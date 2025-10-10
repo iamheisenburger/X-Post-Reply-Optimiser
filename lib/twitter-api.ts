@@ -69,7 +69,18 @@ export const twitterApi = {
       }
       const data = await response.json();
       // TwitterAPI.io returns data directly, not nested in data.data
-      return data;
+      // Map to our TwitterUser interface
+      return {
+        id: data.id || data.userId || "",
+        username: data.userName || data.username || data.screenName || "",
+        name: data.name || data.displayName || "",
+        description: data.description || data.bio || "",
+        followers_count: data.followersCount || data.followers_count || 0,
+        following_count: data.followingCount || data.following_count || 0,
+        verified: data.verified || data.isVerified || data.isBlueVerified || false,
+        profile_image_url: data.profileImageUrl || data.profile_image_url,
+        tweet_count: data.tweetCount || data.tweet_count,
+      };
     } catch (error) {
       console.error(`Failed to fetch user ${username}:`, error);
       return null;
@@ -153,12 +164,12 @@ export const twitterApi = {
       // Map author data to our TwitterUser format
       const author: TwitterUser = {
         id: authorData.id || authorData.userId || "",
-        username: authorData.username || authorData.screenName || "unknown",
+        username: authorData.userName || authorData.username || authorData.screenName || "unknown",
         name: authorData.name || authorData.displayName || "Unknown User",
         description: authorData.description || authorData.bio || "",
         followers_count: authorData.followersCount || authorData.followers_count || 0,
         following_count: authorData.followingCount || authorData.following_count || 0,
-        verified: authorData.verified || authorData.isVerified || false,
+        verified: authorData.verified || authorData.isVerified || authorData.isBlueVerified || false,
       };
 
       console.log(`Successfully extracted author: @${author.username}`);
