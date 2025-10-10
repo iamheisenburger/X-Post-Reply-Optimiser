@@ -131,7 +131,7 @@ export const twitterApi = {
       }
 
       // Fetch author data separately if not included
-      let authorData = author;
+      const authorData = author;
       if (!authorData && tweet.author_id) {
         // Fetch user by ID if needed
         console.log(`Fetching author data for user ID: ${tweet.author_id}`);
