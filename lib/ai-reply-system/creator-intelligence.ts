@@ -3,13 +3,73 @@
 import type { CreatorIntelligence } from "./types";
 import { twitterApi } from "../twitter-api";
 import { analyzeCreatorProfile } from "../openai-client";
+import { fetchQuery, fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
+/**
+ * Build creator intelligence profile with Convex caching.
+ * 
+ * COST OPTIMIZATION: Checks cache FIRST to avoid duplicate OpenAI analysis!
+ */
 export async function buildCreatorIntelligence(
   username: string
 ): Promise<CreatorIntelligence> {
   console.log(`🔍 Building intelligence profile for @${username}...`);
 
-  // 1. Fetch basic profile
+  // 1. CHECK CONVEX CACHE FIRST (avoids duplicate OpenAI costs!)
+  try {
+    const cached = await fetchQuery(api.creators.getByUsername, { username });
+    if (cached) {
+      console.log(`✅ Using cached profile for @${username} (saved $0.02!)`);
+      
+      // Transform from flattened Convex schema to CreatorIntelligence
+      return {
+        username: cached.username,
+        displayName: cached.displayName,
+        followerCount: cached.followerCount,
+        verified: cached.verified,
+        primaryNiche: cached.primaryNiche as "saas" | "mma" | "tech" | "finance" | "mindset" | "other",
+        secondaryNiches: cached.secondaryNiches,
+        audience: {
+          demographics: {
+            primaryInterests: cached.audiencePrimaryInterests,
+            irrelevantTopics: cached.audienceIrrelevantTopics,
+            languageStyle: cached.audienceLanguageStyle,
+            sophisticationLevel: cached.audienceSophisticationLevel,
+          },
+          engagementPatterns: {
+            respondsTo: cached.respondsTo,
+            ignores: cached.ignores,
+            preferredTone: cached.preferredTone,
+          },
+        },
+        contentPatterns: {
+          topics: [], // Not stored in simplified schema
+          postTypes: { insights: 0, questions: 0, announcements: 0, personal: 0 },
+          toneProfile: { serious: 0, humorous: 0, technical: 0, philosophical: 0 },
+        },
+        crossoverPotential: {
+          mmaRelevance: cached.mmaRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+          saasRelevance: cached.saasRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+          disciplineTopics: cached.disciplineTopics as 0 | 1 | 2 | 3 | 4 | 5,
+          philosophyTopics: cached.philosophyTopics as 0 | 1 | 2 | 3 | 4 | 5,
+        },
+        optimalReplyStrategy: {
+          mode: cached.optimalMode as "pure_saas" | "pure_mma" | "mindset_crossover" | "technical" | "storytelling",
+          avoidTopics: cached.avoidTopics,
+          emphasizeTopics: cached.emphasizeTopics,
+          toneMatch: cached.toneMatch,
+          questionStyle: cached.questionStyle,
+        },
+        lastUpdated: cached.lastUpdated,
+        tweetAnalysisCount: cached.tweetAnalysisCount,
+      };
+    }
+  } catch (error) {
+    console.log(`No cached profile for @${username}, building fresh...`);
+  }
+
+  // 2. Fetch basic profile
   const profile = await twitterApi.getUser(username);
   
   if (!profile) {
@@ -81,6 +141,40 @@ export async function buildCreatorIntelligence(
   console.log(`   Optimal mode: ${intelligence.optimalReplyStrategy.mode}`);
   console.log(`   MMA relevance: ${intelligence.crossoverPotential.mmaRelevance}/5`);
   console.log(`   SaaS relevance: ${intelligence.crossoverPotential.saasRelevance}/5`);
+
+  // 5. SAVE TO CONVEX FOR FUTURE REPLIES (huge cost savings!)
+  try {
+    await fetchMutation(api.creators.upsert, {
+      username: intelligence.username,
+      displayName: intelligence.displayName,
+      followerCount: intelligence.followerCount,
+      verified: intelligence.verified,
+      primaryNiche: intelligence.primaryNiche,
+      secondaryNiches: intelligence.secondaryNiches,
+      audiencePrimaryInterests: intelligence.audience.demographics.primaryInterests,
+      audienceIrrelevantTopics: intelligence.audience.demographics.irrelevantTopics,
+      audienceLanguageStyle: intelligence.audience.demographics.languageStyle || "",
+      audienceSophisticationLevel: intelligence.audience.demographics.sophisticationLevel || "",
+      respondsTo: intelligence.audience.engagementPatterns.respondsTo,
+      ignores: intelligence.audience.engagementPatterns.ignores,
+      preferredTone: intelligence.audience.engagementPatterns.preferredTone,
+      mmaRelevance: intelligence.crossoverPotential.mmaRelevance,
+      saasRelevance: intelligence.crossoverPotential.saasRelevance,
+      disciplineTopics: intelligence.crossoverPotential.disciplineTopics,
+      philosophyTopics: intelligence.crossoverPotential.philosophyTopics,
+      optimalMode: intelligence.optimalReplyStrategy.mode,
+      avoidTopics: intelligence.optimalReplyStrategy.avoidTopics,
+      emphasizeTopics: intelligence.optimalReplyStrategy.emphasizeTopics,
+      toneMatch: intelligence.optimalReplyStrategy.toneMatch,
+      questionStyle: intelligence.optimalReplyStrategy.questionStyle,
+      lastUpdated: intelligence.lastUpdated,
+      tweetAnalysisCount: intelligence.tweetAnalysisCount,
+    });
+    console.log(`💾 Profile cached in Convex for future use`);
+  } catch (error) {
+    console.error(`⚠️ Could not cache profile:`, error);
+    // Don't fail the whole request if caching fails
+  }
 
   return intelligence;
 }
