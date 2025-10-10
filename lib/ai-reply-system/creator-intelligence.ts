@@ -16,9 +16,11 @@ export async function buildCreatorIntelligence(
     throw new Error(`Could not fetch profile for @${username}`);
   }
 
-  // 2. Fetch recent tweets for analysis
-  const recentTweets = await twitterApi.getUserTweets(profile.id, 20);
+  // 2. Fetch recent tweets for analysis (reduced from 20 to 10 to save costs)
+  const recentTweets = await twitterApi.getUserTweets(profile.id, 10);
   const tweetTexts = recentTweets.map(t => t.text);
+  
+  console.log(`Fetched ${tweetTexts.length} tweets for analysis`);
 
   // 3. AI analyzes the creator
   console.log(`🤖 Analyzing content patterns...`);

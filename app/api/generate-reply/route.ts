@@ -45,7 +45,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`Fetched tweet from @${tweet.author.username}`);
 
-    // 3. Build or fetch creator intelligence
+    // 3. Check if we have cached creator intelligence in Convex
+    console.log(`Checking for cached profile of @${tweet.author.username}...`);
+    
+    // Note: We'll implement Convex caching in the next step
+    // For now, always build fresh (but we'll optimize this)
     let creatorIntelligence;
     try {
       creatorIntelligence = await buildCreatorIntelligence(tweet.author.username);
