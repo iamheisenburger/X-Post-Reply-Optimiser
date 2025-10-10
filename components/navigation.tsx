@@ -8,6 +8,7 @@ export function Navigation() {
   const pathname = usePathname();
 
   const links = [
+    { href: "/ai-reply", label: "🤖 AI Reply" },
     { href: "/", label: "Optimizer" },
     { href: "/targets", label: "VIP Targets" },
     { href: "/analytics", label: "Analytics" },
@@ -33,4 +34,5 @@ export function Navigation() {
     </nav>
   );
 }
+
 
