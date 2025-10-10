@@ -94,16 +94,39 @@ export const twitterApi = {
     }
     try {
       // TwitterAPI.io endpoint format: /twitter/user/tweets?userId=...&count=...
-      const response = await fetch(`${TWITTER_API_BASE_URL}/twitter/user/tweets?userId=${userId}&count=${count}`, {
+      const url = `${TWITTER_API_BASE_URL}/twitter/user/tweets?userId=${userId}&count=${count}`;
+      console.log(`Fetching ${count} tweets for user ${userId}...`);
+      
+      const response = await fetch(url, {
         headers: getHeaders(),
       });
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Error fetching tweets for user ${userId}: ${response.statusText}`, errorText);
         return [];
       }
+      
       const data = await response.json();
-      return Array.isArray(data) ? data : (data.data || []);
+      console.log(`User tweets response format:`, typeof data, Array.isArray(data) ? 'array' : Object.keys(data).slice(0, 5));
+      
+      // TwitterAPI.io returns { "tweets": [...] } format (same as single tweet fetch)
+      if (data.tweets && Array.isArray(data.tweets)) {
+        console.log(`✅ Fetched ${data.tweets.length} tweets`);
+        return data.tweets;
+      }
+      
+      // Fallback for other formats
+      if (Array.isArray(data)) {
+        return data;
+      }
+      
+      if (data.data && Array.isArray(data.data)) {
+        return data.data;
+      }
+      
+      console.error(`Unexpected user tweets format:`, data);
+      return [];
     } catch (error) {
       console.error(`Failed to fetch tweets for user ${userId}:`, error);
       return [];
