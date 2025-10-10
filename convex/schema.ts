@@ -88,5 +88,38 @@ export default defineSchema({
     description: v.optional(v.string()),
     category: v.optional(v.string()), // e.g., "engagement", "recency"
   }).index("by_name", ["name"]),
+
+  // Creator Intelligence Profiles (for VIP targets)
+  creators: defineTable({
+    username: v.string(),
+    displayName: v.string(),
+    followerCount: v.number(),
+    verified: v.boolean(),
+    primaryNiche: v.string(), // saas, mma, tech, etc.
+    secondaryNiches: v.array(v.string()),
+    // Audience demographics
+    audiencePrimaryInterests: v.array(v.string()),
+    audienceIrrelevantTopics: v.array(v.string()),
+    audienceLanguageStyle: v.string(),
+    audienceSophisticationLevel: v.string(),
+    // Engagement patterns
+    respondsTo: v.array(v.string()),
+    ignores: v.array(v.string()),
+    preferredTone: v.string(),
+    // Crossover potential (0-5 scale)
+    mmaRelevance: v.number(),
+    saasRelevance: v.number(),
+    disciplineTopics: v.number(),
+    philosophyTopics: v.number(),
+    // Strategy
+    optimalMode: v.string(),
+    avoidTopics: v.array(v.string()),
+    emphasizeTopics: v.array(v.string()),
+    toneMatch: v.string(),
+    questionStyle: v.string(),
+    // Metadata
+    lastUpdated: v.number(),
+    tweetAnalysisCount: v.number(),
+  }).index("by_username", ["username"]),
 });
 
