@@ -39,10 +39,12 @@ export const list = query({
     status: v.optional(v.union(v.literal("draft"), v.literal("optimized"), v.literal("posted"))),
   },
   handler: async (ctx, args) => {
-    if (args.status) {
+    const status = args.status;
+    
+    if (status) {
       return await ctx.db
         .query("posts")
-        .withIndex("by_status", (q) => q.eq("status", args.status))
+        .withIndex("by_status", (q) => q.eq("status", status))
         .order("desc")
         .collect();
     }
