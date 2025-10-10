@@ -44,16 +44,33 @@ export async function POST(request: NextRequest) {
 
     console.log(`Built intelligence for @${tweet.author.username}: ${creatorIntelligence.primaryNiche} niche`);
 
-    // 4. Generate optimized replies
+    // 4. Transform tweet to TweetData format
+    const tweetData = {
+      id: tweet.id,
+      text: tweet.text,
+      createdAt: tweet.created_at,
+      conversationId: tweet.conversation_id || tweet.id,
+      author: {
+        id: tweet.author.id,
+        username: tweet.author.username,
+        name: tweet.author.name,
+        description: tweet.author.description,
+        followers_count: tweet.author.followers_count,
+      },
+      hasMedia: tweet.hasMedia,
+      isThread: tweet.isThread,
+    };
+
+    // 5. Generate optimized replies
     const result = await generateOptimizedReplies(
-      tweet,
+      tweetData,
       creatorIntelligence,
       MADMANHAKIM_PROFILE
     );
 
     console.log(`Generated ${result.replies.length} replies with avg score ${result.averageScore.toFixed(1)}`);
 
-    // 5. Return result
+    // 6. Return result
     return NextResponse.json({
       replies: result.replies,
       selectedMode: result.selectedMode,
