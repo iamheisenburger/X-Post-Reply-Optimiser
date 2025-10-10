@@ -1,6 +1,6 @@
 // lib/twitter-api.ts
 
-const TWITTER_API_BASE_URL = process.env.TWITTER_API_BASE_URL || "https://api.twitterapi.io/v1";
+const TWITTER_API_BASE_URL = process.env.TWITTER_API_BASE_URL || "https://api.twitterapi.io";
 const TWITTER_API_KEY = process.env.TWITTER_API_KEY;
 
 export interface TwitterUser {
