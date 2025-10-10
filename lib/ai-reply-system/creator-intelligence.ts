@@ -23,7 +23,8 @@ export async function buildCreatorIntelligence(
     followers_count: number;
     following_count: number;
     verified: boolean;
-  }
+  },
+  currentTweetText?: string
 ): Promise<CreatorIntelligence> {
   console.log(`🔍 Building intelligence profile for @${username}...`);
 
@@ -97,15 +98,40 @@ export async function buildCreatorIntelligence(
     }
   }
 
-  // 2. Fetch recent tweets for analysis (reduced from 20 to 10 to save costs)
+  // 3. Fetch recent tweets for analysis (reduced from 20 to 10 to save costs)
   const recentTweets = await twitterApi.getUserTweets(profile.id, 10);
-  const tweetTexts = recentTweets.map(t => t.text);
+  let tweetTexts = recentTweets.map(t => t.text);
   
   console.log(`Fetched ${tweetTexts.length} tweets for analysis`);
 
-  // 3. AI analyzes the creator
+  // 4. If no tweets available (suspended/private account), use current tweet as fallback
+  if (tweetTexts.length === 0 && currentTweetText) {
+    console.log(`⚠️ No timeline tweets available, using current tweet for analysis`);
+    tweetTexts = [currentTweetText];
+  }
+
+  // 5. AI analyzes the creator (with retry for internal errors)
   console.log(`🤖 Analyzing content patterns...`);
-  const analysis = await analyzeCreatorProfile(profile.description, tweetTexts);
+  let analysis;
+  try {
+    analysis = await analyzeCreatorProfile(profile.description, tweetTexts);
+  } catch (error) {
+    console.error(`OpenAI analysis failed:`, error);
+    
+    // Retry once if it's an internal error
+    if (error instanceof Error && error.message.includes('internal_error')) {
+      console.log(`🔄 Retrying OpenAI analysis...`);
+      try {
+        analysis = await analyzeCreatorProfile(profile.description, tweetTexts);
+      } catch (retryError) {
+        console.error(`Retry failed, using heuristic fallback`);
+        analysis = createHeuristicAnalysis(profile, tweetTexts);
+      }
+    } else {
+      console.error(`Using heuristic fallback`);
+      analysis = createHeuristicAnalysis(profile, tweetTexts);
+    }
+  }
 
   // 4. Build comprehensive profile
   const intelligence: CreatorIntelligence = {
@@ -241,6 +267,10 @@ function analyzePostTypes(tweets: string[]): {
   announcements: number;
   personal: number;
 } {
+  if (tweets.length === 0) {
+    return { insights: 0, questions: 0, announcements: 0, personal: 0 };
+  }
+
   let insights = 0;
   let questions = 0;
   let announcements = 0;
@@ -268,6 +298,10 @@ function analyzeToneProfile(tweets: string[]): {
   technical: number;
   philosophical: number;
 } {
+  if (tweets.length === 0) {
+    return { serious: 0, humorous: 0, technical: 0, philosophical: 0 };
+  }
+
   // Simple heuristic-based analysis
   let serious = 0;
   let humorous = 0;
@@ -296,6 +330,57 @@ function inferQuestionStyle(respondsTo: string[]): string {
   if (respondsTo.some(r => r.toLowerCase().includes("thoughtful"))) return "deep_questions";
   if (respondsTo.some(r => r.toLowerCase().includes("data"))) return "metric_questions";
   return "open_ended";
+}
+
+/**
+ * Heuristic fallback analysis when OpenAI fails
+ */
+function createHeuristicAnalysis(
+  profile: { name: string; description: string; followers_count: number; username: string },
+  tweetTexts: string[]
+): any {
+  console.log(`📊 Creating heuristic analysis for @${profile.username}`);
+  
+  const bio = profile.description.toLowerCase();
+  const allText = (bio + " " + tweetTexts.join(" ")).toLowerCase();
+  
+  // Detect primary niche based on keywords
+  let primaryNiche = "other";
+  let saasRelevance = 0;
+  let mmaRelevance = 0;
+  
+  if (allText.includes("saas") || allText.includes("founder") || allText.includes("startup") || allText.includes("build")) {
+    primaryNiche = "saas";
+    saasRelevance = 5;
+  } else if (allText.includes("mma") || allText.includes("ufc") || allText.includes("fighter") || allText.includes("boxing")) {
+    primaryNiche = "mma";
+    mmaRelevance = 5;
+  } else if (allText.includes("code") || allText.includes("developer") || allText.includes("engineer")) {
+    primaryNiche = "tech";
+    saasRelevance = 3;
+  } else if (allText.includes("discipline") || allText.includes("mindset") || allText.includes("focus")) {
+    primaryNiche = "mindset";
+    saasRelevance = 2;
+    mmaRelevance = 2;
+  }
+  
+  return {
+    primaryNiche,
+    secondaryNiches: [],
+    audienceInterests: ["entrepreneurship", "personal development"],
+    audienceIrrelevantTopics: [],
+    crossoverPotential: {
+      mmaRelevance,
+      saasRelevance,
+      disciplineTopics: 2,
+      philosophyTopics: 2,
+    },
+    optimalReplyMode: saasRelevance >= mmaRelevance ? "pure_saas" : "pure_mma",
+    respondsTo: ["thoughtful questions", "insights"],
+    preferredTone: "direct",
+    avoidTopics: [],
+    emphasizeTopics: ["growth", "building"],
+  };
 }
 
 export function extractTweetId(url: string): string {

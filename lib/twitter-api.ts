@@ -110,6 +110,12 @@ export const twitterApi = {
       const data = await response.json();
       console.log(`User tweets response format:`, typeof data, Array.isArray(data) ? 'array' : Object.keys(data).slice(0, 5));
       
+      // Handle suspended/unavailable users (e.g. suspended accounts)
+      if (data && data.status && data.data && data.data.unavailable) {
+        console.warn(`⚠️ Timeline unavailable for user ${userId}: ${data.data.unavailableReason || data.data.message}`);
+        return []; // Return empty array, not an error
+      }
+      
       // TwitterAPI.io returns { "tweets": [...] } format (same as single tweet fetch)
       if (data.tweets && Array.isArray(data.tweets)) {
         console.log(`✅ Fetched ${data.tweets.length} tweets`);

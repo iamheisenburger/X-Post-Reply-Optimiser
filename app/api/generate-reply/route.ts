@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     
     let creatorIntelligence;
     try {
-      // Pass the author data we already have from the tweet!
+      // Pass the author data AND current tweet text (fallback if timeline unavailable)
       creatorIntelligence = await buildCreatorIntelligence(
         tweet.author.username,
         {
@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
           followers_count: tweet.author.followers_count,
           following_count: tweet.author.following_count,
           verified: tweet.author.verified || false,
-        }
+        },
+        tweet.text // Use current tweet as fallback if timeline unavailable
       );
     } catch (error) {
       console.error("Error building creator intelligence:", error);
