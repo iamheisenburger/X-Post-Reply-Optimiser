@@ -20,10 +20,25 @@ export async function POST(request: NextRequest) {
     console.log(`Extracted tweet ID: ${tweetId}`);
 
     // 2. Fetch tweet data
+    console.log(`Attempting to fetch tweet with ID: ${tweetId}`);
+    
+    if (!process.env.TWITTER_API_KEY) {
+      return NextResponse.json(
+        { error: "TWITTER_API_KEY is not configured in environment variables." },
+        { status: 500 }
+      );
+    }
+    
     const tweet = await twitterApi.getTweet(tweetId);
     if (!tweet) {
       return NextResponse.json(
-        { error: "Could not fetch tweet. Check your TWITTER_API_KEY and the tweet URL." },
+        { 
+          error: "Could not fetch tweet. Possible issues:\n" +
+                 "1. Tweet ID might be invalid\n" +
+                 "2. TWITTER_API_KEY might be incorrect\n" +
+                 "3. TwitterAPI.io endpoint might have changed\n\n" +
+                 "Check Vercel function logs for detailed error."
+        },
         { status: 404 }
       );
     }
