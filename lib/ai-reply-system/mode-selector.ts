@@ -55,13 +55,9 @@ export function selectOptimalMode(
     return "technical";
   }
 
-  // Default: Match their primary niche
-  const defaultMode = creator.primaryNiche === "saas" ? "pure_saas" : 
-                      creator.primaryNiche === "mma" ? "pure_mma" : 
-                      "pure_saas";
-  
-  console.log(`   Defaulting to ${defaultMode} based on primary niche`);
-  return defaultMode;
+  // Default: pure_saas (we've already checked for MMA/SaaS-specific cases above)
+  console.log(`   Defaulting to pure_saas mode`);
+  return "pure_saas";
 }
 
 function containsKeywords(text: string, keywords: string[]): boolean {
