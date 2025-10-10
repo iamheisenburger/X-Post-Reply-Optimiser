@@ -11,6 +11,7 @@ import type {
   FullContext
 } from "./types";
 import { calculateAlgorithmScore, type ContentAnalysisResult } from "../x-algorithm";
+import { calculateQualityScore, type QualityScoreResult, type ScoringContext } from "../x-algorithm-v2";
 import { generateReply } from "../openai-client";
 import { selectOptimalMode, getModePrompt } from "./mode-selector";
 import { X_ALGORITHM_WEIGHTS } from "../x-algorithm";
@@ -119,27 +120,35 @@ async function optimizeSingleReply(
         continue;
       }
 
-      // Score with algorithm
-      const analysis = calculateAlgorithmScore(
-        candidate,
-        "author_engagement", // Always optimize for author engagement (75x weight)
-        context.post.hasMedia,
-        true, // isReply
-        false // isThread
-      );
+      // Score with NEW quality-based algorithm
+      const scoringContext: ScoringContext = {
+        originalTweet: context.post.text,
+        replyText: candidate,
+        creatorNiche: context.creator.primaryNiche,
+        creatorAudienceInterests: context.creator.audience.demographics.primaryInterests,
+        mode: context.mode
+      };
+      
+      const qualityScore = calculateQualityScore(scoringContext);
 
-      console.log(`   Score: ${analysis.score}/100`);
+      console.log(`   Score: ${qualityScore.score}/100`);
 
       // Check if this is better
-      if (analysis.score > bestScore) {
-        bestScore = analysis.score;
+      if (qualityScore.score > bestScore) {
+        bestScore = qualityScore.score;
         bestReply = {
           text: candidate,
-          score: analysis.score,
-          breakdown: analysis.breakdown,
+          score: qualityScore.score,
+          breakdown: {
+            engagement: qualityScore.breakdown.engagementPotential,
+            recency: 10,
+            mediaPresence: context.post.hasMedia ? 10 : 0,
+            conversationDepth: qualityScore.breakdown.conversationDepth,
+            authorReputation: qualityScore.breakdown.valueAdd
+          },
           mode: context.mode,
           iteration,
-          reasoning: analysis.suggestions
+          reasoning: qualityScore.feedback
         };
 
         console.log(`   ⬆️  New best score: ${bestScore}/100`);
@@ -153,7 +162,7 @@ async function optimizeSingleReply(
 
       // Generate detailed feedback for next iteration
       if (bestScore < TARGET_SCORE) {
-        feedback = generateAlgorithmFeedback(analysis, context);
+        feedback = qualityScore.feedback.join("\n");
         previousAttempt = candidate;
         console.log(`   📋 Feedback: ${feedback.substring(0, 100)}...`);
       }
