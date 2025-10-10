@@ -164,12 +164,12 @@ export const twitterApi = {
       return {
         ...tweet,
         author: {
-          id: author.id || author.user_id || tweet.author_id || "",
-          username: author.username || author.screen_name || "unknown",
-          name: author.name || author.display_name || "Unknown User",
-          description: author.description || author.bio || "",
-          followers_count: author.followers_count || author.public_metrics?.followers_count || 0,
-          following_count: author.following_count || author.public_metrics?.following_count || 0,
+          id: author.id,
+          username: author.username,
+          name: author.name,
+          description: author.description,
+          followers_count: author.followers_count,
+          following_count: author.following_count,
           verified: author.verified || false,
         },
         hasMedia: !!(tweet.entities?.urls?.length || tweet.attachments || tweet.media),
