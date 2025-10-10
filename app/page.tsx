@@ -1,103 +1,182 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { calculateAlgorithmScore } from "@/lib/x-algorithm";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [content, setContent] = useState("");
+  const [isReply, setIsReply] = useState(false);
+  const [hasMedia, setHasMedia] = useState(false);
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const createPost = useMutation(api.posts.create);
+
+  const handleAnalyze = () => {
+    const result = calculateAlgorithmScore(
+      content,
+      "viral_reach",
+      hasMedia,
+      isReply,
+      false
+    );
+    setAnalysis(result);
+  };
+
+  const handleSave = async () => {
+    if (!analysis) return;
+    setIsSaving(true);
+    try {
+      await createPost({
+        content,
+        type: isReply ? "reply" : "post",
+        algorithmScore: analysis.score,
+        scoreBreakdown: analysis.breakdown,
+        status: "draft",
+      });
+      alert("Saved to your drafts!");
+    } catch (error) {
+      console.error("Failed to save:", error);
+      alert("Failed to save. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return "text-green-600";
+    if (score >= 40) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Content Optimizer</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Write your post or reply below and get real-time scoring based on X's algorithm
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="content">Your Content</Label>
+              <Textarea
+                id="content"
+                placeholder="Write your post or reply here..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="min-h-[150px] mt-2"
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isReply}
+                  onChange={(e) => setIsReply(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">This is a reply</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasMedia}
+                  onChange={(e) => setHasMedia(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Includes media (image/video)</span>
+              </label>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleAnalyze} disabled={!content.trim()}>
+                Analyze Content
+              </Button>
+              {analysis && (
+                <Button
+                  onClick={handleSave}
+                  variant="outline"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Draft"}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {analysis && (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Algorithm Score</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center">
+                  <div className={`text-6xl font-bold ${getScoreColor(analysis.score)}`}>
+                    {analysis.score}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Out of 100 (Based on X's Heavy Ranker Model)
+                  </p>
+                </div>
+
+                <div className="mt-6 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Engagement Potential</span>
+                    <Badge>{analysis.breakdown.engagement.toFixed(1)}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Recency</span>
+                    <Badge>{analysis.breakdown.recency.toFixed(1)}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Media Presence</span>
+                    <Badge>{analysis.breakdown.mediaPresence.toFixed(1)}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Conversation Depth</span>
+                    <Badge>{analysis.breakdown.conversationDepth.toFixed(1)}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Author Reputation</span>
+                    <Badge>{analysis.breakdown.authorReputation.toFixed(1)}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {analysis.suggestions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Optimization Suggestions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.suggestions.map((suggestion: string, index: number) => (
+                      <li key={index} className="flex gap-2">
+                        <span className="text-primary">•</span>
+                        <span className="text-sm">{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,92 @@
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  // VIP Target Accounts (50 accounts to engage with)
+  targets: defineTable({
+    username: v.string(),
+    displayName: v.string(),
+    userId: v.optional(v.string()),
+    followerCount: v.optional(v.number()),
+    followingCount: v.optional(v.number()),
+    bio: v.optional(v.string()),
+    profileImage: v.optional(v.string()),
+    lastEngaged: v.optional(v.number()), // timestamp
+    engagementRate: v.optional(v.number()), // calculated metric
+    priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+    tags: v.array(v.string()), // e.g., ["mma", "saas", "tech"]
+    notes: v.optional(v.string()),
+  })
+    .index("by_username", ["username"])
+    .index("by_priority", ["priority"]),
+
+  // Your Posts/Replies (tracking what you've created and posted)
+  posts: defineTable({
+    content: v.string(),
+    type: v.union(v.literal("reply"), v.literal("post"), v.literal("thread")),
+    targetUsername: v.optional(v.string()), // if it's a reply
+    targetTweetId: v.optional(v.string()),
+    algorithmScore: v.number(), // 0-100 score based on X algorithm
+    scoreBreakdown: v.object({
+      engagement: v.number(),
+      recency: v.number(),
+      mediaPresence: v.number(),
+      conversationDepth: v.number(),
+      authorReputation: v.number(),
+    }),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("optimized"),
+      v.literal("posted")
+    ),
+    postedAt: v.optional(v.number()), // timestamp when actually posted
+    performance: v.optional(
+      v.object({
+        views: v.number(),
+        likes: v.number(),
+        retweets: v.number(),
+        replies: v.number(),
+        bookmarks: v.number(),
+        profileClicks: v.number(),
+      })
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_target", ["targetUsername"])
+    .index("by_created", ["createdAt"]),
+
+  // Content Templates (proven patterns that work)
+  templates: defineTable({
+    name: v.string(),
+    content: v.string(),
+    type: v.union(v.literal("reply"), v.literal("post"), v.literal("thread")),
+    tags: v.array(v.string()),
+    usageCount: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
+
+  // Analytics (tracking overall performance)
+  analytics: defineTable({
+    date: v.string(), // YYYY-MM-DD
+    followersGained: v.number(),
+    subwiseUsersGained: v.number(),
+    totalPosts: v.number(),
+    totalReplies: v.number(),
+    totalEngagement: v.number(), // sum of likes, retweets, replies
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]),
+
+  // X Algorithm Rules (for reference and dynamic scoring)
+  algorithmRules: defineTable({
+    name: v.string(), // e.g., "reply_weight"
+    value: v.number(),
+    description: v.optional(v.string()),
+    category: v.optional(v.string()), // e.g., "engagement", "recency"
+  }).index("by_name", ["name"]),
+});
+

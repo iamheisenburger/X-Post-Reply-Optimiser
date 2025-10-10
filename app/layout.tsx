@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navigation } from "@/components/navigation";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,24 +29,26 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <header className="border-b">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-bold">X Reply Optimizer</h1>
-                <p className="text-xs text-muted-foreground">
-                  Built on X's Open Source Algorithm
-                </p>
-              </div>
-              <Navigation />
-              <div className="text-right">
-                <p className="text-sm font-medium">Goal: 3 → 250 Followers</p>
-                <p className="text-xs text-muted-foreground">0 → 50 SubWise Users | 30 Days</p>
+        <Providers>
+          <header className="border-b">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-bold">X Reply Optimizer</h1>
+                  <p className="text-xs text-muted-foreground">
+                    Built on X's Open Source Algorithm
+                  </p>
+                </div>
+                <Navigation />
+                <div className="text-right">
+                  <p className="text-sm font-medium">Goal: 3 → 250 Followers</p>
+                  <p className="text-xs text-muted-foreground">0 → 50 SubWise Users | 30 Days</p>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
-        {children}
+          </header>
+          {children}
+        </Providers>
       </body>
     </html>
   );
