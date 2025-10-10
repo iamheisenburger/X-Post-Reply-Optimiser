@@ -10,9 +10,20 @@ import { api } from "@/convex/_generated/api";
  * Build creator intelligence profile with Convex caching.
  * 
  * COST OPTIMIZATION: Checks cache FIRST to avoid duplicate OpenAI analysis!
+ * 
+ * @param username - The creator's username (without @)
+ * @param profileData - Optional pre-fetched profile data (from tweet.author)
  */
 export async function buildCreatorIntelligence(
-  username: string
+  username: string,
+  profileData?: {
+    id: string;
+    name: string;
+    description: string;
+    followers_count: number;
+    following_count: number;
+    verified: boolean;
+  }
 ): Promise<CreatorIntelligence> {
   console.log(`🔍 Building intelligence profile for @${username}...`);
 
@@ -69,11 +80,21 @@ export async function buildCreatorIntelligence(
     console.log(`No cached profile for @${username}, building fresh...`);
   }
 
-  // 2. Fetch basic profile
-  const profile = await twitterApi.getUser(username);
-  
-  if (!profile) {
-    throw new Error(`Could not fetch profile for @${username}`);
+  // 2. Use provided profile data OR fetch it
+  let profile;
+  if (profileData) {
+    console.log(`✅ Using provided profile data (saved API call!)`);
+    profile = {
+      username,
+      ...profileData,
+    };
+  } else {
+    console.log(`⚠️ No profile data provided, fetching from API...`);
+    profile = await twitterApi.getUser(username);
+    
+    if (!profile) {
+      throw new Error(`Could not fetch profile for @${username}`);
+    }
   }
 
   // 2. Fetch recent tweets for analysis (reduced from 20 to 10 to save costs)
