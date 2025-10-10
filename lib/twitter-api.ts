@@ -105,25 +105,41 @@ export const twitterApi = {
       return null;
     }
     try {
-      // TwitterAPI.io endpoint format: /twitter/tweet?tweetId=...
-      const response = await fetch(
-        `${TWITTER_API_BASE_URL}/twitter/tweet?tweetId=${tweetId}`,
-        {
-          headers: getHeaders(),
-        }
-      );
+      // TwitterAPI.io endpoint format: /twitter/tweets?ids=... (note: plural)
+      const url = `${TWITTER_API_BASE_URL}/twitter/tweets?ids=${tweetId}`;
+      console.log(`Fetching tweet from: ${url}`);
+      
+      const response = await fetch(url, {
+        headers: getHeaders(),
+      });
+      
+      console.log(`Tweet fetch response status: ${response.status}`);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Error fetching tweet ${tweetId}: ${response.statusText}`, errorText);
+        console.error(`Error fetching tweet ${tweetId}:`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          url: url
+        });
         return null;
       }
       
       const data = await response.json();
+      console.log(`Tweet data structure:`, JSON.stringify(data).substring(0, 200));
       
-      // TwitterAPI.io might return tweet data directly or nested
-      const tweet = data.data || data;
-      const author = data.author || data.user || tweet.author || tweet.user;
+      // TwitterAPI.io returns array in data.data for multiple tweets
+      const tweets = data.data || data;
+      const tweet = Array.isArray(tweets) ? tweets[0] : tweets;
+      
+      if (!tweet) {
+        console.error(`No tweet found in response for ID ${tweetId}`);
+        return null;
+      }
+      
+      // Author might be in includes.users or directly in tweet
+      const author = data.includes?.users?.[0] || data.author || data.user || tweet.author || tweet.user;
 
       if (!tweet) {
         console.error(`Tweet data missing for ${tweetId}`);
