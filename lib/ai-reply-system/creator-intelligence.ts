@@ -29,13 +29,25 @@ export async function buildCreatorIntelligence(
   console.log(`🔍 Building intelligence profile for @${username}...`);
 
   // 1. CHECK CONVEX CACHE FIRST (avoids duplicate OpenAI costs!)
+  // But invalidate if it's the old broken "other" niche with 0/0 crossover
   try {
     const cached = await fetchQuery(api.creators.getByUsername, { username });
     if (cached) {
-      console.log(`✅ Using cached profile for @${username} (saved $0.02!)`);
+      // Check if this is the old broken cache (other niche + 0 everything)
+      const isBrokenCache = 
+        cached.primaryNiche === "other" &&
+        cached.mmaRelevance === 0 &&
+        cached.saasRelevance === 0;
       
-      // Transform from flattened Convex schema to CreatorIntelligence
-      return {
+      if (isBrokenCache && currentTweetText) {
+        console.log(`🔄 Detected broken cache for @${username}, rebuilding...`);
+        // Delete the bad cache and continue to rebuild
+        await fetchMutation(api.creators.removeByUsername, { username });
+      } else {
+        console.log(`✅ Using cached profile for @${username} (saved $0.02!)`);
+        
+        // Transform from flattened Convex schema to CreatorIntelligence
+        return {
         username: cached.username,
         displayName: cached.displayName,
         followerCount: cached.followerCount,
@@ -73,9 +85,10 @@ export async function buildCreatorIntelligence(
           toneMatch: cached.toneMatch,
           questionStyle: cached.questionStyle,
         },
-        lastUpdated: cached.lastUpdated,
-        tweetAnalysisCount: cached.tweetAnalysisCount,
-      };
+          lastUpdated: cached.lastUpdated,
+          tweetAnalysisCount: cached.tweetAnalysisCount,
+        };
+      }
     }
   } catch (error) {
     console.log(`No cached profile for @${username}, building fresh...`);

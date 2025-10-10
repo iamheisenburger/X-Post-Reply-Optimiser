@@ -68,11 +68,28 @@ export const list = query({
   },
 });
 
-// Delete a creator profile
+// Delete a creator profile by ID
 export const remove = mutation({
   args: { id: v.id("creators") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+  },
+});
+
+// Delete a creator profile by username (for cache invalidation)
+export const removeByUsername = mutation({
+  args: { username: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("creators")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+    
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return true;
+    }
+    return false;
   },
 });
 
