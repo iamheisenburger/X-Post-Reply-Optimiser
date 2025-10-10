@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Copy, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 interface ScoredReply {
   text: string;
@@ -44,15 +43,10 @@ export default function AIReplyPage() {
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const { toast } = useToast();
 
   const handleGenerate = async () => {
     if (!tweetUrl.trim()) {
-      toast({
-        title: "Missing URL",
-        description: "Please enter a tweet URL",
-        variant: "destructive",
-      });
+      setError("Please enter a tweet URL");
       return;
     }
 
@@ -74,19 +68,9 @@ export default function AIReplyPage() {
 
       const data = await response.json();
       setResult(data);
-
-      toast({
-        title: "Replies Generated!",
-        description: `${data.replies.length} replies with avg ${data.averageScore.toFixed(1)}% score`,
-      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to generate replies";
       setError(errorMessage);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -96,10 +80,6 @@ export default function AIReplyPage() {
     await navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
-    toast({
-      title: "Copied!",
-      description: "Reply copied to clipboard",
-    });
   };
 
   const getModeColor = (mode: string) => {
