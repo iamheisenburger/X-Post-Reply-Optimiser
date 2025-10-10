@@ -14,7 +14,7 @@ export default function Home() {
   const [content, setContent] = useState("");
   const [isReply, setIsReply] = useState(false);
   const [hasMedia, setHasMedia] = useState(false);
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<ReturnType<typeof calculateAlgorithmScore> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const createPost = useMutation(api.posts.create);
@@ -63,7 +63,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Content Optimizer</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Write your post or reply below and get real-time scoring based on X's algorithm
+              Write your post or reply below and get real-time scoring based on X&apos;s algorithm
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -128,7 +128,7 @@ export default function Home() {
                     {analysis.score}
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Out of 100 (Based on X's Heavy Ranker Model)
+                    Out of 100 (Based on X&apos;s Heavy Ranker Model)
                   </p>
                 </div>
 

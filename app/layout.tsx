@@ -36,7 +36,7 @@ export default function RootLayout({
                 <div>
                   <h1 className="text-xl font-bold">X Reply Optimizer</h1>
                   <p className="text-xs text-muted-foreground">
-                    Built on X's Open Source Algorithm
+                    Built on X&apos;s Open Source Algorithm
                   </p>
                 </div>
                 <Navigation />
