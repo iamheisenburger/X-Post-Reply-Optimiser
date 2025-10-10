@@ -105,8 +105,8 @@ export const twitterApi = {
       return null;
     }
     try {
-      // TwitterAPI.io endpoint format: /twitter/tweets?ids=... (note: plural)
-      const url = `${TWITTER_API_BASE_URL}/twitter/tweets?ids=${tweetId}`;
+      // TwitterAPI.io endpoint format: /twitter/tweets?tweet_ids=...
+      const url = `${TWITTER_API_BASE_URL}/twitter/tweets?tweet_ids=${tweetId}`;
       console.log(`Fetching tweet from: ${url}`);
       
       const response = await fetch(url, {
