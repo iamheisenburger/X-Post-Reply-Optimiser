@@ -129,8 +129,9 @@ export const twitterApi = {
       const data = await response.json();
       console.log(`Tweet data structure:`, JSON.stringify(data).substring(0, 500));
       
-      // TwitterAPI.io returns the tweet directly or in data property
-      const tweet = data.data || data;
+      // TwitterAPI.io returns tweets in a 'tweets' array
+      const tweets = data.tweets || [];
+      const tweet = tweets[0];
       
       if (!tweet) {
         console.error(`No tweet found in response for ID ${tweetId}`);
@@ -138,49 +139,27 @@ export const twitterApi = {
       }
 
       console.log(`Tweet object keys:`, Object.keys(tweet));
-      console.log(`Tweet author data:`, JSON.stringify(tweet.author || tweet.user || tweet.author_id || 'NO AUTHOR'));
       
-      // Try multiple ways to get author data
-      let author = null;
-      
-      // Option 1: Author embedded in tweet
-      if (tweet.author || tweet.user) {
-        author = tweet.author || tweet.user;
-        console.log(`Author found in tweet object`);
-      }
-      // Option 2: Author in includes
-      else if (data.includes?.users?.[0]) {
-        author = data.includes.users[0];
-        console.log(`Author found in includes.users`);
-      }
-      // Option 3: Fetch author separately by author_id or user_id
-      else if (tweet.author_id || tweet.user_id) {
-        const authorId = tweet.author_id || tweet.user_id;
-        console.log(`Need to fetch author separately for ID: ${authorId}`);
-        // For now, create minimal author object
-        author = {
-          id: authorId,
-          username: "unknown",
-          name: "Unknown User",
-          description: "",
-          followers_count: 0,
-          following_count: 0,
-        };
+      // Extract username from tweet URL (e.g., "https://x.com/jonbrosio/status/...")
+      let username = "unknown";
+      if (tweet.url || tweet.twitterUrl) {
+        const urlMatch = (tweet.url || tweet.twitterUrl).match(/x\.com\/(\w+)\/status|twitter\.com\/(\w+)\/status/);
+        if (urlMatch) {
+          username = urlMatch[1] || urlMatch[2];
+          console.log(`Extracted username from URL: @${username}`);
+        }
       }
 
-      // Fetch author data separately if not included
-      const authorData = author;
-      if (!authorData && tweet.author_id) {
-        // Fetch user by ID if needed
-        console.log(`Fetching author data for user ID: ${tweet.author_id}`);
-      }
-
+      // Fetch author profile separately since it's not included in tweet response
+      console.log(`Fetching author profile for @${username}...`);
+      const author = await this.getUser(username);
+      
       if (!author) {
-        console.error(`Could not find author data in response`);
+        console.error(`Could not fetch author profile for @${username}`);
         return null;
       }
 
-      console.log(`Successfully extracted author: @${author.username || author.screen_name || 'unknown'}`);
+      console.log(`Successfully fetched author: @${author.username}`);
 
       return {
         ...tweet,
