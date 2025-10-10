@@ -140,26 +140,28 @@ export const twitterApi = {
 
       console.log(`Tweet object keys:`, Object.keys(tweet));
       
-      // Extract username from tweet URL (e.g., "https://x.com/jonbrosio/status/...")
-      let username = "unknown";
-      if (tweet.url || tweet.twitterUrl) {
-        const urlMatch = (tweet.url || tweet.twitterUrl).match(/x\.com\/(\w+)\/status|twitter\.com\/(\w+)\/status/);
-        if (urlMatch) {
-          username = urlMatch[1] || urlMatch[2];
-          console.log(`Extracted username from URL: @${username}`);
-        }
-      }
-
-      // Fetch author profile separately since it's not included in tweet response
-      console.log(`Fetching author profile for @${username}...`);
-      const author = await this.getUser(username);
+      // TwitterAPI.io includes author data directly in the tweet
+      const authorData = tweet.author;
       
-      if (!author) {
-        console.error(`Could not fetch author profile for @${username}`);
+      if (!authorData) {
+        console.error(`No author data in tweet response`);
         return null;
       }
 
-      console.log(`Successfully fetched author: @${author.username}`);
+      console.log(`Author data found:`, JSON.stringify(authorData).substring(0, 200));
+      
+      // Map author data to our TwitterUser format
+      const author: TwitterUser = {
+        id: authorData.id || authorData.userId || "",
+        username: authorData.username || authorData.screenName || "unknown",
+        name: authorData.name || authorData.displayName || "Unknown User",
+        description: authorData.description || authorData.bio || "",
+        followers_count: authorData.followersCount || authorData.followers_count || 0,
+        following_count: authorData.followingCount || authorData.following_count || 0,
+        verified: authorData.verified || authorData.isVerified || false,
+      };
+
+      console.log(`Successfully extracted author: @${author.username}`);
 
       return {
         ...tweet,
