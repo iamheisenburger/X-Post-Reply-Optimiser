@@ -115,15 +115,15 @@ export async function buildCreatorIntelligence(
   let analysis;
   try {
     analysis = await analyzeCreatorProfile(profile.description, tweetTexts);
-  } catch (error) {
-    console.error(`OpenAI analysis failed:`, error);
+  } catch (firstError) {
+    console.error(`OpenAI analysis failed:`, firstError);
     
     // Retry once if it's an internal error
-    if (error instanceof Error && error.message.includes('internal_error')) {
+    if (firstError instanceof Error && firstError.message.includes('internal_error')) {
       console.log(`🔄 Retrying OpenAI analysis...`);
       try {
         analysis = await analyzeCreatorProfile(profile.description, tweetTexts);
-      } catch (retryError) {
+      } catch {
         console.error(`Retry failed, using heuristic fallback`);
         analysis = createHeuristicAnalysis(profile, tweetTexts);
       }
@@ -338,7 +338,23 @@ function inferQuestionStyle(respondsTo: string[]): string {
 function createHeuristicAnalysis(
   profile: { name: string; description: string; followers_count: number; username: string },
   tweetTexts: string[]
-): any {
+): {
+  primaryNiche: string;
+  secondaryNiches: string[];
+  audienceInterests: string[];
+  audienceIrrelevantTopics: string[];
+  crossoverPotential: {
+    mmaRelevance: number;
+    saasRelevance: number;
+    disciplineTopics: number;
+    philosophyTopics: number;
+  };
+  optimalReplyMode: string;
+  respondsTo: string[];
+  preferredTone: string;
+  avoidTopics: string[];
+  emphasizeTopics: string[];
+} {
   console.log(`📊 Creating heuristic analysis for @${profile.username}`);
   
   const bio = profile.description.toLowerCase();
