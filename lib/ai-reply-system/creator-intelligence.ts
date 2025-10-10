@@ -334,6 +334,7 @@ function inferQuestionStyle(respondsTo: string[]): string {
 
 /**
  * Heuristic fallback analysis when OpenAI fails
+ * Uses keyword analysis of bio + tweet content to classify niche
  */
 function createHeuristicAnalysis(
   profile: { name: string; description: string; followers_count: number; username: string },
@@ -360,42 +361,92 @@ function createHeuristicAnalysis(
   const bio = profile.description.toLowerCase();
   const allText = (bio + " " + tweetTexts.join(" ")).toLowerCase();
   
-  // Detect primary niche based on keywords
-  let primaryNiche = "other";
-  let saasRelevance = 0;
-  let mmaRelevance = 0;
+  // Score each niche based on keyword presence
+  let saasScore = 0;
+  let mmaScore = 0;
+  let techScore = 0;
+  let mindsetScore = 0;
+  let financeScore = 0;
   
-  if (allText.includes("saas") || allText.includes("founder") || allText.includes("startup") || allText.includes("build")) {
-    primaryNiche = "saas";
-    saasRelevance = 5;
-  } else if (allText.includes("mma") || allText.includes("ufc") || allText.includes("fighter") || allText.includes("boxing")) {
-    primaryNiche = "mma";
-    mmaRelevance = 5;
-  } else if (allText.includes("code") || allText.includes("developer") || allText.includes("engineer")) {
-    primaryNiche = "tech";
-    saasRelevance = 3;
-  } else if (allText.includes("discipline") || allText.includes("mindset") || allText.includes("focus")) {
-    primaryNiche = "mindset";
-    saasRelevance = 2;
-    mmaRelevance = 2;
+  // SaaS indicators
+  if (allText.match(/\b(saas|startup|founder|build|ship|launch|product|mrr|arr|revenue|growth|users|scale)\b/g)) {
+    saasScore = (allText.match(/\b(saas|startup|founder|build|ship|launch|product|mrr|arr|revenue|growth|users|scale)\b/g) || []).length;
+  }
+  
+  // MMA indicators
+  if (allText.match(/\b(mma|ufc|fighter|fight|boxing|combat|martial arts|octagon|bout|knockout|submission)\b/g)) {
+    mmaScore = (allText.match(/\b(mma|ufc|fighter|fight|boxing|combat|martial arts|octagon|bout|knockout|submission)\b/g) || []).length;
+  }
+  
+  // Tech indicators
+  if (allText.match(/\b(code|developer|engineer|programming|software|api|framework|devops|architecture)\b/g)) {
+    techScore = (allText.match(/\b(code|developer|engineer|programming|software|api|framework|devops|architecture)\b/g) || []).length;
+  }
+  
+  // Mindset indicators (NEW - much broader!)
+  if (allText.match(/\b(mindset|discipline|focus|mental|growth|comfort zone|fear|doubt|excuse|motivation|success|goal|habit|routine|consistency|resilience|determination|philosophy|wisdom|perspective|believe|think|improve|challenge|overcome)\b/g)) {
+    mindsetScore = (allText.match(/\b(mindset|discipline|focus|mental|growth|comfort zone|fear|doubt|excuse|motivation|success|goal|habit|routine|consistency|resilience|determination|philosophy|wisdom|perspective|believe|think|improve|challenge|overcome)\b/g) || []).length;
+  }
+  
+  // Finance indicators
+  if (allText.match(/\b(invest|trading|stocks|crypto|wealth|money|finance|portfolio)\b/g)) {
+    financeScore = (allText.match(/\b(invest|trading|stocks|crypto|wealth|money|finance|portfolio)\b/g) || []).length;
+  }
+  
+  // Determine primary niche
+  const scores = [
+    { niche: "saas", score: saasScore },
+    { niche: "mma", score: mmaScore },
+    { niche: "tech", score: techScore },
+    { niche: "mindset", score: mindsetScore },
+    { niche: "finance", score: financeScore },
+  ];
+  
+  scores.sort((a, b) => b.score - a.score);
+  
+  const primaryNiche = scores[0].score > 0 ? scores[0].niche : "other";
+  
+  console.log(`   Niche scores: SaaS=${saasScore}, MMA=${mmaScore}, Tech=${techScore}, Mindset=${mindsetScore}, Finance=${financeScore}`);
+  console.log(`   → Primary niche: ${primaryNiche}`);
+  
+  // Determine crossover potential (0-5 scale)
+  const saasRelevance = Math.min(5, Math.round(saasScore / 2));
+  const mmaRelevance = Math.min(5, Math.round(mmaScore / 2));
+  const disciplineTopics = Math.min(5, Math.round((mindsetScore + mmaScore) / 3));
+  const philosophyTopics = Math.min(5, Math.round(mindsetScore / 2));
+  
+  // Determine optimal mode
+  let optimalMode: string;
+  if (primaryNiche === "saas") {
+    optimalMode = "pure_saas";
+  } else if (primaryNiche === "mma") {
+    optimalMode = "pure_mma";
+  } else if (primaryNiche === "mindset") {
+    // Mindset content can use crossover if there's ANY SaaS or MMA relevance
+    optimalMode = saasRelevance >= 2 || mmaRelevance >= 2 ? "mindset_crossover" : "storytelling";
+  } else if (primaryNiche === "tech") {
+    optimalMode = "technical";
+  } else {
+    // For "other" or low-confidence, use storytelling (most flexible)
+    optimalMode = "storytelling";
   }
   
   return {
     primaryNiche,
-    secondaryNiches: [],
-    audienceInterests: ["entrepreneurship", "personal development"],
+    secondaryNiches: scores.filter(s => s.score > 0 && s.niche !== primaryNiche).map(s => s.niche),
+    audienceInterests: primaryNiche === "mindset" ? ["personal growth", "discipline", "success"] : ["entrepreneurship", "innovation"],
     audienceIrrelevantTopics: [],
     crossoverPotential: {
       mmaRelevance,
       saasRelevance,
-      disciplineTopics: 2,
-      philosophyTopics: 2,
+      disciplineTopics,
+      philosophyTopics,
     },
-    optimalReplyMode: saasRelevance >= mmaRelevance ? "pure_saas" : "pure_mma",
-    respondsTo: ["thoughtful questions", "insights"],
-    preferredTone: "direct",
+    optimalReplyMode: optimalMode,
+    respondsTo: ["thoughtful questions", "insights", "personal experiences"],
+    preferredTone: primaryNiche === "mindset" ? "inspirational" : "direct",
     avoidTopics: [],
-    emphasizeTopics: ["growth", "building"],
+    emphasizeTopics: primaryNiche === "mindset" ? ["growth", "discipline", "mindset"] : ["growth", "building"],
   };
 }
 
