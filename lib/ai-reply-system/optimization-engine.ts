@@ -24,7 +24,7 @@ export async function generateOptimizedReplies(
   console.log(`📝 Post: "${tweet.text.substring(0, 100)}${tweet.text.length > 100 ? "..." : ""}"`);
 
   // 1. Select optimal mode
-  const mode = selectOptimalMode(creator, tweet, userProfile);
+  const mode = selectOptimalMode(creator, tweet);
   
   // 2. Build full context
   const context: FullContext = {
@@ -42,7 +42,7 @@ export async function generateOptimizedReplies(
   for (let i = 0; i < 3; i++) {
     console.log(`\n💫 Generating reply option #${i + 1}...`);
     
-    const result = await optimizeSingleReply(context, i);
+    const result = await optimizeSingleReply(context);
     
     if (result) {
       replies.push(result.reply);
@@ -75,8 +75,7 @@ export async function generateOptimizedReplies(
 }
 
 async function optimizeSingleReply(
-  context: FullContext,
-  _replyIndex: number
+  context: FullContext
 ): Promise<{ reply: ScoredReply; iterations: number } | null> {
   
   const MAX_ITERATIONS = 10;

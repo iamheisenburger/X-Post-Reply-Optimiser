@@ -31,7 +31,7 @@ export async function buildCreatorIntelligence(
     followerCount: profile.followers_count,
     verified: profile.verified || false,
     
-    primaryNiche: analysis.primaryNiche,
+    primaryNiche: analysis.primaryNiche as "saas" | "mma" | "tech" | "finance" | "mindset" | "other",
     secondaryNiches: analysis.secondaryNiches || [],
     
     audience: {
@@ -63,11 +63,11 @@ export async function buildCreatorIntelligence(
     },
     
     optimalReplyStrategy: {
-      mode: analysis.optimalReplyMode,
+      mode: analysis.optimalReplyMode as "pure_saas" | "pure_mma" | "mindset_crossover" | "technical" | "storytelling",
       avoidTopics: analysis.avoidTopics || [],
       emphasizeTopics: analysis.emphasizeTopics || [],
       toneMatch: analysis.preferredTone || "direct",
-      questionStyle: inferQuestionStyle(analysis.respondsTo),
+      questionStyle: inferQuestionStyle(analysis.respondsTo || []),
     },
     
     lastUpdated: Date.now(),

@@ -4,8 +4,7 @@ import type { ReplyMode, CreatorIntelligence, TweetData, UserProfile } from "./t
 
 export function selectOptimalMode(
   creator: CreatorIntelligence,
-  post: TweetData,
-  _userProfile: UserProfile
+  post: TweetData
 ): ReplyMode {
   console.log(`🎯 Selecting optimal mode for @${creator.username}...`);
 
