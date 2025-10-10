@@ -127,23 +127,45 @@ export const twitterApi = {
       }
       
       const data = await response.json();
-      console.log(`Tweet data structure:`, JSON.stringify(data).substring(0, 200));
+      console.log(`Tweet data structure:`, JSON.stringify(data).substring(0, 500));
       
-      // TwitterAPI.io returns array in data.data for multiple tweets
-      const tweets = data.data || data;
-      const tweet = Array.isArray(tweets) ? tweets[0] : tweets;
+      // TwitterAPI.io returns the tweet directly or in data property
+      const tweet = data.data || data;
       
       if (!tweet) {
         console.error(`No tweet found in response for ID ${tweetId}`);
         return null;
       }
-      
-      // Author might be in includes.users or directly in tweet
-      const author = data.includes?.users?.[0] || data.author || data.user || tweet.author || tweet.user;
 
-      if (!tweet) {
-        console.error(`Tweet data missing for ${tweetId}`);
-        return null;
+      console.log(`Tweet object keys:`, Object.keys(tweet));
+      console.log(`Tweet author data:`, JSON.stringify(tweet.author || tweet.user || tweet.author_id || 'NO AUTHOR'));
+      
+      // Try multiple ways to get author data
+      let author = null;
+      
+      // Option 1: Author embedded in tweet
+      if (tweet.author || tweet.user) {
+        author = tweet.author || tweet.user;
+        console.log(`Author found in tweet object`);
+      }
+      // Option 2: Author in includes
+      else if (data.includes?.users?.[0]) {
+        author = data.includes.users[0];
+        console.log(`Author found in includes.users`);
+      }
+      // Option 3: Fetch author separately by author_id or user_id
+      else if (tweet.author_id || tweet.user_id) {
+        const authorId = tweet.author_id || tweet.user_id;
+        console.log(`Need to fetch author separately for ID: ${authorId}`);
+        // For now, create minimal author object
+        author = {
+          id: authorId,
+          username: "unknown",
+          name: "Unknown User",
+          description: "",
+          followers_count: 0,
+          following_count: 0,
+        };
       }
 
       // Fetch author data separately if not included
@@ -153,24 +175,23 @@ export const twitterApi = {
         console.log(`Fetching author data for user ID: ${tweet.author_id}`);
       }
 
+      if (!author) {
+        console.error(`Could not find author data in response`);
+        return null;
+      }
+
+      console.log(`Successfully extracted author: @${author.username || author.screen_name || 'unknown'}`);
+
       return {
         ...tweet,
-        author: authorData ? {
-          id: authorData.id || authorData.user_id || "",
-          username: authorData.username || authorData.screen_name || "",
-          name: authorData.name || authorData.display_name || "",
-          description: authorData.description || authorData.bio || "",
-          followers_count: authorData.followers_count || authorData.public_metrics?.followers_count || 0,
-          following_count: authorData.following_count || authorData.public_metrics?.following_count || 0,
-          verified: authorData.verified || false,
-        } : {
-          id: "",
-          username: "unknown",
-          name: "Unknown User",
-          description: "",
-          followers_count: 0,
-          following_count: 0,
-          verified: false,
+        author: {
+          id: author.id || author.user_id || tweet.author_id || "",
+          username: author.username || author.screen_name || "unknown",
+          name: author.name || author.display_name || "Unknown User",
+          description: author.description || author.bio || "",
+          followers_count: author.followers_count || author.public_metrics?.followers_count || 0,
+          following_count: author.following_count || author.public_metrics?.following_count || 0,
+          verified: author.verified || false,
         },
         hasMedia: !!(tweet.entities?.urls?.length || tweet.attachments || tweet.media),
         isThread: tweet.conversation_id && tweet.conversation_id !== tweet.id,
