@@ -53,10 +53,28 @@ export async function generateWithOpenAI(
   return data.choices[0].message.content;
 }
 
+interface CreatorAnalysis {
+  primaryNiche: string;
+  secondaryNiches: string[];
+  audienceInterests: string[];
+  audienceIrrelevantTopics: string[];
+  crossoverPotential: {
+    mmaRelevance: number;
+    saasRelevance: number;
+    disciplineTopics: number;
+    philosophyTopics: number;
+  };
+  optimalReplyMode: string;
+  respondsTo: string[];
+  preferredTone: string;
+  avoidTopics: string[];
+  emphasizeTopics: string[];
+}
+
 export async function analyzeCreatorProfile(
   bio: string,
   recentTweets: string[]
-): Promise<any> {
+): Promise<CreatorAnalysis> {
   const prompt = `Analyze this X creator's profile and recent tweets.
 
 Profile Bio: ${bio}

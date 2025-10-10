@@ -76,7 +76,7 @@ export async function generateOptimizedReplies(
 
 async function optimizeSingleReply(
   context: FullContext,
-  replyIndex: number
+  _replyIndex: number
 ): Promise<{ reply: ScoredReply; iterations: number } | null> {
   
   const MAX_ITERATIONS = 10;
@@ -301,4 +301,5 @@ function validateModeCompliance(
 
   return { passed: true };
 }
+
 

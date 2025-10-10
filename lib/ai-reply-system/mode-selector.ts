@@ -5,7 +5,7 @@ import type { ReplyMode, CreatorIntelligence, TweetData, UserProfile } from "./t
 export function selectOptimalMode(
   creator: CreatorIntelligence,
   post: TweetData,
-  userProfile: UserProfile
+  _userProfile: UserProfile
 ): ReplyMode {
   console.log(`🎯 Selecting optimal mode for @${creator.username}...`);
 
@@ -186,4 +186,5 @@ Generate a reply that shares relevant personal experience briefly and authentica
 
   return prompts[mode];
 }
+
 

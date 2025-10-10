@@ -1,6 +1,6 @@
 // Creator Intelligence Builder - Deep profile analysis
 
-import type { CreatorIntelligence, TweetData } from "./types";
+import type { CreatorIntelligence } from "./types";
 import { twitterApi } from "../twitter-api";
 import { analyzeCreatorProfile } from "../openai-client";
 
