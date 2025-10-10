@@ -56,10 +56,10 @@ export async function buildCreatorIntelligence(
     },
     
     crossoverPotential: {
-      mmaRelevance: analysis.crossoverPotential.mmaRelevance,
-      saasRelevance: analysis.crossoverPotential.saasRelevance,
-      disciplineTopics: analysis.crossoverPotential.disciplineTopics,
-      philosophyTopics: analysis.crossoverPotential.philosophyTopics,
+      mmaRelevance: analysis.crossoverPotential.mmaRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+      saasRelevance: analysis.crossoverPotential.saasRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+      disciplineTopics: analysis.crossoverPotential.disciplineTopics as 0 | 1 | 2 | 3 | 4 | 5,
+      philosophyTopics: analysis.crossoverPotential.philosophyTopics as 0 | 1 | 2 | 3 | 4 | 5,
     },
     
     optimalReplyStrategy: {
