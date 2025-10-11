@@ -222,24 +222,25 @@ export default function AIReplyPage() {
                     <div className="bg-muted p-4 rounded-lg font-mono text-sm whitespace-pre-wrap">
                       {reply.text}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => copyToClipboard(reply.text, index)}
-                    >
-                      {copiedIndex === index ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-1" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
+                    <div className="mt-2 md:mt-0 md:absolute md:top-2 md:right-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(reply.text, index)}
+                      >
+                        {copiedIndex === index ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Score Breakdown */}

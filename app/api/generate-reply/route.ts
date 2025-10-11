@@ -143,10 +143,19 @@ export async function POST(request: NextRequest) {
 
     // 6. Transform for frontend
     const MAX_TOTAL_SCORE = 300; // Normalization cap for 0-100 UI score
+    const classifyMode = (text: string, f: { hasQuestion: boolean; hasPushback: boolean; hasSpecificData: boolean; }) => {
+      if (f.hasPushback) return "contrarian";
+      if (f.hasQuestion) return "question";
+      if (/\b(I agree|good point|so true|exactly)\b/i.test(text)) return "agreement";
+      return "add_value";
+    };
+
     const transformedReplies = replies.map((reply, idx) => {
       const sb = reply.prediction.scoreBreakdown;
       const total = Math.max(1, (sb.authorReply || 0) + (sb.replies || 0) + (sb.likes || 0) + (sb.profileClicks || 0) + (sb.recencyBonus || 0));
-      const normalizedScore = Math.max(0, Math.min(100, Math.round(((reply.prediction.totalScore || 0) / MAX_TOTAL_SCORE) * 100)));
+      // Derive score from the same visible components to avoid 0 values and keep consistent with breakdown
+      const rawForUi = (sb.authorReply || 0) + (sb.replies || 0) + (sb.profileClicks || 0) + (sb.likes || 0) + (sb.recencyBonus || 0);
+      const normalizedScore = Math.max(1, Math.min(100, Math.round((rawForUi / MAX_TOTAL_SCORE) * 100)));
 
       return {
         text: reply.text,
@@ -158,7 +167,7 @@ export async function POST(request: NextRequest) {
           conversationDepth: Math.round(((sb.replies || 0) / total) * 100),
           authorReputation: Math.round(((sb.profileClicks || 0) / total) * 100),
         },
-        mode: "algorithm_optimized",
+        mode: classifyMode(reply.text, reply.features),
         iteration: idx + 1,
         reasoning: [reply.reasoning],
         features: {
