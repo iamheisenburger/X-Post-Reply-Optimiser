@@ -21,6 +21,12 @@ interface ScoredReply {
   mode: string;
   iteration: number;
   reasoning: string[];
+  features: {
+    hasQuestion: boolean;
+    hasPushback: boolean;
+    hasData: boolean;
+    authorReplyProb: number;
+  };
 }
 
 interface OptimizationResult {
