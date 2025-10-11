@@ -72,13 +72,23 @@ export function validateSpecificity(reply: string): SpecificityCheck {
   
   // === CHECK 2: Look for concrete elements ===
   
-  // 1. Numbers/Metrics (with context)
-  const hasNumbers = /\b\d+[KMB]?\s*(MRR|ARR|users?|followers?|%|x|times?|days?|weeks?|months?|customers?|revenue)\b/i.test(reply);
+  // Detect if this is a QUESTION-based reply (honest curiosity strategy)
+  const isQuestion = reply.trim().endsWith('?') || reply.includes('?');
+  
+  // 1. Numbers/Metrics (with context) - MORE GENEROUS for questions with ratios
+  const hasRatios = /\b\d+%\s+(to|vs|versus|and)\s+\d+%/i.test(reply) || // "60% to 40%", "70% vs 30%"
+                    /\b\d+\s+(to|vs|versus|and)\s+\d+/i.test(reply);   // "10 to 2", "5 vs 3"
+  const hasMetrics = /\b\d+[KMB]?\s*(MRR|ARR|users?|followers?|%|x|times?|days?|weeks?|months?|customers?|revenue)\b/i.test(reply);
+  const hasNumbers = hasRatios || hasMetrics;
+  
   if (hasNumbers) {
     score += 20;
+    if (hasRatios && isQuestion) {
+      score += 10; // Bonus for ratio-based questions (honest strategy)
+    }
   } else {
     issues.push(`❌ No specific numbers or metrics`);
-    suggestions.push(`   → Add: "at 5K MRR" or "50 users" or "3x improvement" or "40%"`);
+    suggestions.push(`   → Add: "60% to 40%" or "10 to 2" or "at 5K MRR" or "3x improvement"`);
   }
   
   // 2. Timeframes
@@ -134,8 +144,14 @@ export function validateSpecificity(reply: string): SpecificityCheck {
   }
   
   // === PASS/FAIL LOGIC ===
-  // Must have: no vague phrases OR at least 2 concrete elements + score >= 70
-  const passed = (vagueCount === 0 || concreteCount >= 2) && score >= 70;
+  // HONEST QUESTIONS get special treatment:
+  // - If it's a question with ratios + any other element (timeframe/scenario/verbs), that's specific enough
+  // - Otherwise: no vague phrases OR at least 2 concrete elements + score >= 70
+  
+  const isQuestionWithRatios = isQuestion && hasRatios;
+  const passed = isQuestionWithRatios 
+    ? (concreteCount >= 2 && score >= 60) // More lenient for honest questions with ratios
+    : (vagueCount === 0 || concreteCount >= 2) && score >= 70;
   
   if (passed) {
     suggestions.push(`✅ Reply has good specificity - ${concreteCount}/4 concrete elements`);
