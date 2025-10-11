@@ -15,6 +15,7 @@ import { generateReply } from "../openai-client";
 import { selectOptimalMode, getModePrompt } from "./mode-selector";
 import { evaluateCheckpoints } from "./quality-checkpoints";
 import { validateSpecificity } from "./specificity-validator";
+import { extractKeywords, validateKeywordUsage, type KeywordExtractionResult } from "./keyword-extractor";
 
 export async function generateOptimizedReplies(
   tweet: TweetData,
@@ -24,15 +25,24 @@ export async function generateOptimizedReplies(
   console.log(`\n🚀 Starting optimization engine for @${creator.username}'s post`);
   console.log(`📝 Post: "${tweet.text.substring(0, 100)}${tweet.text.length > 100 ? "..." : ""}"`);
 
-  // 1. Select optimal mode
+  // 1. Extract keywords from the original tweet for content relevance
+  const keywords = extractKeywords(tweet.text);
+  console.log(`\n🔑 Extracted keywords:`);
+  console.log(`   Primary: ${keywords.primaryKeywords.join(", ")}`);
+  if (keywords.emotionalWords.length > 0) {
+    console.log(`   Emotional: ${keywords.emotionalWords.join(", ")}`);
+  }
+
+  // 2. Select optimal mode
   const mode = selectOptimalMode(creator, tweet);
   
-  // 2. Build full context
+  // 3. Build full context
   const context: FullContext = {
     userProfile,
     creator,
     post: tweet,
-    mode
+    mode,
+    keywords  // NEW: Pass keywords to the context
   };
 
   // 3. Generate 3 optimized replies
@@ -91,7 +101,8 @@ async function optimizeSingleReply(
     context.mode,
     context.creator,
     context.post,
-    context.userProfile
+    context.userProfile,
+    context.keywords
   );
 
   while (iteration < MAX_ITERATIONS && bestScore < TARGET_SCORE) {
@@ -155,6 +166,42 @@ async function optimizeSingleReply(
         .map(([k]) => k.replace('has', '').replace(/([A-Z])/g, ' $1').trim().toLowerCase())
         .join(", ");
       console.log(`      Concrete elements: ${concreteElements}`);
+
+      // STEP 0.5: Check keyword usage (critical for content relevance)
+      if (context.keywords) {
+        const keywordCheck = validateKeywordUsage(candidate, context.keywords);
+        console.log(`   🔑 Keyword usage: ${keywordCheck.score}/100 (${keywordCheck.usedKeywords.length}/${context.keywords.primaryKeywords.length} keywords)`);
+        
+        if (!keywordCheck.passed) {
+          console.log(`   ❌ Keyword check failed - not using enough exact keywords from tweet`);
+          console.log(`      Missing: ${keywordCheck.missingKeywords.slice(0, 5).join(", ")}`);
+          
+          previousAttempt = candidate;
+          feedback = [
+            "🚨 KEYWORD FAILURE - Not using enough EXACT keywords from the original tweet",
+            "",
+            "❌ THE PROBLEM:",
+            "The X algorithm scores keyword matches. If tweet says 'yourself', you MUST use 'yourself', NOT 'self-talk'.",
+            "",
+            `📊 KEYWORD USAGE: ${keywordCheck.usedKeywords.length}/${context.keywords.primaryKeywords.length} keywords used`,
+            "",
+            "✅ KEYWORDS YOU USED:",
+            keywordCheck.usedKeywords.length > 0 ? keywordCheck.usedKeywords.join(", ") : "None",
+            "",
+            "❌ CRITICAL MISSING KEYWORDS (use these EXACT words!):",
+            ...keywordCheck.missingKeywords.slice(0, 5).map(k => `   "${k}"`),
+            "",
+            "🎯 REQUIRED FIX:",
+            `Rewrite your reply to include at least 3-4 of these EXACT keywords: ${context.keywords.primaryKeywords.slice(0, 6).map(k => `"${k}"`).join(", ")}`,
+            "",
+            "Example structure:",
+            `"When you mention [KEYWORD] - [thoughtful question]? Does [KEYWORD] work better when [specific scenario with numbers]?"`,
+            "",
+            "⚠️  DO NOT USE SYNONYMS. Use their EXACT words."
+          ].join("\n");
+          continue;
+        }
+      }
 
       // STEP 1: Validate mode compliance
       const modeValidation = validateModeCompliance(candidate, context.mode, context.creator);

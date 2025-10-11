@@ -112,6 +112,7 @@ export interface FullContext {
   creator: CreatorIntelligence;
   post: TweetData;
   mode: ReplyMode;
+  keywords?: import("./keyword-extractor").KeywordExtractionResult;
 }
 
 export interface ScoredReply {

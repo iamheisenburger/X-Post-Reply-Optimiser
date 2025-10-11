@@ -2,6 +2,7 @@
 
 import type { ReplyMode, CreatorIntelligence, TweetData, UserProfile } from "./types";
 import { getExamplesByNiche } from "./example-library";
+import type { KeywordExtractionResult } from "./keyword-extractor";
 
 export function selectOptimalMode(
   creator: CreatorIntelligence,
@@ -79,15 +80,17 @@ export function getModePrompt(
   mode: ReplyMode,
   creator: CreatorIntelligence,
   post: TweetData,
-  userProfile: UserProfile
+  userProfile: UserProfile,
+  keywords?: KeywordExtractionResult
 ): string {
-  // Get 5 real examples for this niche (few-shot learning)
+  // Get 5 real HONEST examples for this niche (few-shot learning)
   const examples = getExamplesByNiche(creator.primaryNiche, 5);
   
   // Format examples for prompt
   const examplesSection = examples.map((ex, i) => `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REAL EXAMPLE ${i + 1} (Score: ${ex.score}/100${ex.gotAuthorReply ? ', Got Author Reply ✅' : ''})
+Strategy: ${ex.strategy}
 
 Original Tweet:
 "${ex.tweet}"
@@ -100,6 +103,18 @@ ${ex.why}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   `).join("\n");
   
+  // Build keywords section for content relevance
+  const keywordsSection = keywords ? `
+🔑 CRITICAL KEYWORDS (MUST use these exact words for high content relevance):
+
+Primary Keywords: ${keywords.primaryKeywords.map(k => `"${k}"`).join(", ")}
+${keywords.emotionalWords.length > 0 ? `Emotional Words: ${keywords.emotionalWords.map(k => `"${k}"`).join(", ")}` : ''}
+${keywords.actionVerbs.length > 0 ? `Action Verbs: ${keywords.actionVerbs.map(k => `"${k}"`).join(", ")}` : ''}
+
+⚠️  You MUST use at least 3-4 of these EXACT keywords in your reply. The X algorithm scores keyword matches, not synonyms.
+Example: If tweet says "yourself" → use "yourself", NOT "self-talk" or "inner dialogue"
+` : '';
+  
   const baseContext = `
 Creator: @${creator.username}
 Their niche: ${creator.primaryNiche}
@@ -111,39 +126,47 @@ Post: "${post.text}"
     pure_saas: `
 You are @${userProfile.handle}, a SaaS builder focused on ${userProfile.currentProject}.
 
-🎯 YOUR GOAL: Generate a 90%+ reply by learning from REAL examples below.
+🎯 YOUR GOAL: Generate an HONEST 90%+ reply using exact keywords from their tweet.
 
-=== 5 REAL HIGH-PERFORMING REPLIES (Study These!) ===
+${keywordsSection}
+
+=== 5 REAL HIGH-PERFORMING HONEST REPLIES (Study These!) ===
 
 ${examplesSection}
 
 === 🔑 KEY PATTERN (From Examples Above) ===
 
-All 90%+ replies share:
-1. CONCRETE DETAILS: Specific numbers ("5K MRR", "3x"), timeframes ("last month", "3 weeks"), scenarios ("At [Company]", "When we built X")
-2. MEASURABLE RESULTS: "40% faster", "50 users in 2 weeks", "2.3x better conversion"
-3. TECHNICAL SPECIFICITY: Actual tools/techniques ("Redis cache", "circuit breakers", "automated testing gates")
-4. ONE FOCUSED QUESTION: Specific to their context, not generic
+All 90%+ replies are HONEST and use these strategies:
+1. **Thoughtful Specific Question**: Ask about ratios, thresholds, edge cases with NUMBERS
+   Example: "Is 10 services with 90 calls worse than 20 services with 40 calls?"
+   
+2. **Explore Tradeoffs**: Question the balance between competing factors
+   Example: "What's more costly - slow reviews causing context switching or fast reviews missing bugs?"
+   
+3. **Edge Case Curiosity**: Ask what happens at boundaries/extremes
+   Example: "Is there a read:write ratio where indexes flip from helping to hurting?"
 
-AVOID:
-❌ "I've found that..." (too vague)
-❌ "In my experience..." (needs specific context)
-❌ "Great point!" (no filler praise)
-❌ Multiple questions
+4. **Use EXACT Keywords**: If tweet says "microservices" → use "microservices", not "distributed systems"
+
+AVOID COMPLETELY:
+❌ Fake personal stories ("At 5K MRR we..." if you're not at 5K MRR)
+❌ Fabricated experiences ("Last month I..." if it didn't happen)
+❌ Generic praise ("Great point!")
+❌ Synonyms for their keywords (use their EXACT words)
 
 === YOUR TASK ===
 
-Creator: @${creator.username} (${creator.primaryNiche})
-Tweet: "${post.text}"
-Audience cares about: ${creator.audience.demographics.primaryInterests.join(", ")}
+${baseContext}
 
-Generate ONE reply that matches the SPECIFICITY and CONCRETENESS of the examples above.
-- 35-55 words
-- Include at least 2 concrete elements (numbers, timeframe, specific scenario, action verbs)
-- End with ONE specific question
-- Model your reply on the examples' level of detail
+Generate ONE HONEST reply that:
+1. Uses 3-4 of the EXACT keywords from above (not synonyms!)
+2. Asks a thoughtful specific question with NUMBERS/SPECIFICS
+3. Shows analytical thinking about tradeoffs/thresholds/edge cases
+4. Is 35-55 words
+5. NO FAKE SCENARIOS - only honest curiosity
 
-CRITICAL: Your reply should be as specific as the examples. If it could apply to any tweet, it's too generic.
+EXAMPLE FORMAT:
+"When you mention [EXACT KEYWORD] - [thoughtful question with specific numbers/ratios/thresholds]? [Follow-up exploring edge case or tradeoff]?"
     `,
 
     pure_mma: `
@@ -170,40 +193,49 @@ Generate a reply that:
     mindset_crossover: `
 You are @${userProfile.handle}, bridging high-performance concepts across domains.
 
-🎯 YOUR GOAL: Generate a 90%+ reply by learning from REAL examples below.
+🎯 YOUR GOAL: Generate an HONEST 90%+ reply using exact keywords from their tweet.
 
-=== 5 REAL HIGH-PERFORMING REPLIES (Study These!) ===
+${keywordsSection}
+
+=== 5 REAL HIGH-PERFORMING HONEST REPLIES (Study These!) ===
 
 ${examplesSection}
 
 === 🔑 KEY PATTERN (From Examples Above) ===
 
-All 90%+ replies share:
-1. CONCRETE PERSONAL EXPERIENCES: Specific experiments ("tracked for 30 days", "tested over 3 years"), actual numbers ("68% negative", "5-year portfolio")
-2. MEASURABLE TRANSFORMATIONS: "output doubled", "decision time cut 70%", "mental clarity 10x better"
-3. SPECIFIC TECHNIQUES: Actual practices ("'yet' reframes", "courage compass", "evidence journals"), not generic advice
-4. ONE FOCUSED QUESTION: About their specific practice/framework, not generic "any tips?"
+All 90%+ replies are HONEST and use these strategies:
+1. **Ratio/Threshold Questions**: Ask about quantities with SPECIFIC NUMBERS
+   Example: "Does the ratio of hope to doubt matter more than absolute quantity? Like 10 hopeful + 2 doubts vs 3 hopeful + 0 doubts?"
+   
+2. **Implementation Curiosity**: Ask HOW to apply the concept
+   Example: "Is it better to think of future self as 1 year away, 5 years, or 10 years for daily decisions?"
+   
+3. **Boundary Exploration**: What happens at extremes or edge cases?
+   Example: "Is there a frequency threshold where consistency flips? Like 30min daily vs 1hr every 2 days?"
 
-AVOID:
-❌ "I've found that..." (needs specifics: when? what exactly?)
-❌ "This resonates" (no filler - jump to your experience)
-❌ "Great point!" (never start with praise)
-❌ Multiple questions
+4. **Use EXACT Keywords**: If tweet says "mind" and "courage" → use those exact words, not "brain" and "bravery"
+
+AVOID COMPLETELY:
+❌ Fake personal experiences ("I tracked for 30 days..." if you didn't)
+❌ Fabricated transformations ("My output doubled..." if it didn't)
+❌ Generic statements ("This resonates")
+❌ Synonyms for their keywords (use their EXACT words)
 
 === YOUR TASK ===
 
 Creator: @${creator.username} (${creator.primaryNiche})
 Tweet: "${post.text}"
 Audience cares about: ${creator.audience.demographics.primaryInterests.join(", ")}
-Sophistication: ${creator.audience.demographics.sophisticationLevel}
 
-Generate ONE reply that matches the SPECIFICITY and CONCRETENESS of the examples above.
-- 35-55 words
-- Include at least 2 concrete elements (numbers, timeframe, specific practice/framework, measurable results)
-- End with ONE specific question about their approach/framework
-- Model your reply on the examples' level of detail
+Generate ONE HONEST reply that:
+1. Uses 3-4 of the EXACT keywords from above (not synonyms!)
+2. Asks a thoughtful question with SPECIFIC NUMBERS/RATIOS/TIMEFRAMES
+3. Explores practical implementation or boundary conditions
+4. Is 35-55 words
+5. NO FAKE EXPERIENCES - only honest curiosity and analytical thinking
 
-CRITICAL: Your reply should be as specific as the examples. If it could apply to any mindset tweet, it's too generic.
+EXAMPLE FORMAT:
+"When you say [EXACT KEYWORD] - [question with specific numbers/ratios]? [Follow-up about implementation or edge case]?"
     `,
 
     technical: `
