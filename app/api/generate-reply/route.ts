@@ -153,10 +153,11 @@ export async function POST(request: NextRequest) {
       const p = reply.prediction;
       
       // Show probability/likelihood scores (0-100) for each signal - these are interpretable
-      const authorReplyChance = Math.round(p.authorReplyProb * 100); // Direct probability (0-100%)
-      const conversationLikelihood = Math.min(100, Math.round((p.repliesExpected / 10) * 100)); // Normalized expected replies
-      const profileClickChance = Math.min(100, Math.round((p.profileClicksExpected / 10) * 100)); // Normalized expected clicks
-      const recencyBoost = minutesSincePosted <= 5 ? 100 : Math.max(0, Math.round((1 - minutesSincePosted / 60) * 100));
+      // CRITICAL: Guard all calculations to prevent NaN/undefined breaking frontend .toFixed()
+      const authorReplyChance = Math.round((p.authorReplyProb || 0) * 100); // Direct probability (0-100%)
+      const conversationLikelihood = Math.min(100, Math.round(((p.repliesExpected || 0) / 10) * 100)); // Normalized expected replies
+      const profileClickChance = Math.min(100, Math.round(((p.profileClicksExpected || 0) / 10) * 100)); // Normalized expected clicks
+      const recencyBoost = minutesSincePosted <= 5 ? 100 : Math.max(0, Math.round((1 - (minutesSincePosted || 0) / 60) * 100));
       
       // Overall score: weighted combination emphasizing author reply (most valuable per X algorithm)
       const overallScore = Math.max(1, Math.min(100, Math.round(
@@ -168,13 +169,13 @@ export async function POST(request: NextRequest) {
 
       return {
         text: reply.text,
-        score: overallScore,
+        score: Number(overallScore) || 0,
         breakdown: {
-          engagement: authorReplyChance,        // Likelihood author responds (0-100%)
-          recency: recencyBoost,                // Recency advantage (0-100)
-          mediaPresence: 0,                     // Reserved for future media detection
-          conversationDepth: conversationLikelihood, // Likelihood of sparking replies (0-100)
-          authorReputation: profileClickChance, // Likelihood of profile click (0-100)
+          engagement: Number(authorReplyChance) || 0,        // Likelihood author responds (0-100%)
+          recency: Number(recencyBoost) || 0,                // Recency advantage (0-100)
+          mediaPresence: 0,                                  // Reserved for future media detection
+          conversationDepth: Number(conversationLikelihood) || 0, // Likelihood of sparking replies (0-100)
+          authorReputation: Number(profileClickChance) || 0, // Likelihood of profile click (0-100)
         },
         mode: classifyMode(reply.text, reply.features),
         iteration: idx + 1,
