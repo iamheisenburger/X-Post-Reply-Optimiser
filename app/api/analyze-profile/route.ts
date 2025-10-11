@@ -29,11 +29,24 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Fetched @${userInfo.username}: ${userInfo.followers_count.toLocaleString()} followers`);
 
-    // 2. AI analyzes the profile (bio only - no timeline needed)
-    console.log(`🤖 Running AI analysis...`);
+    // 2. Fetch user's recent tweets for better analysis
+    console.log(`📥 Fetching recent tweets...`);
+    const recentTweets = await twitterApi.getUserTweets(userInfo.id, 15);
+    console.log(`✅ Fetched ${recentTweets.length} tweets`);
+
+    // Extract just the text from tweets
+    const tweetTexts = recentTweets.map(t => t.text);
+
+    // 3. AI analyzes the profile with FULL context
+    if (tweetTexts.length > 0) {
+      console.log(`🤖 Running AI analysis with ${tweetTexts.length} tweets (RICH ANALYSIS)...`);
+    } else {
+      console.log(`⚠️ No tweets available - analyzing bio only (BASIC ANALYSIS)...`);
+    }
+    
     const analysis = await analyzeCreatorProfile(
       userInfo.description,
-      [] // No tweets needed - bio is enough
+      tweetTexts // Pass tweets if available, empty array if not
     );
 
     console.log(`✅ Analysis complete: ${analysis.primaryNiche} niche`);
@@ -69,7 +82,7 @@ export async function POST(request: NextRequest) {
       questionStyle: "open_ended",
       
       lastUpdated: Date.now(),
-      tweetAnalysisCount: 0, // Bio-based analysis
+      tweetAnalysisCount: tweetTexts.length, // Number of tweets analyzed
     });
 
     console.log(`💾 Profile saved to database`);
