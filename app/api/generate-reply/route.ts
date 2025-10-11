@@ -3,6 +3,8 @@ import { twitterApi } from "@/lib/twitter-api";
 import { buildCreatorIntelligence, extractTweetId } from "@/lib/ai-reply-system/creator-intelligence";
 import { generateOptimizedReplies } from "@/lib/ai-reply-system/optimization-engine";
 import { MADMANHAKIM_PROFILE } from "@/lib/ai-reply-system";
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 export async function POST(request: NextRequest) {
   try {
