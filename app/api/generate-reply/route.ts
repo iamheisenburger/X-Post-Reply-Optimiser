@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🧠 Built intelligence: ${creatorIntelligence.primaryNiche} niche, ${creatorIntelligence.engagementStyle} style`);
+    console.log(`🧠 Built intelligence: ${creatorIntelligence.primaryNiche} niche, ${creatorIntelligence.optimalReplyStrategy.mode} mode`);
 
     // 4. Calculate time since tweet posted (for recency boost)
     const tweetDate = new Date(tweet.created_at);

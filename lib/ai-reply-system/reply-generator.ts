@@ -124,6 +124,8 @@ function buildOptimizationPrompt(context: ReplyGenerationContext): string {
     : "No specific engagement patterns available";
 
   const audienceLevel = creatorProfile.audience?.demographics?.sophisticationLevel || "mixed";
+  const preferredTone = creatorProfile.audience?.engagementPatterns?.preferredTone || creatorProfile.optimalReplyStrategy.toneMatch;
+  const replyMode = creatorProfile.optimalReplyStrategy.mode;
   
   return `Generate 3 DIFFERENT high-engagement replies to this tweet:
 
@@ -132,18 +134,20 @@ function buildOptimizationPrompt(context: ReplyGenerationContext): string {
 
 **CREATOR PROFILE ANALYSIS** (USE THIS CONTEXT):
 - Primary Niche: ${creatorProfile.primaryNiche}
-- Engagement Style: ${creatorProfile.engagementStyle}
-- Avg Engagement: ${creatorProfile.averageEngagement.replies} replies, ${creatorProfile.averageEngagement.likes} likes
-- Responds to Replies: ${creatorProfile.responsiveness.respondsToReplies ? 'YES (High value!)' : 'Rarely'}
+- Secondary Niches: ${creatorProfile.secondaryNiches.join(', ')}
+- Preferred Tone: ${preferredTone}
+- Optimal Reply Mode: ${replyMode}
 - Audience Level: ${audienceLevel}
 - ${profileContext}
+- Emphasize: ${creatorProfile.optimalReplyStrategy.emphasizeTopics.join(', ')}
+- Avoid: ${creatorProfile.optimalReplyStrategy.avoidTopics.join(', ')}
 
 **YOUR HANDLE**: @${yourHandle}
 **TIME SINCE POST**: ${minutesSincePosted} minutes ${minutesSincePosted <= 5 ? '(RECENCY BOOST ACTIVE!)' : '(recency decaying)'}
 
 **REQUIREMENTS**:
 1. Each reply must DIRECTLY reference the tweet content (not generic)
-2. Match the creator's ${creatorProfile.engagementStyle} style
+2. Match the creator's ${preferredTone} tone
 3. Target their ${creatorProfile.primaryNiche} niche with relevant context
 4. Use ONLY real insights - NO made-up stats or fake stories
 5. Each reply < 280 characters
