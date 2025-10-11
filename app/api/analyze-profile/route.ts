@@ -15,10 +15,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🔍 Analyzing profile: @${username}`);
+    // Parse username from various input formats
+    let cleanUsername = username.trim();
+    
+    // Remove @ if present
+    cleanUsername = cleanUsername.replace(/^@/, "");
+    
+    // Extract username from URL formats
+    // https://x.com/username or https://twitter.com/username or https://x.com/username/status/123
+    if (cleanUsername.includes("x.com/") || cleanUsername.includes("twitter.com/")) {
+      const urlMatch = cleanUsername.match(/(?:x\.com|twitter\.com)\/([a-zA-Z0-9_]+)/);
+      if (urlMatch && urlMatch[1]) {
+        cleanUsername = urlMatch[1];
+      }
+    }
+    
+    console.log(`🔍 Analyzing profile: @${cleanUsername}`);
 
     // 1. Fetch user info from Twitter API
-    const userInfo = await twitterApi.getUser(username);
+    const userInfo = await twitterApi.getUser(cleanUsername);
     
     if (!userInfo) {
       return NextResponse.json(

@@ -29,7 +29,19 @@ export default function ProfilesPage() {
     setSuccess("");
 
     try {
-      const cleanUsername = username.replace("@", "").trim();
+      // Clean username - handle @username, username, or full URLs
+      let cleanUsername = username.trim();
+      
+      // Remove @ if present
+      cleanUsername = cleanUsername.replace(/^@/, "");
+      
+      // Extract username from URL if it's a URL
+      if (cleanUsername.includes("x.com/") || cleanUsername.includes("twitter.com/")) {
+        const urlMatch = cleanUsername.match(/(?:x\.com|twitter\.com)\/([a-zA-Z0-9_]+)/);
+        if (urlMatch && urlMatch[1]) {
+          cleanUsername = urlMatch[1];
+        }
+      }
       
       const response = await fetch("/api/analyze-profile", {
         method: "POST",
