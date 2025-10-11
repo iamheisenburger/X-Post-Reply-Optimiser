@@ -80,7 +80,10 @@ async function optimizeSingleReply(
     console.log(`\n🔄 Iteration ${iteration}/${MAX_ITERATIONS}`);
 
     // Generate prompt focusing on engagement
-    const systemPrompt = buildEngagementPrompt(creator, tweet, userProfile);
+    // Use engagement rate > 3% as heuristic for "responds to replies"
+    // TODO: Make this a manual input from user's curated list
+    const creatorResponds = creator.metrics.engagementRate > 0.03;
+    const systemPrompt = buildEngagementPrompt(creator, tweet, userProfile, creatorResponds);
 
     // Generate reply
       const candidate = await generateReply(
@@ -100,7 +103,7 @@ async function optimizeSingleReply(
         username: creator.username,
         followers: creator.metrics.followers,
         engagement_rate: creator.metrics.engagementRate,
-        respondsToReplies: creator.metrics.engagementRate > 0.03 // Heuristic: >3% engagement = responds
+        respondsToReplies: creatorResponds // Use same value from prompt
       },
       {
         text: tweet.text,
@@ -156,10 +159,9 @@ async function optimizeSingleReply(
 function buildEngagementPrompt(
   creator: CreatorIntelligence,
   tweet: TweetData,
-  userProfile: UserProfile
+  userProfile: UserProfile,
+  creatorResponds: boolean // Manual input from curated list
 ): string {
-  const respondsToReplies = creator.metrics.engagementRate > 0.03; // Rough heuristic
-  
   return `
 You are @${userProfile.handle}, replying to @${creator.username}'s tweet within 5 minutes.
 
@@ -168,38 +170,34 @@ You are @${userProfile.handle}, replying to @${creator.username}'s tweet within 
 === ORIGINAL TWEET ===
 "${tweet.text}"
 
-=== CREATOR ANALYSIS ===
-${respondsToReplies 
-  ? "✅ This creator RESPONDS to replies → Author response (75x boost) is possible"
+=== CREATOR BEHAVIOR ===
+${creatorResponds 
+  ? "✅ This creator RESPONDS to replies (you curated them for this) → Author response (75x boost) is possible"
   : "⚠️ This creator RARELY responds → Focus on likes (1x) and replies from others (13.5x)"
 }
 
-=== REPLY STRATEGIES ===
+=== REPLY STRATEGY ===
 
-Choose ONE approach (35-75 words):
+${creatorResponds 
+  ? `Use THOUGHTFUL QUESTION approach (35-75 words):
+- Ask about implementation, edge cases, or tradeoffs
+- Make it specific to their tweet content
+- Easy to answer but thought-provoking
+- Shows you understand their point`
+  : `Use VALUABLE INSIGHT approach (35-75 words):
+- Share specific observation or analytical angle
+- Add new perspective to their point  
+- Include data/numbers if relevant
+- Spark discussion with others`
+}
 
-1. **THOUGHTFUL QUESTION** (Best if creator responds to replies)
-   - Ask about implementation, edge cases, or tradeoffs
-   - Make it specific to their tweet
-   - Easy to answer but thought-provoking
+🚫 CRITICAL RULES:
+- NO fake scenarios or made-up stories
+- NO generic praise ("Great point!", "Love this!")
+- NO multiple questions
+- ONLY share genuine experiences if relevant
 
-2. **VALUABLE INSIGHT** (Best for likes + replies from others)
-   - Share a specific observation or data point
-   - Add new angle to their point
-   - Include numbers/metrics if relevant
-
-3. **PERSONAL STORY** (Good for relatability)
-   - Brief relevant experience (if genuine)
-   - Shows you understand their point
-   - Makes human connection
-
-❌ AVOID:
-- Generic praise ("Great point!")
-- Multiple questions
-- Fake scenarios you didn't experience
-- Just agreeing without adding value
-
-Remember: Be early (< 5 min), be specific, be valuable.
+Remember: Be early (< 5 min), be honest, be valuable.
   `.trim();
 }
 

@@ -70,9 +70,9 @@ export function predictEngagement(
       reasoning.push("✅ Valuable insight → +25% likes, +15% replies");
       break;
     case 'story':
+      // Only if genuine personal experience
       likesProb += 0.20;
-      authorRespondProb += 0.10;
-      reasoning.push("✅ Personal story → +20% likes, +10% author response");
+      reasoning.push("✅ Honest personal experience → +20% likes");
       break;
     case 'agreement':
       likesProb += 0.10;
@@ -179,7 +179,7 @@ export function extractSignals(
     username: string; 
     followers: number; 
     engagement_rate?: number;
-    respondsToReplies?: boolean; // NEW: Track if creator responds
+    respondsToReplies?: boolean; // MANUAL INPUT: User curates list of responsive creators
   },
   tweet: { text: string; created_at: string; reply_count: number; like_count: number }
 ): EngagementSignals {
@@ -194,7 +194,7 @@ export function extractSignals(
     length: reply.split(/\s+/).length,
     creatorFollowers: creator.followers,
     creatorEngagementRate: creator.engagement_rate || (tweet.reply_count / Math.max(tweet.like_count, 1)),
-    creatorRespondsToReplies: creator.respondsToReplies !== false, // Default to true if unknown
+    creatorRespondsToReplies: creator.respondsToReplies ?? true, // Default true, but should be manual input
     tweetHasEngagement: tweet.like_count > 5 || tweet.reply_count > 2,
     tweetAge: tweetAgeMinutes
   };
