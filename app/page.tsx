@@ -107,7 +107,7 @@ export default function AIReplyPage() {
           AI Reply Generator
         </h1>
         <p className="text-muted-foreground">
-          Paste a tweet URL and get 3 algorithm-optimized replies targeting 90%+ scores
+          Paste a tweet URL and get 3 algorithm-optimized replies tuned to X's ranking signals
         </p>
       </div>
 
@@ -198,7 +198,7 @@ export default function AIReplyPage() {
       {result && result.replies.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-2xl font-bold">Generated Replies</h2>
-          {result.replies.map((reply, index) => (
+          {([...result.replies].sort((a, b) => b.score - a.score)).map((reply, index) => (
             <Card key={index} className="relative">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -211,9 +211,6 @@ export default function AIReplyPage() {
                   <div className="flex items-center gap-2">
                     <Badge className={getModeColor(reply.mode)} variant="outline">
                       {reply.mode.replace("_", " ")}
-                    </Badge>
-                    <Badge variant="secondary">
-                      {reply.iteration} iterations
                     </Badge>
                   </div>
                 </div>
@@ -251,23 +248,23 @@ export default function AIReplyPage() {
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Engagement</p>
-                        <p className="font-bold text-sm">{reply.breakdown.engagement.toFixed(0)}</p>
+                        <p className="font-bold text-sm">{reply.breakdown.engagement.toFixed(0)}%</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Conversation</p>
-                        <p className="font-bold text-sm">{reply.breakdown.conversationDepth.toFixed(0)}</p>
+                        <p className="font-bold text-sm">{reply.breakdown.conversationDepth.toFixed(0)}%</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Profile Click</p>
-                        <p className="font-bold text-sm">{reply.breakdown.authorReputation.toFixed(0)}</p>
+                        <p className="font-bold text-sm">{reply.breakdown.authorReputation.toFixed(0)}%</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Recency</p>
-                        <p className="font-bold text-sm">{reply.breakdown.recency.toFixed(0)}</p>
+                        <p className="font-bold text-sm">{reply.breakdown.recency.toFixed(0)}%</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Media</p>
-                        <p className="font-bold text-sm">{reply.breakdown.mediaPresence.toFixed(0)}</p>
+                        <p className="font-bold text-sm">{reply.breakdown.mediaPresence.toFixed(0)}%</p>
                       </div>
                     </div>
                   </div>
@@ -301,7 +298,7 @@ export default function AIReplyPage() {
               <div className="text-center space-y-2">
                 <h3 className="font-semibold text-lg">Generating Intelligent Replies...</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Analyzing creator profile, selecting optimal mode, and iterating until 90%+ scores
+                  Analyzing creator profile and optimizing for author response (75x), conversation (13.5x), and recency
                 </p>
               </div>
             </div>

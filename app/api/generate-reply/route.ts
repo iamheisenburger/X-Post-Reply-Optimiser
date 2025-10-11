@@ -142,26 +142,33 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Score range: ${replies[replies.length-1].score} - ${replies[0].score}`);
 
     // 6. Transform for frontend
-    const transformedReplies = replies.map((reply, idx) => ({
-      text: reply.text,
-      score: reply.score,
-      breakdown: {
-        engagement: Number(reply.prediction.scoreBreakdown.authorReply + reply.prediction.scoreBreakdown.replies) || 0,
-        recency: Number(reply.prediction.scoreBreakdown.recencyBonus) || 0,
-        mediaPresence: 0,
-        conversationDepth: Number(reply.prediction.scoreBreakdown.replies) || 0,
-        authorReputation: Number(reply.prediction.scoreBreakdown.profileClicks) || 0,
-      },
-      mode: "algorithm_optimized",
-      iteration: idx + 1,
-      reasoning: [reply.reasoning],
-      features: {
-        hasQuestion: reply.features.hasQuestion,
-        hasPushback: reply.features.hasPushback,
-        hasData: reply.features.hasSpecificData,
-        authorReplyProb: Math.round(reply.prediction.authorReplyProb * 100),
-      },
-    }));
+    const MAX_TOTAL_SCORE = 300; // Normalization cap for 0-100 UI score
+    const transformedReplies = replies.map((reply, idx) => {
+      const sb = reply.prediction.scoreBreakdown;
+      const total = Math.max(1, (sb.authorReply || 0) + (sb.replies || 0) + (sb.likes || 0) + (sb.profileClicks || 0) + (sb.recencyBonus || 0));
+      const normalizedScore = Math.max(0, Math.min(100, Math.round(((reply.prediction.totalScore || 0) / MAX_TOTAL_SCORE) * 100)));
+
+      return {
+        text: reply.text,
+        score: normalizedScore,
+        breakdown: {
+          engagement: Math.round((((sb.authorReply || 0) + (sb.replies || 0)) / total) * 100),
+          recency: Math.round(((sb.recencyBonus || 0) / total) * 100),
+          mediaPresence: 0,
+          conversationDepth: Math.round(((sb.replies || 0) / total) * 100),
+          authorReputation: Math.round(((sb.profileClicks || 0) / total) * 100),
+        },
+        mode: "algorithm_optimized",
+        iteration: idx + 1,
+        reasoning: [reply.reasoning],
+        features: {
+          hasQuestion: reply.features.hasQuestion,
+          hasPushback: reply.features.hasPushback,
+          hasData: reply.features.hasSpecificData,
+          authorReplyProb: Math.round(reply.prediction.authorReplyProb * 100),
+        },
+      };
+    });
 
     const averageScore = Math.round(
       transformedReplies.reduce((sum, r) => sum + r.score, 0) / transformedReplies.length
