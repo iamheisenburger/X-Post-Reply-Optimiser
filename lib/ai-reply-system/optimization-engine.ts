@@ -159,9 +159,21 @@ async function optimizeSingleReply(
 
       // Generate detailed feedback for next iteration
       if (bestScore < TARGET_SCORE) {
-        feedback = qualityScore.feedback.join("\n");
+        // Build enhanced feedback with creator-specific context
+        const enhancedFeedback = [
+          ...qualityScore.feedback,
+          "",
+          "CREATOR-SPECIFIC OPTIMIZATION:",
+          `• This audience (${context.creator.primaryNiche}) responds best to: ${context.creator.audience.engagementPatterns.respondsTo[0]}`,
+          `• Avoid: ${context.creator.audience.engagementPatterns.ignores[0]}`,
+          qualityScore.breakdown.contentRelevance < 70 ? 
+            `• Connect more clearly to audience interests: ${context.creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}` : 
+            null
+        ].filter(Boolean);
+        
+        feedback = enhancedFeedback.join("\n");
         previousAttempt = candidate;
-        console.log(`   📋 Feedback: ${feedback.substring(0, 100)}...`);
+        console.log(`   📋 Feedback: ${feedback.substring(0, 150)}...`);
       }
 
     } catch (error) {
@@ -178,12 +190,43 @@ async function optimizeSingleReply(
 }
 
 function buildContextString(context: FullContext): string {
+  const { creator, post, mode } = context;
+  
   return `
-Replying to @${context.creator.username}'s post:
-"${context.post.text}"
+CREATOR INTELLIGENCE FOR @${creator.username}:
 
-Your goal: Generate ONE high-quality reply that maximizes engagement.
-Target: 90%+ algorithm score, with focus on author engagement (75x weight in X algorithm).
+Profile: ${creator.displayName} (${creator.followerCount.toLocaleString()} followers)
+Primary Niche: ${creator.primaryNiche}
+${creator.secondaryNiches.length > 0 ? `Secondary Niches: ${creator.secondaryNiches.join(", ")}` : ""}
+
+AUDIENCE ANALYSIS:
+• Primary Interests: ${creator.audience.demographics.primaryInterests.join(", ")}
+• Irrelevant Topics: ${creator.audience.demographics.irrelevantTopics.join(", ")}
+• Language Style: ${creator.audience.demographics.languageStyle}
+• Sophistication: ${creator.audience.demographics.sophisticationLevel}
+
+ENGAGEMENT PATTERNS:
+• Responds Well To: ${creator.audience.engagementPatterns.respondsTo.join(", ")}
+• Typically Ignores: ${creator.audience.engagementPatterns.ignores.join(", ")}
+• Preferred Tone: ${creator.audience.engagementPatterns.preferredTone}
+
+OPTIMAL STRATEGY FOR THIS CREATOR:
+• Selected Mode: ${mode}
+• Topics to EMPHASIZE: ${creator.optimalReplyStrategy.emphasizeTopics.length > 0 ? creator.optimalReplyStrategy.emphasizeTopics.join(", ") : "Universal themes"}
+• Topics to AVOID: ${creator.optimalReplyStrategy.avoidTopics.length > 0 ? creator.optimalReplyStrategy.avoidTopics.join(", ") : "None specific"}
+• Tone Match: ${creator.optimalReplyStrategy.toneMatch}
+
+ORIGINAL POST:
+"${post.text}"
+
+YOUR GOAL:
+Generate ONE high-quality reply that:
+1. Aligns with this creator's audience interests and engagement patterns
+2. Matches their preferred tone and sophistication level
+3. Adds genuine value (new insight, perspective, or actionable advice)
+4. Maximizes X algorithm score (90%+ target)
+
+CRITICAL: Stay UNBIASED. Don't pander or flatter. Provide authentic, valuable contribution that happens to match what this specific audience finds engaging. Quality and X algorithm compliance are the priority.
   `.trim();
 }
 
