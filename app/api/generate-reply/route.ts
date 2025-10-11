@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { twitterApi } from "@/lib/twitter-api";
 import { buildCreatorIntelligence, extractTweetId } from "@/lib/ai-reply-system/creator-intelligence";
-import { generateOptimizedReplies } from "@/lib/ai-reply-system/optimization-engine";
-import { MADMANHAKIM_PROFILE } from "@/lib/ai-reply-system";
+import { generateOptimizedReplies } from "@/lib/ai-reply-system/reply-generator";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
@@ -19,11 +18,9 @@ export async function POST(request: NextRequest) {
 
     // 1. Extract tweet ID from URL
     const tweetId = extractTweetId(tweetUrl);
-    console.log(`Extracted tweet ID: ${tweetId}`);
+    console.log(`🎯 Extracted tweet ID: ${tweetId}`);
 
     // 2. Fetch tweet data
-    console.log(`Attempting to fetch tweet with ID: ${tweetId}`);
-    
     if (!process.env.TWITTER_API_KEY) {
       return NextResponse.json(
         { error: "TWITTER_API_KEY is not configured in environment variables." },
@@ -35,30 +32,23 @@ export async function POST(request: NextRequest) {
     if (!tweet) {
       return NextResponse.json(
         { 
-          error: "Could not fetch tweet. Possible issues:\n" +
-                 "1. Tweet ID might be invalid\n" +
-                 "2. TWITTER_API_KEY might be incorrect\n" +
-                 "3. TwitterAPI.io endpoint might have changed\n\n" +
-                 "Check Vercel function logs for detailed error."
+          error: "Could not fetch tweet. Check your TWITTER_API_KEY and tweet URL."
         },
         { status: 404 }
       );
     }
 
-    console.log(`Fetched tweet from @${tweet.author.username}`);
+    console.log(`✅ Fetched tweet from @${tweet.author.username}`);
 
     // 3. Build creator intelligence - CHECK DATABASE FIRST!
-    console.log(`Checking for cached profile of @${tweet.author.username}...`);
-    
     let creatorIntelligence;
     try {
-      // First, check if profile exists in Profiles database
       const cachedProfile = await fetchQuery(api.creators.getByUsername, { 
         username: tweet.author.username 
       });
 
       if (cachedProfile) {
-        console.log(`✅ Using pre-analyzed profile from Profiles database!`);
+        console.log(`✅ Using pre-analyzed profile from database!`);
         
         // Transform cached profile to CreatorIntelligence format
         creatorIntelligence = {
@@ -68,16 +58,32 @@ export async function POST(request: NextRequest) {
           verified: cachedProfile.verified,
           primaryNiche: cachedProfile.primaryNiche as "saas" | "mma" | "tech" | "finance" | "mindset" | "other",
           secondaryNiches: cachedProfile.secondaryNiches,
+          engagementStyle: cachedProfile.toneMatch || "professional",
+          averageEngagement: {
+            replies: 10, // Heuristic based on follower count
+            likes: Math.round(cachedProfile.followerCount * 0.02),
+            retweets: Math.round(cachedProfile.followerCount * 0.005),
+          },
+          responsiveness: {
+            respondsToReplies: cachedProfile.respondsTo.includes("questions") || cachedProfile.respondsTo.includes("insights"),
+            avgResponseTime: "< 2 hours",
+          },
+          crossoverPotential: {
+            mmaRelevance: cachedProfile.mmaRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+            saasRelevance: cachedProfile.saasRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+            disciplineTopics: cachedProfile.disciplineTopics as 0 | 1 | 2 | 3 | 4 | 5,
+            philosophyTopics: cachedProfile.philosophyTopics as 0 | 1 | 2 | 3 | 4 | 5,
+          },
           metrics: {
             followers: cachedProfile.followerCount,
-            engagementRate: 0.03, // Default heuristic, TODO: Calculate from cached data
+            engagementRate: 0.03,
           },
           audience: {
             demographics: {
               primaryInterests: cachedProfile.audiencePrimaryInterests,
-              irrelevantTopics: cachedProfile.audienceIrrelevantTopics,
               languageStyle: cachedProfile.audienceLanguageStyle,
               sophisticationLevel: cachedProfile.audienceSophisticationLevel,
+              irrelevantTopics: cachedProfile.audienceIrrelevantTopics,
             },
             engagementPatterns: {
               respondsTo: cachedProfile.respondsTo,
@@ -90,12 +96,6 @@ export async function POST(request: NextRequest) {
             postTypes: { insights: 0, questions: 0, announcements: 0, personal: 0 },
             toneProfile: { serious: 0, humorous: 0, technical: 0, philosophical: 0 },
           },
-          crossoverPotential: {
-            mmaRelevance: cachedProfile.mmaRelevance as 0 | 1 | 2 | 3 | 4 | 5,
-            saasRelevance: cachedProfile.saasRelevance as 0 | 1 | 2 | 3 | 4 | 5,
-            disciplineTopics: cachedProfile.disciplineTopics as 0 | 1 | 2 | 3 | 4 | 5,
-            philosophyTopics: cachedProfile.philosophyTopics as 0 | 1 | 2 | 3 | 4 | 5,
-          },
           optimalReplyStrategy: {
             mode: cachedProfile.optimalMode as "pure_saas" | "pure_mma" | "mindset_crossover" | "technical" | "storytelling",
             avoidTopics: cachedProfile.avoidTopics,
@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
           tweetAnalysisCount: cachedProfile.tweetAnalysisCount,
         };
       } else {
-        // Fallback: Analyze on-the-fly (basic intelligence from tweet only)
         console.log(`⚠️ Profile not in database. Add @${tweet.author.username} to Profiles page for better results.`);
         
         creatorIntelligence = await buildCreatorIntelligence(
@@ -120,88 +119,93 @@ export async function POST(request: NextRequest) {
             following_count: tweet.author.following_count,
             verified: tweet.author.verified || false,
           },
-          tweet.text // Use current tweet as fallback
+          tweet.text
         );
       }
     } catch (error) {
       console.error("Error building creator intelligence:", error);
       return NextResponse.json(
-        { error: "Failed to analyze creator profile. Check your OPENAI_API_KEY and TWITTER_API_KEY." },
+        { error: "Failed to analyze creator profile. Check your OPENAI_API_KEY." },
         { status: 500 }
       );
     }
 
-    console.log(`Built intelligence for @${tweet.author.username}: ${creatorIntelligence.primaryNiche} niche`);
+    console.log(`🧠 Built intelligence: ${creatorIntelligence.primaryNiche} niche, ${creatorIntelligence.engagementStyle} style`);
 
-    // 4. Transform tweet to TweetData format
-    const tweetData = {
-      id: tweet.id,
-      text: tweet.text,
-      createdAt: tweet.created_at,
-      conversationId: tweet.conversation_id || tweet.id,
-      author: {
-        id: tweet.author.id,
-        username: tweet.author.username,
-        name: tweet.author.name,
-        description: tweet.author.description,
-        followers_count: tweet.author.followers_count,
-      },
-      hasMedia: tweet.hasMedia,
-      isThread: tweet.isThread,
-    };
+    // 4. Calculate time since tweet posted (for recency boost)
+    const tweetDate = new Date(tweet.created_at);
+    const now = new Date();
+    const minutesSincePosted = Math.floor((now.getTime() - tweetDate.getTime()) / (1000 * 60));
 
-    // 5. Generate optimized replies
-    const result = await generateOptimizedReplies(
-      tweetData,
-      creatorIntelligence,
-      MADMANHAKIM_PROFILE
-    );
+    console.log(`⏱️  Tweet posted ${minutesSincePosted} minutes ago ${minutesSincePosted <= 5 ? '(RECENCY BOOST!)' : ''}`);
 
-    console.log(`Generated ${result.replies.length} replies with avg ${result.averageIterations.toFixed(1)} iterations`);
+    // 5. Generate algorithm-optimized replies using NEW system
+    const replies = await generateOptimizedReplies({
+      tweetText: tweet.text,
+      tweetAuthor: tweet.author.username,
+      creatorProfile: creatorIntelligence,
+      minutesSincePosted,
+      yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",
+    });
 
-    // 6. Transform replies to match frontend expectations
-    const transformedReplies = result.replies.map(reply => ({
+    console.log(`✨ Generated ${replies.length} algorithm-optimized replies`);
+    console.log(`📊 Score range: ${replies[replies.length-1].score} - ${replies[0].score}`);
+
+    // 6. Transform for frontend
+    const transformedReplies = replies.map((reply, idx) => ({
       text: reply.text,
       score: reply.score,
       breakdown: {
-        engagement: Math.round(reply.engagement.authorRespondProb * 100),
-        recency: 50, // Static value for now
-        mediaPresence: 0, // No media in text replies
-        conversationDepth: Math.round(reply.engagement.repliesProb * 100),
-        authorReputation: Math.round(reply.engagement.likesProb * 100),
+        engagement: reply.prediction.scoreBreakdown.authorReply + reply.prediction.scoreBreakdown.replies,
+        recency: reply.prediction.scoreBreakdown.recencyBonus,
+        conversationDepth: reply.prediction.scoreBreakdown.replies,
+        quality: reply.prediction.scoreBreakdown.likes,
+        profileClick: reply.prediction.scoreBreakdown.profileClicks,
       },
-      mode: reply.mode,
-      iteration: reply.iteration,
-      reasoning: [], // Empty for simple generation
+      mode: "algorithm_optimized",
+      iteration: idx + 1,
+      reasoning: [reply.reasoning],
+      features: {
+        hasQuestion: reply.features.hasQuestion,
+        hasPushback: reply.features.hasPushback,
+        hasData: reply.features.hasSpecificData,
+        authorReplyProb: Math.round(reply.prediction.authorReplyProb * 100),
+      },
     }));
 
-    // Calculate average score
     const averageScore = Math.round(
       transformedReplies.reduce((sum, r) => sum + r.score, 0) / transformedReplies.length
     );
 
-    // 7. Return result
+    // 7. Return results
     return NextResponse.json({
       replies: transformedReplies,
-      selectedMode: "engagement_optimized",
+      selectedMode: "algorithm_optimized",
       creatorProfile: {
         username: creatorIntelligence.username,
         displayName: creatorIntelligence.displayName,
         primaryNiche: creatorIntelligence.primaryNiche,
         mmaRelevance: creatorIntelligence.crossoverPotential.mmaRelevance,
         saasRelevance: creatorIntelligence.crossoverPotential.saasRelevance,
+        engagementStyle: creatorIntelligence.engagementStyle,
       },
-      totalIterations: result.totalIterations,
+      totalIterations: 1, // One-shot generation!
       averageScore: averageScore,
+      algorithmInsights: {
+        authorReplyWeight: "75x (TARGET THIS!)",
+        conversationWeight: "13.5x",
+        likeWeight: "1x",
+        recencyBoost: minutesSincePosted <= 5 ? "ACTIVE ⚡" : "DECAYING 📉",
+        tweetAge: `${minutesSincePosted} min`,
+      },
     });
 
   } catch (error) {
     console.error("Error in generate-reply API:", error);
     const errorMessage = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: errorMessage },
+      { error: errorMessage, stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined },
       { status: 500 }
     );
   }
 }
-

@@ -1,206 +1,168 @@
-// lib/x-algorithm.ts
-// Exact weights from X's Heavy Ranker ML model
+/**
+ * X (Twitter) Algorithm Scoring System
+ * Based on official open-source algorithm: https://github.com/twitter/the-algorithm
+ * 
+ * CRITICAL ENGAGEMENT WEIGHTS (from LinearScoringFunction.java):
+ * - Author Reply: 75x  (Getting the OP to respond is GOLD)
+ * - Reply from Others: 13.5x (Sparking conversation)  
+ * - Likes: 1x (Baseline)
+ * - Profile Click: High correlation with follows
+ * - Retweet: ~2x
+ * 
+ * REPLY OPTIMIZATION STRATEGY:
+ * 1. Post within 5 mins (recency boost - logarithmic decay)
+ * 2. Trigger author response (ask question, challenge take, add unique insight)
+ * 3. Drive conversation (make others want to reply)
+ * 4. Make viewers click your profile (authority + intrigue)
+ */
 
-export const X_ALGORITHM_WEIGHTS = {
-  scored_tweets_model_weight_fav: 0.5,
-  scored_tweets_model_weight_retweet: 1.0,
-  scored_tweets_model_weight_reply: 13.5,
-  scored_tweets_model_weight_good_profile_click: 12.0,
-  scored_tweets_model_weight_video_playback50: 0.005,
-  scored_tweets_model_weight_reply_engaged_by_author: 75.0,
-  scored_tweets_model_weight_good_click: 11.0,
-  scored_tweets_model_weight_good_click_v2: 10.0,
-  scored_tweets_model_weight_negative_feedback_v2: -74.0,
-  scored_tweets_model_weight_report: -369.0,
+export interface XAlgorithmWeights {
+  authorReply: number;      // 75x - Most valuable signal
+  replies: number;           // 13.5x - Conversation starter
+  retweets: number;          // ~2x
+  likes: number;             // 1x baseline
+  profileClicks: number;     // High follow correlation
+  recencyBoost: number;      // Logarithmic decay
+}
+
+export const ALGORITHM_WEIGHTS: XAlgorithmWeights = {
+  authorReply: 75,
+  replies: 13.5,
+  retweets: 2,
+  likes: 1,
+  profileClicks: 5, // Estimated based on follow correlation
+  recencyBoost: 2.5, // Early replies get exponential boost
 };
 
-export type EngagementGoal =
-  | "reply"
-  | "retweet"
-  | "like"
-  | "profile_click"
-  | "video_playback"
-  | "author_engagement"
-  | "conversation_click"
-  | "long_conversation_click"
-  | "viral_reach"; // Custom goal for overall visibility
-
-export interface ContentAnalysisResult {
-  score: number;
-  breakdown: {
-    engagement: number;
-    recency: number;
-    mediaPresence: number;
-    conversationDepth: number;
-    authorReputation: number;
-  };
-  suggestions: string[];
+export interface ReplyFeatures {
+  hasQuestion: boolean;           // Triggers author to respond
+  hasPushback: boolean;           // Contrarian = memorable
+  hasSpecificData: boolean;       // Numbers/examples = credible
+  hasPersonalExperience: boolean; // Authenticity signal
+  isShort: boolean;               // <280 chars = readable
+  callsOutOP: boolean;            // @ mention increases notification priority
+  linksToProfile: boolean;        // "More on my profile" drives clicks
 }
 
-export function calculateAlgorithmScore(
-  content: string,
-  targetGoal: EngagementGoal = "viral_reach",
-  hasMedia: boolean = false,
-  isReply: boolean = false,
-  isThread: boolean = false,
-  authorReputationScore: number = 1.0 // Placeholder, 0.5-1.5 based on TweepCred
-): ContentAnalysisResult {
-  let score = 0;
-  const breakdown = {
-    engagement: 0,
-    recency: 10, // Assume recent for new content
-    mediaPresence: hasMedia ? 10 : 0,
-    conversationDepth: isReply || isThread ? 10 : 0,
-    authorReputation: authorReputationScore * 10,
+export interface EngagementPrediction {
+  authorReplyProb: number;    // 0-1 probability
+  repliesExpected: number;     // Count
+  likesExpected: number;       // Count
+  profileClicksExpected: number; // Count
+  totalScore: number;          // Weighted sum
+  scoreBreakdown: {
+    authorReply: number;
+    replies: number;
+    likes: number;
+    profileClicks: number;
+    recencyBonus: number;
   };
-  const suggestions: string[] = [];
+}
 
-  // Base content length and keyword analysis (simplified)
-  const wordCount = content.split(/\s+/).filter(Boolean).length;
-  const hasQuestion = content.includes("?") || content.includes("🤔");
-  const hasCallToAction = content.includes("retweet") || content.includes("like") || content.includes("follow");
-  const hasLink = content.includes("http://") || content.includes("https://");
-
-  // Apply weights based on content characteristics and target goal
-  // This is a simplified mapping to the Heavy Ranker's predicted probabilities
-  // In a real scenario, we'd need a model to predict these probabilities.
-  // For now, we'll simulate based on content features.
-
-  let predictedReplyProb = 0.1;
-  let predictedRetweetProb = 0.05;
-  let predictedFavProb = 0.15;
-  let predictedProfileClickProb = 0.02;
-  let predictedVideoPlaybackProb = 0;
-  let predictedReplyEngagedByAuthorProb = 0.01;
-  let predictedGoodClickProb = 0.03;
-  let predictedGoodClickV2Prob = 0.02;
-
-  // Adjust probabilities based on content features
-  if (isReply) {
-    predictedReplyProb += 0.2;
-    predictedReplyEngagedByAuthorProb += 0.05;
-    breakdown.conversationDepth += 10;
-    suggestions.push("Great start! Replies inherently boost conversation depth.");
-  }
-  if (isThread) {
-    predictedReplyProb += 0.1;
-    predictedGoodClickProb += 0.05;
-    predictedGoodClickV2Prob += 0.03;
-    breakdown.conversationDepth += 5;
-    suggestions.push("Threads encourage deeper engagement and longer read times.");
-  }
-  if (hasQuestion) {
-    predictedReplyProb += 0.15;
-    suggestions.push("Asking questions is excellent for driving replies!");
-  }
-  if (hasCallToAction) {
-    predictedRetweetProb += 0.05;
-    predictedFavProb += 0.05;
-    suggestions.push("Clear calls to action can boost specific engagement types.");
-  }
-  if (hasMedia) {
-    predictedFavProb += 0.1;
-    predictedRetweetProb += 0.05;
-    predictedProfileClickProb += 0.03;
-    predictedVideoPlaybackProb += 0.1; // If it's a video
-    suggestions.push("Including media significantly increases visibility and engagement.");
-  }
-  if (wordCount > 50) {
-    predictedGoodClickV2Prob += 0.01; // Longer content might imply more time spent
-  }
-  if (hasLink && !isReply) { // Penalize links in main post, but not in replies (e.g., "link in bio")
-    suggestions.push("Consider moving external links to a reply to avoid downranking the main post.");
-  }
-
-  // Cap probabilities at a reasonable max
-  predictedReplyProb = Math.min(predictedReplyProb, 0.8);
-  predictedRetweetProb = Math.min(predictedRetweetProb, 0.5);
-  predictedFavProb = Math.min(predictedFavProb, 0.7);
-  predictedProfileClickProb = Math.min(predictedProfileClickProb, 0.3);
-  predictedVideoPlaybackProb = Math.min(predictedVideoPlaybackProb, 0.9);
-  predictedReplyEngagedByAuthorProb = Math.min(predictedReplyEngagedByAuthorProb, 0.5);
-  predictedGoodClickProb = Math.min(predictedGoodClickProb, 0.4);
-  predictedGoodClickV2Prob = Math.min(predictedGoodClickV2Prob, 0.3);
-
-  // Calculate weighted sum
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_fav * predictedFavProb;
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_retweet * predictedRetweetProb;
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_reply * predictedReplyProb;
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_good_profile_click * predictedProfileClickProb;
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_video_playback50 * predictedVideoPlaybackProb;
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_reply_engaged_by_author * predictedReplyEngagedByAuthorProb;
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_good_click * predictedGoodClickProb;
-  score += X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_good_click_v2 * predictedGoodClickV2Prob;
-
-  // Normalize score to 0-100 range (rough estimation)
-  // Max possible score with current weights and max probs:
-  // 0.5*0.7 + 1.0*0.5 + 13.5*0.8 + 12.0*0.3 + 0.005*0.9 + 75.0*0.5 + 11.0*0.4 + 10.0*0.3
-  // = 0.35 + 0.5 + 10.8 + 3.6 + 0.0045 + 37.5 + 4.4 + 3.0 = ~60.15
-  const MAX_POSSIBLE_SCORE = 65; // Adjusted for a more realistic max
-  score = (score / MAX_POSSIBLE_SCORE) * 100;
-  score = Math.max(0, Math.min(100, score)); // Clamp between 0 and 100
-
-  // Adjust breakdown based on score contribution (simplified)
-  breakdown.engagement = Math.min(100, (predictedReplyProb * X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_reply + predictedRetweetProb * X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_retweet + predictedFavProb * X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_fav) / (MAX_POSSIBLE_SCORE / 3) * 100);
-  breakdown.conversationDepth = Math.min(100, (predictedReplyEngagedByAuthorProb * X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_reply_engaged_by_author + predictedGoodClickProb * X_ALGORITHM_WEIGHTS.scored_tweets_model_weight_good_click) / (MAX_POSSIBLE_SCORE / 3) * 100);
-  breakdown.authorReputation = Math.min(100, authorReputationScore * 100); // Directly use reputation score for now
-
-  // Add goal-specific suggestions
-  if (targetGoal === "reply" && !hasQuestion) {
-    suggestions.push("To maximize replies, try asking a direct question or inviting discussion.");
-  }
-  if (targetGoal === "author_engagement" && !isReply) {
-    suggestions.push("To get the author to engage, ensure your reply is thoughtful and adds value to their original post.");
-  }
-  if (targetGoal === "viral_reach" && !hasMedia) {
-    suggestions.push("For broader reach, consider adding an image or video to your post.");
-  }
+/**
+ * Analyze reply features that drive X algorithm engagement
+ */
+export function analyzeReplyFeatures(replyText: string): ReplyFeatures {
+  const hasQuestion = /\?/.test(replyText);
+  const hasPushback = /\b(actually|but|disagree|however|counterpoint|flip side|though)\b/i.test(replyText);
+  const hasSpecificData = /\d+[%x]|\$\d+|\d+\s*(users|people|times|days|years)/.test(replyText);
+  const hasPersonalExperience = /\b(I|my|when I|in my experience)\b/i.test(replyText);
+  const isShort = replyText.length <= 280;
+  const callsOutOP = replyText.startsWith('@');
+  const linksToProfile = /\b(check my|see my|more in my|on my profile)\b/i.test(replyText);
 
   return {
-    score: parseFloat(score.toFixed(1)),
-    breakdown,
-    suggestions: Array.from(new Set(suggestions)), // Remove duplicates
+    hasQuestion,
+    hasPushback,
+    hasSpecificData,
+    hasPersonalExperience,
+    isShort,
+    callsOutOP,
+    linksToProfile,
   };
 }
 
-export function generateOptimizationSuggestions(content: string, targetGoal: EngagementGoal): string[] {
-  const suggestions: string[] = [];
-  const wordCount = content.split(/\s+/).filter(Boolean).length;
-  const hasQuestion = content.includes("?") || content.includes("🤔");
-  const hasCallToAction = content.includes("retweet") || content.includes("like") || content.includes("follow");
-  const hasLink = content.includes("http://") || content.includes("https://");
-  const hasHashtag = content.includes("#");
+/**
+ * Predict engagement based on reply features + X algorithm weights
+ */
+export function predictEngagement(
+  features: ReplyFeatures,
+  minutesSincePost: number
+): EngagementPrediction {
+  // Base probabilities
+  let authorReplyProb = 0.05; // 5% baseline
+  let repliesExpected = 2;
+  let likesExpected = 5;
+  let profileClicksExpected = 1;
 
-  if (wordCount < 10) {
-    suggestions.push("Consider adding more detail to increase perceived value and engagement time.");
-  } else if (wordCount > 200) {
-    suggestions.push("Longer posts can be effective, but ensure it's concise. Consider breaking into a thread.");
-  }
+  // AUTHOR REPLY TRIGGERS (Most important - 75x weight!)
+  if (features.hasQuestion) authorReplyProb += 0.25; // Questions beg answers
+  if (features.hasPushback) authorReplyProb += 0.15; // Authors defend their takes
+  if (features.hasSpecificData) authorReplyProb += 0.10; // Credible = worthy of response
+  if (features.callsOutOP) authorReplyProb += 0.10; // Notification priority
 
-  if (!hasQuestion && (targetGoal === "reply" || targetGoal === "author_engagement")) {
-    suggestions.push("Asking a direct question is highly effective for driving replies and conversations.");
-  }
+  // CONVERSATION TRIGGERS (13.5x weight)
+  if (features.hasQuestion) repliesExpected += 5; // Others join debate
+  if (features.hasPushback) repliesExpected += 3; // Controversy drives engagement
+  if (features.hasSpecificData) repliesExpected += 2; // Facts invite discussion
 
-  if (!hasCallToAction && (targetGoal === "retweet" || targetGoal === "like")) {
-    suggestions.push("Include a clear call to action (e.g., 'Retweet if you agree!') to boost specific engagement.");
-  }
+  // LIKE TRIGGERS (1x baseline)
+  if (features.hasPersonalExperience) likesExpected += 10; // Relatability
+  if (features.isShort) likesExpected += 5; // Readability
+  if (features.hasSpecificData) likesExpected += 8; // Credibility
 
-  if (hasLink && !content.startsWith("RT @") && !content.includes("link in bio")) { // Heuristic for main post links
-    suggestions.push("External links in the main post can sometimes reduce reach. Consider putting links in a follow-up reply.");
-  }
+  // PROFILE CLICK TRIGGERS (High follow correlation)
+  if (features.linksToProfile) profileClicksExpected += 10;
+  if (features.hasSpecificData) profileClicksExpected += 5; // Authority signal
+  if (features.hasPushback) profileClicksExpected += 3; // "Who is this guy?"
 
-  if (!hasHashtag) {
-    suggestions.push("Adding relevant hashtags can increase discoverability for your niche.");
-  }
+  // RECENCY BOOST (logarithmic decay - early replies WIN)
+  const recencyMultiplier = minutesSincePost <= 5 
+    ? ALGORITHM_WEIGHTS.recencyBoost 
+    : Math.max(1, 1 + Math.log(6 / (minutesSincePost + 1)));
 
-  // General tips
-  suggestions.push("Aim for content that sparks genuine conversation, not just passive consumption.");
-  suggestions.push("Engage with replies to your posts to signal high conversation depth to the algorithm.");
-  suggestions.push("Post consistently and at optimal times for your audience.");
+  // Calculate weighted score
+  const authorReplyScore = authorReplyProb * ALGORITHM_WEIGHTS.authorReply;
+  const repliesScore = repliesExpected * ALGORITHM_WEIGHTS.replies;
+  const likesScore = likesExpected * ALGORITHM_WEIGHTS.likes;
+  const profileClicksScore = profileClicksExpected * ALGORITHM_WEIGHTS.profileClicks;
+  const recencyBonus = (authorReplyScore + repliesScore) * (recencyMultiplier - 1);
 
-  return suggestions;
+  const totalScore = authorReplyScore + repliesScore + likesScore + profileClicksScore + recencyBonus;
+
+  return {
+    authorReplyProb: Math.min(0.95, authorReplyProb),
+    repliesExpected: Math.round(repliesExpected),
+    likesExpected: Math.round(likesExpected),
+    profileClicksExpected: Math.round(profileClicksExpected),
+    totalScore: Math.round(totalScore),
+    scoreBreakdown: {
+      authorReply: Math.round(authorReplyScore),
+      replies: Math.round(repliesScore),
+      likes: Math.round(likesScore),
+      profileClicks: Math.round(profileClicksScore),
+      recencyBonus: Math.round(recencyBonus),
+    },
+  };
 }
 
-
-
-
+/**
+ * Generate optimization guidelines for reply generation
+ */
+export function getOptimizationGuidelines(creatorProfile: {
+  primaryNiche: string;
+  engagementStyle: string;
+  avgRepliesPerPost: number;
+}): string[] {
+  return [
+    "✅ Ask a specific question that requires the author's expertise",
+    "✅ Include a contrarian take or counterpoint (authors defend positions)",
+    "✅ Add specific data/numbers to establish credibility",
+    "✅ Keep under 280 chars for readability",
+    "✅ Mention @ the author for notification priority",
+    `✅ Reference ${creatorProfile.primaryNiche} context (shows you're in-niche)`,
+    "❌ Avoid generic agreement ('Great point!' = ignored)",
+    "❌ Don't be purely negative (drives blocks, not engagement)",
+    "❌ No humble brags or self-promotion in body (put in bio)",
+  ];
+}
