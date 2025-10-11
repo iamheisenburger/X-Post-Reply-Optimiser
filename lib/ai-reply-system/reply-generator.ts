@@ -21,10 +21,14 @@ export interface ReplyGenerationContext {
 export interface GeneratedReply {
   text: string;
   score: number;
+  strategy: 'question' | 'contrarian' | 'add_value' | 'crossover';
   features: {
     hasQuestion: boolean;
     hasPushback: boolean;
     hasSpecificData: boolean;
+    referencesOriginalTweet: boolean;
+    matchesCreatorNiche: boolean;
+    matchesCreatorTone: boolean;
   };
   prediction: {
     authorReplyProb: number;
@@ -121,13 +125,27 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
         
         console.log(`   Reply ${idx + 1}: ${score}/100`);
         
+        // Infer strategy based on reply features
+        let strategy: 'question' | 'contrarian' | 'add_value' | 'crossover' = 'add_value';
+        if (features.hasQuestion) {
+          strategy = 'question';
+        } else if (features.hasPushback) {
+          strategy = 'contrarian';
+        } else if (features.hasSpecificData) {
+          strategy = 'add_value';
+        }
+        
         return {
           text,
           score,
+          strategy,
           features: {
             hasQuestion: features.hasQuestion,
             hasPushback: features.hasPushback,
             hasSpecificData: features.hasSpecificData,
+            referencesOriginalTweet: features.specificity > 60,
+            matchesCreatorNiche: true,
+            matchesCreatorTone: true,
           },
           prediction: {
             authorReplyProb: prediction.authorReplyProb,
