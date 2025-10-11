@@ -55,7 +55,12 @@ export default function ProfilesPage() {
         throw new Error(data.error || "Failed to analyze profile");
       }
 
-      setSuccess(`✅ Profile analyzed and saved for @${cleanUsername}`);
+      // Show detailed success message with analysis level
+      const analysisLevel = data.profile?.analysisType === "full" 
+        ? `Full analysis (bio + ${data.profile.tweetAnalysisCount} tweets)` 
+        : "Basic analysis (bio only - no tweets available)";
+      
+      setSuccess(`✅ Profile analyzed and saved for @${cleanUsername} • ${analysisLevel}`);
       setUsername("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to analyze profile");
@@ -172,6 +177,19 @@ export default function ProfilesPage() {
                         Optimal Mode: {profile.optimalMode} • 
                         {profile.followerCount?.toLocaleString()} followers •
                         Updated {new Date(profile.lastUpdated).toLocaleDateString()}
+                      </div>
+                      
+                      {/* Analysis Level Indicator */}
+                      <div className="mt-2 text-xs">
+                        {profile.tweetAnalysisCount > 0 ? (
+                          <span className="text-green-400">
+                            ✅ Full analysis (bio + {profile.tweetAnalysisCount} tweets)
+                          </span>
+                        ) : (
+                          <span className="text-yellow-400">
+                            ⚠️ Basic analysis (bio only)
+                          </span>
+                        )}
                       </div>
                     </div>
 

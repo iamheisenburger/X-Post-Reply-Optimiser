@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
         primaryNiche: analysis.primaryNiche,
         saasRelevance: analysis.crossoverPotential.saasRelevance,
         mmaRelevance: analysis.crossoverPotential.mmaRelevance,
+        tweetAnalysisCount: tweetTexts.length, // Show how many tweets were analyzed
+        analysisType: tweetTexts.length > 0 ? "full" : "basic", // Explicit type
       },
     });
 
