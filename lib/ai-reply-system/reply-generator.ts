@@ -5,7 +5,7 @@
 
 import OpenAI from "openai";
 import { analyzeReplyFeatures, predictEngagement, type EngagementPrediction, type ReplyFeatures } from "../x-algorithm";
-import type { CreatorIntelligence } from "./creator-intelligence";
+import type { CreatorIntelligence } from "./types";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
