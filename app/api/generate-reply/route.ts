@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
     // 6. Return result
     return NextResponse.json({
       replies: result.replies,
-      selectedMode: result.selectedMode,
+      selectedMode: "engagement_optimized",
       creatorProfile: {
         username: creatorIntelligence.username,
         displayName: creatorIntelligence.displayName,
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         mmaRelevance: creatorIntelligence.crossoverPotential.mmaRelevance,
         saasRelevance: creatorIntelligence.crossoverPotential.saasRelevance,
       },
-      averageIterations: result.averageIterations,
+      totalIterations: result.totalIterations,
     });
 
   } catch (error) {

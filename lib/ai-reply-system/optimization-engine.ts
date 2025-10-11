@@ -1,266 +1,166 @@
 /**
- * Optimization Engine - Maximize Engagement Probability
- * 
- * Based on X's actual algorithm, not made-up quality scores.
- * Goal: Generate replies that get engagement (likes, replies, author response)
+ * Simple Reply Generator
+ * Based on X Algorithm: Author response (75x), Replies (13.5x), Likes (1x)
  */
 
 import type { 
   TweetData, 
   UserProfile, 
   CreatorIntelligence, 
-  ScoredReply, 
+  GeneratedReply,
   OptimizationResult
 } from "./types";
 import { generateReply } from "../openai-client";
-import { predictEngagement, extractSignals, type EngagementPrediction } from "./engagement-predictor";
-
-const MAX_ITERATIONS = 6;
-const TARGET_ENGAGEMENT_SCORE = 85; // 85%+ engagement probability
 
 export async function generateOptimizedReplies(
   tweet: TweetData,
   creator: CreatorIntelligence,
   userProfile: UserProfile
 ): Promise<OptimizationResult> {
-  console.log(`\n🚀 Starting optimization for @${creator.username}'s tweet`);
-  console.log(`📝 Tweet: "${tweet.text.substring(0, 100)}..."`);
+  console.log(`\n🚀 Generating 3 replies for @${creator.username}'s tweet`);
 
-  // Generate 3 reply options
-  const replies: ScoredReply[] = [];
-  let totalIterations = 0;
+  const systemPrompt = buildPrompt(creator, tweet, userProfile);
+  const replies: GeneratedReply[] = [];
 
+  // Generate 3 replies
   for (let i = 0; i < 3; i++) {
-    console.log(`\n💫 Generating reply option #${i + 1}...`);
+    console.log(`\n💫 Generating reply #${i + 1}...`);
     
-    const result = await optimizeSingleReply(tweet, creator, userProfile);
+    const replyText = await generateReply(
+      systemPrompt,
+      `Tweet: "${tweet.text}"`,
+      undefined,
+      undefined,
+      1 // Always use gpt-4o-mini (iteration 1)
+    );
+
+    console.log(`   📄 Generated: "${replyText.substring(0, 80)}..."`);
+
+    // Simple engagement prediction
+    const engagement = predictEngagement(replyText, creator);
     
-    if (result) {
-      replies.push(result.reply);
-      totalIterations += result.iterations;
-      console.log(`✅ Reply #${i + 1}: ${result.reply.score}/100 engagement score in ${result.iterations} iterations`);
-    } else {
-      console.log(`⚠️  Could not achieve ${TARGET_ENGAGEMENT_SCORE}+ score for reply #${i + 1}`);
-    }
+    // Calculate overall score (weighted by X's algorithm)
+    const score = Math.round(
+      (engagement.authorRespondProb * 75) + // 75x weight
+      (engagement.repliesProb * 13.5) +     // 13.5x weight
+      (engagement.likesProb * 1)            // 1x weight
+    );
+    
+    console.log(`   📊 Score: ${score}/100`);
+    console.log(`      - Author respond: ${(engagement.authorRespondProb * 100).toFixed(1)}%`);
+    console.log(`      - Gets likes: ${(engagement.likesProb * 100).toFixed(1)}%`);
+    console.log(`      - Gets replies: ${(engagement.repliesProb * 100).toFixed(1)}%`);
+
+    replies.push({
+      text: replyText,
+      score,
+      mode: "engagement_optimized",
+      iteration: 1,
+      engagement
+    });
   }
 
-  // Sort by engagement score
-  replies.sort((a, b) => b.score - a.score);
-
-  const avgScore = replies.length > 0 
-    ? replies.reduce((sum, r) => sum + r.score, 0) / replies.length 
-    : 0;
-
-  console.log(`\n✨ Optimization complete!`);
-  console.log(`   Generated: ${replies.length}/3 replies`);
-  console.log(`   Average engagement score: ${avgScore.toFixed(1)}/100`);
-  console.log(`   Total iterations: ${totalIterations}`);
+  console.log(`\n✨ Done! Generated 3 replies`);
 
   return {
     replies,
-    selectedMode: "engagement_optimized", // No more fake modes
-    averageIterations: replies.length > 0 ? totalIterations / replies.length : 0
+    averageIterations: 1,
+    totalIterations: 3 // 3 replies × 1 iteration each
   };
 }
 
-async function optimizeSingleReply(
-  tweet: TweetData,
+function buildPrompt(
   creator: CreatorIntelligence,
+  tweet: TweetData,
   userProfile: UserProfile
-): Promise<{ reply: ScoredReply; iterations: number } | null> {
-  
-  let bestReply: string | null = null;
-  let bestScore = 0;
-  let iteration = 0;
-  let previousAttempt: string | undefined;
-  let feedback: string | undefined;
-
-  while (iteration < MAX_ITERATIONS && bestScore < TARGET_ENGAGEMENT_SCORE) {
-    iteration++;
-    console.log(`\n🔄 Iteration ${iteration}/${MAX_ITERATIONS}`);
-
-    // Generate prompt focusing on engagement
-    // Use engagement rate > 3% as heuristic for "responds to replies"
-    // TODO: Make this a manual input from user's curated list
-    const creatorResponds = creator.metrics.engagementRate > 0.03;
-    const systemPrompt = buildEngagementPrompt(creator, tweet, userProfile, creatorResponds);
-
-    // Generate reply
-      const candidate = await generateReply(
-        systemPrompt,
-      buildContext(creator, tweet),
-        previousAttempt,
-      feedback,
-      iteration
-    );
-
-    console.log(`   📄 Generated: "${candidate.substring(0, 80)}..."`);
-
-    // Predict engagement probability
-    const signals = extractSignals(
-      candidate,
-      {
-        username: creator.username,
-        followers: creator.metrics.followers,
-        engagement_rate: creator.metrics.engagementRate,
-        respondsToReplies: creatorResponds // Use same value from prompt
-      },
-      {
-        text: tweet.text,
-        created_at: tweet.createdAt,
-        reply_count: tweet.replyCount || 0,
-        like_count: tweet.likeCount || 0
-      }
-    );
-
-    const prediction = predictEngagement(candidate, signals);
-    const score = prediction.overallScore;
-
-    console.log(`   📊 Engagement Score: ${score.toFixed(1)}/100`);
-    console.log(`      - Author respond: ${(prediction.probabilityAuthorResponds * 100).toFixed(1)}%`);
-    console.log(`      - Gets likes: ${(prediction.probabilityGetsLikes * 100).toFixed(1)}%`);
-    console.log(`      - Gets replies: ${(prediction.probabilityGetsReplies * 100).toFixed(1)}%`);
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestReply = candidate;
-      console.log(`   ✅ New best score: ${bestScore.toFixed(1)}/100`);
-    }
-
-    if (score >= TARGET_ENGAGEMENT_SCORE) {
-      console.log(`   🎯 Target achieved!`);
-        break;
-      }
-
-    // Generate feedback for next iteration
-    feedback = generateFeedback(prediction, candidate, tweet);
-        previousAttempt = candidate;
-  }
-
-  if (bestReply) {
-    return {
-      reply: {
-        text: bestReply,
-        score: bestScore,
-        mode: "engagement_optimized",
-        engagement: {
-          authorRespondProb: 0, // Will fill in final prediction
-          likesProb: 0,
-          repliesProb: 0
-        }
-      },
-      iterations: iteration
-    };
-  }
-
-  return null;
-}
-
-function buildEngagementPrompt(
-  creator: CreatorIntelligence,
-  tweet: TweetData,
-  userProfile: UserProfile,
-  creatorResponds: boolean // Manual input from curated list
 ): string {
+  // Heuristic: High engagement rate = likely responds to replies
+  const creatorResponds = creator.metrics.engagementRate > 0.03;
+
   return `
-You are @${userProfile.handle}, replying to @${creator.username}'s tweet within 5 minutes.
+You are @${userProfile.handle}, replying to @${creator.username}'s tweet.
 
-🎯 YOUR GOAL: Maximize engagement probability
+🎯 GOAL: Maximize engagement (based on X's algorithm)
+- Author response: 75x boost
+- Replies from others: 13.5x boost
+- Likes: 1x boost
 
-=== ORIGINAL TWEET ===
+=== TWEET ===
 "${tweet.text}"
 
-=== CREATOR BEHAVIOR ===
-${creatorResponds 
-  ? "✅ This creator RESPONDS to replies (you curated them for this) → Author response (75x boost) is possible"
-  : "⚠️ This creator RARELY responds → Focus on likes (1x) and replies from others (13.5x)"
-}
+=== CREATOR ===
+- Niche: ${creator.primaryNiche}
+- Followers: ${creator.metrics.followers.toLocaleString()}
+- ${creatorResponds ? "✅ Responds to replies" : "⚠️ Rarely responds"}
+- Interests: ${creator.audience.demographics.primaryInterests.slice(0, 3).join(", ")}
 
-=== REPLY STRATEGY ===
+=== YOUR STRATEGY ===
 
 ${creatorResponds 
-  ? `Use THOUGHTFUL QUESTION approach (35-75 words):
+  ? `🎯 ASK A THOUGHTFUL QUESTION (35-75 words):
 - Ask about implementation, edge cases, or tradeoffs
-- Make it specific to their tweet content
-- Easy to answer but thought-provoking
+- Make it specific to their tweet
+- Easy for them to answer
 - Shows you understand their point`
-  : `Use VALUABLE INSIGHT approach (35-75 words):
-- Share specific observation or analytical angle
-- Add new perspective to their point  
-- Include data/numbers if relevant
-- Spark discussion with others`
+  : `💡 SHARE A VALUABLE INSIGHT (35-75 words):
+- Add a new perspective or analytical angle
+- Include specific examples or data
+- Spark discussion with others
+- Don't need creator to respond`
 }
 
-🚫 CRITICAL RULES:
-- NO fake scenarios or made-up stories
-- NO generic praise ("Great point!", "Love this!")
+🚫 RULES:
+- NO fake stories or scenarios
+- NO generic praise ("Great point!")
 - NO multiple questions
-- ONLY share genuine experiences if relevant
+- Be honest and specific
 
-Remember: Be early (< 5 min), be honest, be valuable.
+Write your reply now (35-75 words):
   `.trim();
 }
 
-function buildContext(creator: CreatorIntelligence, tweet: TweetData): string {
-  return `
-Creator: @${creator.username}
-Their niche: ${creator.primaryNiche}
-Their audience cares about: ${creator.audience.demographics.primaryInterests.join(", ")}
-Tweet engagement: ${tweet.likeCount || 0} likes, ${tweet.replyCount || 0} replies
-  `.trim();
+function predictEngagement(
+  reply: string,
+  creator: CreatorIntelligence
+): {
+  authorRespondProb: number;
+  likesProb: number;
+  repliesProb: number;
+} {
+  const hasQuestion = reply.includes('?');
+  const wordCount = reply.split(/\s+/).length;
+  const hasNumbers = /\b\d+[KM%]?\b/.test(reply);
+  const creatorResponds = creator.metrics.engagementRate > 0.03;
+
+  // Simple probability calculations
+  let authorRespondProb = 0.05; // Base 5%
+  let likesProb = 0.15; // Base 15%
+  let repliesProb = 0.05; // Base 5%
+
+  // If creator doesn't respond, drop author probability
+  if (!creatorResponds) {
+    authorRespondProb = 0.02;
+  } else {
+    // Question boosts author response
+    if (hasQuestion) authorRespondProb += 0.25;
+    
+    // Good length
+    if (wordCount >= 35 && wordCount <= 75) {
+      authorRespondProb += 0.15;
+      likesProb += 0.20;
+    }
+  }
+
+  // Numbers/data boost likes
+  if (hasNumbers) likesProb += 0.15;
+
+  // Thought-provoking boosts replies
+  if (hasQuestion || wordCount > 50) repliesProb += 0.10;
+
+  return {
+    authorRespondProb: Math.min(authorRespondProb, 1),
+    likesProb: Math.min(likesProb, 1),
+    repliesProb: Math.min(repliesProb, 1)
+  };
 }
 
-function generateFeedback(
-  prediction: EngagementPrediction,
-  candidate: string,
-  tweet: TweetData
-): string {
-  const issues: string[] = [];
-
-  // Check author response probability
-  if (prediction.probabilityAuthorResponds < 0.25) {
-    if (!candidate.includes('?')) {
-      issues.push("❌ No question asked - author unlikely to respond");
-      issues.push("   → Add ONE specific question at the end");
-    } else {
-      issues.push("❌ Question is too generic or vague");
-      issues.push("   → Make it specific to their tweet's topic");
-    }
-  }
-
-  // Check likes probability
-  if (prediction.probabilityGetsLikes < 0.25) {
-    const words = candidate.split(/\s+/).length;
-    if (words < 35) {
-      issues.push(`❌ Too short (${words} words) - needs more substance`);
-      issues.push("   → Expand to 35-75 words with a specific insight");
-    } else if (words > 100) {
-      issues.push(`❌ Too long (${words} words) - people won't read it all`);
-      issues.push("   → Cut to 35-75 words, one focused point");
-    }
-
-    if (!/\b\d+[KM%]?\b/.test(candidate)) {
-      issues.push("❌ No specific numbers or data");
-      issues.push("   → If relevant, add concrete data points");
-    }
-  }
-
-  // Check replies probability
-  if (prediction.probabilityGetsReplies < 0.05) {
-    issues.push("❌ Not thought-provoking enough to spark discussion");
-    issues.push("   → Ask about edge cases, tradeoffs, or implementation");
-  }
-
-  if (issues.length === 0) {
-    return "Good reply! Try to push engagement score even higher.";
-  }
-
-  return `
-🔧 **ISSUES TO FIX:**
-
-${issues.join("\n")}
-
-**CRITICAL:** Reference the original tweet directly. Use their words.
-Tweet said: "${tweet.text.substring(0, 100)}..."
-  `.trim();
-}

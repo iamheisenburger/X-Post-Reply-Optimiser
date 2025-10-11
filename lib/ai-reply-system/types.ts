@@ -1,92 +1,12 @@
-// Core types for the AI Reply System
-
-export type ReplyMode = 
-  | "pure_saas"           // Only SaaS insights, zero MMA
-  | "pure_mma"            // Only MMA analysis, minimal SaaS
-  | "mindset_crossover"   // Bridge discipline concepts (rare, needs receptive audience)
-  | "technical"           // Pure technical/tactical insights
-  | "storytelling";       // Personal experience
-
-export interface CreatorIntelligence {
-  username: string;
-  displayName: string;
-  followerCount: number;
-  verified: boolean;
-  
-  // Niche Analysis
-  primaryNiche: "saas" | "mma" | "tech" | "finance" | "mindset" | "other";
-  secondaryNiches: string[];
-  
-  // Audience Analysis
-  audience: {
-    demographics: {
-      primaryInterests: string[];
-      irrelevantTopics: string[];
-      languageStyle: string;
-      sophisticationLevel: string;
-    };
-    
-    engagementPatterns: {
-      respondsTo: string[];
-      ignores: string[];
-      preferredTone: string;
-    };
-  };
-  
-  // Content Analysis
-  contentPatterns: {
-    topics: Array<{
-      topic: string;
-      frequency: number;
-      engagement: number;
-    }>;
-    
-    postTypes: {
-      insights: number;
-      questions: number;
-      announcements: number;
-      personal: number;
-    };
-    
-    toneProfile: {
-      serious: number;
-      humorous: number;
-      technical: number;
-      philosophical: number;
-    };
-  };
-  
-  // Crossover Receptiveness
-  crossoverPotential: {
-    mmaRelevance: 0 | 1 | 2 | 3 | 4 | 5;
-    saasRelevance: 0 | 1 | 2 | 3 | 4 | 5;
-    disciplineTopics: 0 | 1 | 2 | 3 | 4 | 5;
-    philosophyTopics: 0 | 1 | 2 | 3 | 4 | 5;
-  };
-  
-  // Optimal Strategy
-  optimalReplyStrategy: {
-    mode: ReplyMode;
-    avoidTopics: string[];
-    emphasizeTopics: string[];
-    toneMatch: string;
-    questionStyle: string;
-  };
-  
-  // Metrics
-  metrics: {
-    followers: number;
-    engagementRate: number;
-  };
-  
-  // Metadata
-  lastUpdated: number;
-  tweetAnalysisCount: number;
-}
+/**
+ * Core Types - Keep it simple
+ */
 
 export interface TweetData {
   id: string;
   text: string;
+  createdAt: string;
+  conversationId: string;
   author: {
     id: string;
     username: string;
@@ -94,10 +14,8 @@ export interface TweetData {
     description: string;
     followers_count: number;
   };
-  hasMedia: boolean;
-  isThread: boolean;
-  conversationId: string;
-  createdAt: string;
+  hasMedia?: boolean;
+  isThread?: boolean;
   likeCount?: number;
   replyCount?: number;
   retweetCount?: number;
@@ -105,21 +23,71 @@ export interface TweetData {
 
 export interface UserProfile {
   handle: string;
-  currentFollowers: number;
-  targetFollowers: number;
-  niche: string;
-  subNiche: string;
-  voice: string;
-  goal: string;
-  strategy: string;
-  expertise: string;
-  currentProject: string;
+  displayName: string;
+  bio: string;
 }
 
-export interface ScoredReply {
+export interface CreatorIntelligence {
+  username: string;
+  displayName: string;
+  followerCount: number;
+  verified: boolean;
+  primaryNiche: "saas" | "mma" | "tech" | "finance" | "mindset" | "other";
+  secondaryNiches: string[];
+  metrics: {
+    followers: number;
+    engagementRate: number;
+  };
+  audience: {
+    demographics: {
+      primaryInterests: string[];
+      irrelevantTopics: string[];
+      languageStyle: string;
+      sophisticationLevel: string;
+    };
+    engagementPatterns: {
+      respondsTo: string[];
+      ignores: string[];
+      preferredTone: string;
+    };
+  };
+  contentPatterns: {
+    topics: string[];
+    postTypes: {
+      insights: number;
+      questions: number;
+      announcements: number;
+      personal: number;
+    };
+    toneProfile: {
+      serious: number;
+      humorous: number;
+      technical: number;
+      philosophical: number;
+    };
+  };
+  crossoverPotential: {
+    mmaRelevance: 0 | 1 | 2 | 3 | 4 | 5;
+    saasRelevance: 0 | 1 | 2 | 3 | 4 | 5;
+    disciplineTopics: 0 | 1 | 2 | 3 | 4 | 5;
+    philosophyTopics: 0 | 1 | 2 | 3 | 4 | 5;
+  };
+  optimalReplyStrategy: {
+    mode: "pure_saas" | "pure_mma" | "mindset_crossover" | "technical" | "storytelling";
+    avoidTopics: string[];
+    emphasizeTopics: string[];
+    toneMatch: string;
+    questionStyle: string;
+  };
+  lastUpdated: number;
+  tweetAnalysisCount: number;
+}
+
+export interface GeneratedReply {
   text: string;
-  score: number; // Engagement probability (0-100)
-  mode: string; // Always "engagement_optimized"
+  score: number; // Overall engagement score 0-100
+  mode: string; // Reply mode/strategy used
+  iteration: number; // Number of iterations (always 1 now)
   engagement: {
     authorRespondProb: number;
     likesProb: number;
@@ -128,8 +96,8 @@ export interface ScoredReply {
 }
 
 export interface OptimizationResult {
-  replies: ScoredReply[];
-  selectedMode: string; // Always "engagement_optimized"
+  replies: GeneratedReply[];
   averageIterations: number;
+  totalIterations: number;
 }
 

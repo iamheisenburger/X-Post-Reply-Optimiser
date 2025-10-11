@@ -1,30 +1,21 @@
-// Main AI Reply System - Orchestrates all components
+/**
+ * AI Reply System - Simple & Working
+ */
 
-export { generateOptimizedReplies } from "./optimization-engine";
 export { buildCreatorIntelligence, extractTweetId } from "./creator-intelligence";
-export type {
-  ReplyMode,
-  CreatorIntelligence,
-  TweetData,
-  UserProfile,
-  ScoredReply,
-  OptimizationResult
+export { generateOptimizedReplies } from "./optimization-engine";
+export type { 
+  CreatorIntelligence, 
+  TweetData, 
+  UserProfile, 
+  GeneratedReply,
+  OptimizationResult 
 } from "./types";
 
-// User profile constant (from your requirements)
+// User profile
 export const MADMANHAKIM_PROFILE = {
   handle: "madmanhakim",
-  currentFollowers: 3,
-  targetFollowers: 250,
-  niche: "MMA + SaaS",
-  subNiche: "MMA analysis and SaaS building",
-  voice: "Bridge combat sports discipline with startup execution",
-  goal: "Grow from 3 to 250 followers in 30 days, drive SubWise signups (0→50 users)",
-  strategy: "High-value replies to VIP list of 50 accounts",
-  expertise: "Fighter mindset applied to startups, MMA technical analysis, SaaS building",
-  currentProject: "SubWise (subscription management SaaS)"
+  displayName: "Hakim",
+  bio: "Building SubWise (subscription tracker) & Reply Optimizer. SaaS + MMA mindset.",
 };
-
-
-
 
