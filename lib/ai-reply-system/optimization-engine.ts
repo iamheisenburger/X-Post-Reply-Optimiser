@@ -13,7 +13,7 @@ import type {
   OptimizationResult
 } from "./types";
 import { generateReply } from "../openai-client";
-import { predictEngagement, extractSignals } from "./engagement-predictor";
+import { predictEngagement, extractSignals, type EngagementPrediction } from "./engagement-predictor";
 
 const MAX_ITERATIONS = 6;
 const TARGET_ENGAGEMENT_SCORE = 85; // 85%+ engagement probability
@@ -83,10 +83,10 @@ async function optimizeSingleReply(
     const systemPrompt = buildEngagementPrompt(creator, tweet, userProfile);
 
     // Generate reply
-    const candidate = await generateReply(
-      systemPrompt,
+      const candidate = await generateReply(
+        systemPrompt,
       buildContext(creator, tweet),
-      previousAttempt,
+        previousAttempt,
       feedback,
       iteration
     );
@@ -125,12 +125,12 @@ async function optimizeSingleReply(
 
     if (score >= TARGET_ENGAGEMENT_SCORE) {
       console.log(`   🎯 Target achieved!`);
-      break;
-    }
+        break;
+      }
 
     // Generate feedback for next iteration
     feedback = generateFeedback(prediction, candidate, tweet);
-    previousAttempt = candidate;
+        previousAttempt = candidate;
   }
 
   if (bestReply) {
@@ -210,7 +210,7 @@ Tweet engagement: ${tweet.likeCount || 0} likes, ${tweet.replyCount || 0} replie
 }
 
 function generateFeedback(
-  prediction: any,
+  prediction: EngagementPrediction,
   candidate: string,
   tweet: TweetData
 ): string {

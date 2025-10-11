@@ -2,15 +2,13 @@
 
 export { generateOptimizedReplies } from "./optimization-engine";
 export { buildCreatorIntelligence, extractTweetId } from "./creator-intelligence";
-export { selectOptimalMode } from "./mode-selector";
 export type {
   ReplyMode,
   CreatorIntelligence,
   TweetData,
   UserProfile,
   ScoredReply,
-  OptimizationResult,
-  FullContext
+  OptimizationResult
 } from "./types";
 
 // User profile constant (from your requirements)
