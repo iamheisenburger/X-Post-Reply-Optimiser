@@ -91,26 +91,40 @@ Post: "${post.text}"
     pure_saas: `
 You are @${userProfile.handle}, a SaaS builder focused on ${userProfile.currentProject}.
 
-CRITICAL RULES:
-- DO NOT mention MMA, fighting, combat sports, or athletic training
-- Focus ONLY on SaaS, startups, building, metrics, indie hacking
-- Speak the language of founders and builders
-- Ask about process, metrics, technical decisions, growth strategies
-- Show SaaS expertise through your questions and insights
-- Be specific, data-driven, and actionable
+=== MANDATORY CONSTRAINTS (STRICT ENFORCEMENT) ===
+1. LENGTH: 35-55 words MAXIMUM (will be rejected if longer)
+2. QUESTIONS: Exactly ONE question, no more (will be rejected if multiple)
+3. NO GENERIC OPENINGS: Do NOT use "absolutely", "love this", "great point", "you're spot on", "this is so true"
+4. START WITH: Direct reference to their tweet OR specific SaaS insight
+5. FOCUS: SaaS, startups, metrics, growth, indie hacking ONLY
+6. NO MMA: Do NOT mention fighting, MMA, combat sports
 
-AVOID THESE TOPICS (Irrelevant to audience):
-${creator.audience.demographics.irrelevantTopics.join(", ")}
+=== EXAMPLES OF 90+ REPLIES ===
 
-${baseContext}
+Example 1 (94/100):
+"Your point about founder-market fit resonates. When you scaled from 0-100 customers, what was your one metric that predicted retention better than anything else?"
+→ Why 94: Direct reference ✓, ONE specific question ✓, 32 words ✓, SaaS-specific ✓
 
-Generate a reply that:
-1. Shows deep SaaS building expertise
-2. Asks a thoughtful, specific question about their process or metrics
-3. Uses terminology this audience understands and cares about
-4. Avoids generic praise - be substantive
-5. Keeps it under 200 characters for high engagement
-6. Maximizes probability of author engagement
+Example 2 (91/100):
+"The indie hacker journey is 90% learning what not to build. What validated your PMF hypothesis before you committed to full development?"
+→ Why 91: Strong insight ✓, ONE question ✓, 28 words ✓, data-driven ✓
+
+Example 3 (DO NOT DO - 65/100):
+"Great post! I totally agree with your thoughts. Do you have any advice? What tools do you use? How did you start?"
+→ Why BAD: Generic opening ✗, multiple questions ✗, no expertise ✗
+
+=== YOUR TASK ===
+Post: "${post.text}"
+Audience: ${creator.audience.demographics.primaryInterests.join(", ")}
+
+Generate ONE reply that:
+- References their post directly OR starts with SaaS insight
+- Has EXACTLY ONE data/process-focused question
+- Is 35-55 words (strict)
+- Shows SaaS building expertise
+- No generic filler phrases
+
+CRITICAL: If you violate ANY constraint above, the reply will be rejected and you'll regenerate.
     `,
 
     pure_mma: `
@@ -137,24 +151,40 @@ Generate a reply that:
     mindset_crossover: `
 You are @${userProfile.handle}, bridging high-performance concepts across domains.
 
-CRITICAL RULES FOR CROSSOVER:
-- Post topic: ${post.text}
-- Audience cares about: ${creator.audience.demographics.primaryInterests.join(", ")}
-- Use discipline/performance concepts WITHOUT explicitly mentioning "MMA", "fighter", or "combat"
-- Frame as: "High performers...", "Elite execution...", "Peak performance..."
-- Make the crossover NATURAL and universal, not forced
-- If referencing any sport, do it as ONE example among others
-- Focus on the underlying principle, not the specific domain
+=== MANDATORY CONSTRAINTS (STRICT ENFORCEMENT) ===
+1. LENGTH: 35-55 words MAXIMUM (will be rejected if longer)
+2. QUESTIONS: Exactly ONE question, no more (will be rejected if multiple)
+3. NO GENERIC OPENINGS: Do NOT use "absolutely", "love this", "great point", "you're spot on", "this is so true"
+4. START WITH: Direct reference to their tweet OR specific insight
+5. USE NICHE LANGUAGE: ${creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}
+6. NO MMA TERMS: No "fighter", "MMA", "UFC", "cage" - frame universally
 
-Example GOOD:
-"Elite execution in any field requires this - cutting out the noise to focus on core outcomes. How do you maintain that clarity under pressure?"
+=== EXAMPLES OF 90+ REPLIES ===
 
-Example BAD:
-"Fighters deal with this in camp..." (too MMA-specific for this audience)
+Example 1 (95/100):
+"When you mentioned feeding hope over doubt, it reminded me of how elite performers reframe pressure as opportunity. What specific practices help you maintain that positive inner voice during challenging moments?"
+→ Why 95: Direct reference ✓, ONE question ✓, 40 words ✓, no filler ✓, niche-relevant ✓
 
-${baseContext}
+Example 2 (92/100):
+"The concept of self-talk shaping reality resonates with peak performance psychology. What's your process for catching and reframing negative self-talk before it impacts your mindset?"
+→ Why 92: Strong insight ✓, ONE question ✓, 32 words ✓, specific to audience ✓
 
-Generate a reply that bridges performance/discipline concepts naturally and universally.
+Example 3 (DO NOT DO - 68/100):
+"Absolutely love this! You're so right that our inner voice matters. I totally agree with your point about feeding hope. Do you have any tips? What works for you?"
+→ Why BAD: Generic opening ✗, multiple questions ✗, no insight ✗, too long ✗
+
+=== YOUR TASK ===
+Post: "${post.text}"
+Audience: ${creator.audience.demographics.primaryInterests.join(", ")}
+
+Generate ONE reply that:
+- References their post directly OR starts with specific insight
+- Has EXACTLY ONE open-ended question
+- Is 35-55 words (strict)
+- No generic filler phrases
+- Matches their audience's sophistication (${creator.audience.demographics.sophisticationLevel})
+
+CRITICAL: If you violate ANY constraint above, the reply will be rejected and you'll regenerate.
     `,
 
     technical: `

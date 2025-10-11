@@ -121,7 +121,7 @@ function evaluateContentRelevance(
     id: "content_relevance",
     name: "Content Relevance",
     weight: 25,
-    passed: score >= 60,
+    passed: score >= 75, // Raised from 60 - must reference tweet strongly
     score: Math.min(100, score),
     feedback,
     critical: true
@@ -148,17 +148,17 @@ function evaluateEngagementHooks(
     const questionCount = (reply.match(/\?/g) || []).length;
     
     if (questionCount === 1) {
-      score += 25;
+      score += 30;
       feedback.push(`✅ Has one focused question (optimal for engagement)`);
     } else if (questionCount === 2) {
-      score += 10;
-      feedback.push(`⚠️ Has ${questionCount} questions - focus on ONE best question`);
+      score -= 20;
+      feedback.push(`❌ Has ${questionCount} questions - MUST have exactly ONE question`);
     } else {
-      score -= 10;
-      feedback.push(`❌ Too many questions (${questionCount}) - pick ONE specific question`);
+      score -= 30;
+      feedback.push(`❌ Too many questions (${questionCount}) - STRICTLY ONE question only`);
     }
   } else {
-    score -= 20;
+    score -= 25;
     feedback.push(`❌ No question - add an open-ended question to drive engagement`);
   }
   
@@ -182,27 +182,32 @@ function evaluateEngagementHooks(
     feedback.push(`💡 TIP: Add personal experience or observation ("I've found..." or "In building X, I noticed...")`);
   }
   
-  // CHECK 3: Generic praise (NEGATIVE)
+  // CHECK 3: Generic praise (NEGATIVE) - STRICT ENFORCEMENT
   const genericPhrases = [
     "great point",
     "love this",
     "so true",
-    "absolutely agree",
+    "absolutely",
     "totally agree",
     "this is awesome",
     "well said",
     "amazing",
-    "perfectly said"
+    "perfectly said",
+    "you're spot on",
+    "you're right",
+    "i agree",
+    "this resonates",
+    "100%"
   ];
   
   const genericCount = genericPhrases.filter(phrase => replyLower.includes(phrase)).length;
   
   if (genericCount === 0) {
-    score += 15;
+    score += 20;
     feedback.push(`✅ No generic filler praise`);
   } else {
-    score -= genericCount * 15;
-    feedback.push(`❌ Contains generic praise - be substantive, not flattering`);
+    score -= genericCount * 25; // Increased penalty
+    feedback.push(`❌ Contains generic praise ("${genericPhrases.find(p => replyLower.includes(p))}") - FORBIDDEN`);
   }
   
   // CHECK 4: Specific to creator's niche?
@@ -223,7 +228,7 @@ function evaluateEngagementHooks(
     id: "engagement_hooks",
     name: "Engagement Hooks",
     weight: 30,
-    passed: score >= 65,
+    passed: score >= 75, // Raised from 65 - must be stricter
     score: Math.min(100, Math.max(0, score)),
     feedback,
     critical: true
@@ -366,24 +371,30 @@ function evaluateConversationDepth(
     feedback.push(`💡 TIP: Make question specific to their niche: ${expertiseTerms}`);
   }
   
-  // Not too short/long?
+  // STRICT LENGTH CHECK: 35-55 words
   const wordCount = reply.split(/\s+/).length;
-  if (wordCount >= 20 && wordCount <= 60) {
-    score += 20;
-    feedback.push(`✅ Good length (${wordCount} words) - clear but not overwhelming`);
-  } else if (wordCount < 15) {
-    score -= 15;
-    feedback.push(`⚠️ Too brief (${wordCount} words) - add more substance`);
-  } else if (wordCount > 80) {
-    score -= 10;
-    feedback.push(`⚠️ Too long (${wordCount} words) - be more concise`);
+  if (wordCount >= 35 && wordCount <= 55) {
+    score += 30;
+    feedback.push(`✅ Perfect length (${wordCount} words) - optimal for engagement`);
+  } else if (wordCount >= 25 && wordCount < 35) {
+    score += 10;
+    feedback.push(`⚠️ Slightly short (${wordCount} words) - aim for 35-55 words`);
+  } else if (wordCount > 55 && wordCount <= 70) {
+    score -= 20;
+    feedback.push(`❌ Too long (${wordCount} words) - MUST be 35-55 words`);
+  } else if (wordCount < 25) {
+    score -= 25;
+    feedback.push(`❌ Too brief (${wordCount} words) - MUST be at least 35 words`);
+  } else {
+    score -= 30;
+    feedback.push(`❌ Way too long (${wordCount} words) - STRICTLY 35-55 words only`);
   }
   
   return {
     id: "conversation_depth",
     name: "Conversation Depth",
     weight: 20,
-    passed: score >= 60,
+    passed: score >= 70, // Raised from 60 - must be stricter
     score: Math.min(100, Math.max(0, score)),
     feedback,
     critical: false
