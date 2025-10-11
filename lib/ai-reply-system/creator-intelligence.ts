@@ -156,6 +156,11 @@ export async function buildCreatorIntelligence(
     primaryNiche: analysis.primaryNiche as "saas" | "mma" | "tech" | "finance" | "mindset" | "other",
     secondaryNiches: analysis.secondaryNiches || [],
     
+    metrics: {
+      followers: profile.followers_count,
+      engagementRate: calculateEngagementRate(recentTweets),
+    },
+    
     audience: {
       demographics: {
         primaryInterests: analysis.audienceInterests || [],
@@ -461,6 +466,33 @@ function createHeuristicAnalysis(
     avoidTopics: [],
     emphasizeTopics: primaryNiche === "mindset" ? ["growth", "discipline", "mindset"] : ["growth", "building"],
   };
+}
+
+function calculateEngagementRate(tweets: any[]): number {
+  if (tweets.length === 0) return 0;
+  
+  let totalEngagement = 0;
+  let totalImpressions = 0;
+  
+  for (const tweet of tweets) {
+    const likes = tweet.likeCount || tweet.like_count || 0;
+    const retweets = tweet.retweetCount || tweet.retweet_count || 0;
+    const replies = tweet.replyCount || tweet.reply_count || 0;
+    const views = tweet.viewCount || tweet.view_count || tweet.impressionCount || 0;
+    
+    totalEngagement += likes + retweets + replies;
+    if (views > 0) {
+      totalImpressions += views;
+    }
+  }
+  
+  // If we have view data, use engagement / views
+  if (totalImpressions > 0) {
+    return totalEngagement / totalImpressions;
+  }
+  
+  // Otherwise use engagement per tweet as a proxy
+  return totalEngagement / tweets.length / 100; // Normalize to 0-1 range
 }
 
 export function extractTweetId(url: string): string {
