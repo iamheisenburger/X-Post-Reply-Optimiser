@@ -187,7 +187,8 @@ export async function POST(request: NextRequest) {
         primaryNiche: creatorIntelligence.primaryNiche,
         mmaRelevance: creatorIntelligence.crossoverPotential.mmaRelevance,
         saasRelevance: creatorIntelligence.crossoverPotential.saasRelevance,
-        engagementStyle: creatorIntelligence.engagementStyle,
+        replyMode: creatorIntelligence.optimalReplyStrategy.mode,
+        preferredTone: creatorIntelligence.audience.engagementPatterns.preferredTone,
       },
       totalIterations: 1, // One-shot generation!
       averageScore: averageScore,
