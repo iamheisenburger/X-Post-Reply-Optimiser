@@ -31,7 +31,7 @@ export function evaluateCheckpoints(
 ): CheckpointEvaluation {
   
   const checkpoints: QualityCheckpoint[] = [
-    evaluateContentRelevance(originalTweet, reply, creator),
+    evaluateContentRelevance(originalTweet, reply),
     evaluateEngagementHooks(reply, creator),
     evaluateValueAdd(originalTweet, reply),
     evaluateConversationDepth(reply, creator),
@@ -67,8 +67,7 @@ export function evaluateCheckpoints(
  */
 function evaluateContentRelevance(
   originalTweet: string,
-  reply: string,
-  creator: CreatorIntelligence
+  reply: string
 ): QualityCheckpoint {
   
   let score = 0;
@@ -103,7 +102,6 @@ function evaluateContentRelevance(
   
   // Check for direct reference
   const replyLower = reply.toLowerCase();
-  const tweetLower = originalTweet.toLowerCase();
   const directReferences = [
     "your point about",
     "you mentioned",

@@ -273,8 +273,6 @@ function validateModeCompliance(
   creator: CreatorIntelligence
 ): ModeValidation {
   
-  const lowerReply = reply.toLowerCase();
-
   // Helper to check for whole word matches (not substrings)
   const containsWholeWord = (text: string, word: string): boolean => {
     const regex = new RegExp(`\\b${word}\\b`, 'i');

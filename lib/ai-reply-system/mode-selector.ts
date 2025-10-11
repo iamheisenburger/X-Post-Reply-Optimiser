@@ -38,9 +38,9 @@ export function selectOptimalMode(
     return "pure_saas";
   }
   
-  // RULE 2: Check if finance/business niche
-  if (creator.primaryNiche === "finance" || creator.primaryNiche === "business") {
-    console.log(`   ✅ Finance/Business creator → pure_saas`);
+  // RULE 2: Check if finance niche
+  if (creator.primaryNiche === "finance") {
+    console.log(`   ✅ Finance creator → pure_saas`);
     return "pure_saas";
   }
 
