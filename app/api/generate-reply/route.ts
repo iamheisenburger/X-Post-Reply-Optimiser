@@ -142,7 +142,6 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Score range: ${replies[replies.length-1].score} - ${replies[0].score}`);
 
     // 6. Transform for frontend
-    const MAX_TOTAL_SCORE = 300; // internal normalization reference
     const classifyMode = (text: string, f: { hasQuestion: boolean; hasPushback: boolean; hasSpecificData: boolean; }) => {
       if (f.hasPushback) return "contrarian";
       if (f.hasQuestion) return "question";
@@ -151,31 +150,31 @@ export async function POST(request: NextRequest) {
     };
 
     const transformedReplies = replies.map((reply, idx) => {
-      const sb = reply.prediction.scoreBreakdown;
-      const total = Math.max(1, (sb.authorReply || 0) + (sb.replies || 0) + (sb.likes || 0) + (sb.profileClicks || 0) + (sb.recencyBonus || 0));
-      // Percent breakdowns (what we display)
-      const engagementPct = ((sb.authorReply || 0) + (sb.replies || 0)) / total * 100;
-      const conversationPct = (sb.replies || 0) / total * 100;
-      const authorRepPct = (sb.profileClicks || 0) / total * 100;
-      const recencyPct = (sb.recencyBonus || 0) / total * 100;
-      const mediaPct = 0;
-      // UI score derived directly from displayed percentages so it aligns visually
-      const uiScore = Math.max(1, Math.min(100, Math.round(
-        engagementPct * 0.55 +
-        conversationPct * 0.25 +
-        authorRepPct * 0.15 +
-        recencyPct * 0.05
+      const p = reply.prediction;
+      
+      // Show probability/likelihood scores (0-100) for each signal - these are interpretable
+      const authorReplyChance = Math.round(p.authorReplyProb * 100); // Direct probability (0-100%)
+      const conversationLikelihood = Math.min(100, Math.round((p.repliesExpected / 10) * 100)); // Normalized expected replies
+      const profileClickChance = Math.min(100, Math.round((p.profileClicksExpected / 10) * 100)); // Normalized expected clicks
+      const recencyBoost = minutesSincePosted <= 5 ? 100 : Math.max(0, Math.round((1 - minutesSincePosted / 60) * 100));
+      
+      // Overall score: weighted combination emphasizing author reply (most valuable per X algorithm)
+      const overallScore = Math.max(1, Math.min(100, Math.round(
+        authorReplyChance * 0.50 +       // Author response is KING (75x in X algorithm)
+        conversationLikelihood * 0.30 +  // Conversation starter (13.5x)
+        profileClickChance * 0.15 +      // Profile visit (5x, leads to follows)
+        recencyBoost * 0.05              // Recency bonus (2.5x within 5min)
       )));
 
       return {
         text: reply.text,
-        score: uiScore,
+        score: overallScore,
         breakdown: {
-          engagement: Math.round(engagementPct),
-          recency: Math.round(recencyPct),
-          mediaPresence: Math.round(mediaPct),
-          conversationDepth: Math.round(conversationPct),
-          authorReputation: Math.round(authorRepPct),
+          engagement: authorReplyChance,        // Likelihood author responds (0-100%)
+          recency: recencyBoost,                // Recency advantage (0-100)
+          mediaPresence: 0,                     // Reserved for future media detection
+          conversationDepth: conversationLikelihood, // Likelihood of sparking replies (0-100)
+          authorReputation: profileClickChance, // Likelihood of profile click (0-100)
         },
         mode: classifyMode(reply.text, reply.features),
         iteration: idx + 1,
@@ -184,7 +183,7 @@ export async function POST(request: NextRequest) {
           hasQuestion: reply.features.hasQuestion,
           hasPushback: reply.features.hasPushback,
           hasData: reply.features.hasSpecificData,
-          authorReplyProb: Math.round(reply.prediction.authorReplyProb * 100),
+          authorReplyProb: authorReplyChance,
         },
       };
     });

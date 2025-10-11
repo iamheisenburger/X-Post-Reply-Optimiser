@@ -245,27 +245,24 @@ export default function AIReplyPage() {
 
                   {/* Score Breakdown */}
                   <div>
-                    <h4 className="font-semibold mb-2 text-sm">Algorithm Breakdown:</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                    <h4 className="font-semibold mb-2 text-sm">X Algorithm Signals:</h4>
+                    <p className="text-xs text-muted-foreground mb-2">Likelihood scores (0-100% per signal)</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Engagement</p>
+                        <p className="text-xs text-muted-foreground">Author Reply (75x)</p>
                         <p className="font-bold text-sm">{reply.breakdown.engagement.toFixed(0)}%</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Conversation</p>
+                        <p className="text-xs text-muted-foreground">Spark Conversation (13.5x)</p>
                         <p className="font-bold text-sm">{reply.breakdown.conversationDepth.toFixed(0)}%</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Profile Click</p>
+                        <p className="text-xs text-muted-foreground">Profile Click (5x)</p>
                         <p className="font-bold text-sm">{reply.breakdown.authorReputation.toFixed(0)}%</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Recency</p>
+                        <p className="text-xs text-muted-foreground">Recency Boost (2.5x)</p>
                         <p className="font-bold text-sm">{reply.breakdown.recency.toFixed(0)}%</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Media</p>
-                        <p className="font-bold text-sm">{reply.breakdown.mediaPresence.toFixed(0)}%</p>
                       </div>
                     </div>
                   </div>
