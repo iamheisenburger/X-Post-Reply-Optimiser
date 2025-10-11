@@ -4,7 +4,7 @@ import OpenAI from "openai";
 import { analyzeReplyFeatures, predictEngagement } from "../x-algorithm";
 import type { CreatorIntelligence } from "./types";
 import { analyzeTweetContent } from "./content-analyzer";
-import { assessQuality, shouldIterate, type QualityReport } from "./quality-gate";
+import { assessQuality, shouldIterate, getImprovementSummary, type QualityReport } from "./quality-gate";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
