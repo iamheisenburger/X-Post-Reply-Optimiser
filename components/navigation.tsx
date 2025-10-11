@@ -9,7 +9,8 @@ export function Navigation() {
 
   const links = [
     { href: "/", label: "🤖 AI Reply" },
-    { href: "/targets", label: "VIP Targets" },
+    { href: "/profiles", label: "👤 Profiles" },
+    { href: "/targets", label: "🎯 VIP Targets" },
   ];
 
   return (

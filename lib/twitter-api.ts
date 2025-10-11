@@ -58,8 +58,8 @@ export const twitterApi = {
       return null;
     }
     try {
-      // TwitterAPI.io endpoint format: /twitter/user?userName=username
-      const url = `${TWITTER_API_BASE_URL}/twitter/user?userName=${username}`;
+      // TwitterAPI.io CORRECT endpoint: /twitter/user/info
+      const url = `${TWITTER_API_BASE_URL}/twitter/user/info?userName=${username}`;
       console.log(`\n🔍 FETCHING USER: @${username}`);
       console.log(`📡 Request URL: ${url}`);
       
@@ -129,15 +129,16 @@ export const twitterApi = {
     }
   },
 
-  async getUserTweets(userId: string, count: number = 5): Promise<Tweet[]> {
+  async getUserTweets(userId: string, count: number = 10): Promise<Tweet[]> {
     if (!TWITTER_API_KEY) {
       console.warn("TWITTER_API_KEY is not set. Cannot fetch user tweets.");
       return [];
     }
     try {
-      // TwitterAPI.io endpoint format: /twitter/user/tweets?userId=...&count=...
-      const url = `${TWITTER_API_BASE_URL}/twitter/user/tweets?userId=${userId}&count=${count}`;
-      console.log(`\n🔍 FETCHING TWEETS: ${count} tweets for user ${userId}`);
+      // TwitterAPI.io CORRECT endpoint: /twitter/user/last_tweets
+      // Note: API returns up to 20 tweets per page, no 'count' parameter
+      const url = `${TWITTER_API_BASE_URL}/twitter/user/last_tweets?userId=${userId}`;
+      console.log(`\n🔍 FETCHING TWEETS: Last tweets for user ${userId}`);
       console.log(`📡 Request URL: ${url}`);
       
       const response = await fetch(url, {
@@ -188,10 +189,11 @@ export const twitterApi = {
       
       // ===== ATTEMPT MULTIPLE PARSING STRATEGIES =====
       
-      // Strategy 1: Check for direct tweets array
+      // Strategy 1: Check for direct tweets array (CORRECT FORMAT per docs)
       if (data.tweets && Array.isArray(data.tweets)) {
         console.log(`✅ SUCCESS: Found ${data.tweets.length} tweets in data.tweets`);
-        return data.tweets;
+        // Return only the requested count (API might return up to 20)
+        return data.tweets.slice(0, count);
       }
       
       // Strategy 2: Check if data itself is an array
