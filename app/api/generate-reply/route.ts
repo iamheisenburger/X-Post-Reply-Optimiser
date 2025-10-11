@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Build creator intelligence - CHECK DATABASE FIRST!
     let creatorIntelligence;
+    let profileSource: 'cached' | 'analyzed' = 'analyzed';
     try {
       const cachedProfile = await fetchQuery(api.creators.getByUsername, { 
         username: tweet.author.username 
@@ -49,6 +50,7 @@ export async function POST(request: NextRequest) {
 
       if (cachedProfile) {
         console.log(`✅ Using pre-analyzed profile from database!`);
+        profileSource = 'cached';
         
         // Transform cached profile to CreatorIntelligence format
         creatorIntelligence = {
@@ -205,6 +207,7 @@ export async function POST(request: NextRequest) {
         saasRelevance: creatorIntelligence.crossoverPotential.saasRelevance,
         replyMode: creatorIntelligence.optimalReplyStrategy.mode,
         preferredTone: creatorIntelligence.audience.engagementPatterns.preferredTone,
+        profileSource: profileSource,
       },
       totalIterations: 1, // One-shot generation!
       averageScore: averageScore,

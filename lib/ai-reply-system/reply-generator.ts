@@ -153,29 +153,40 @@ function buildOptimizationPrompt(context: ReplyGenerationContext): string {
 5. Each reply < 280 characters
 6. @ mention @${tweetAuthor} at start for notification priority
 
-**REPLY STRATEGIES** (use different approach for each):
-1. **Question Reply**: Ask a specific question about WHAT THEY SAID that requires their expertise
-2. **Contrarian Reply**: Polite pushback or alternative perspective on THEIR SPECIFIC POINT
-3. **Add-Value Reply**: Expand on THEIR IDEA with a real relevant insight or connection
+**REPLY STRATEGIES** (MANDATORY - each reply MUST use a DIFFERENT strategy):
 
-**FORMAT** (return EXACTLY this):
-REPLY 1:
-[Your reply that references the actual tweet content]
+**STRATEGY 1 - QUESTION** (REQUIRED for Reply 1):
+Ask a SPECIFIC question about what they said that requires THEIR expertise to answer. NOT generic "what do you think?" but something that shows you understood their point deeply.
 
-REPLY 2:
-[Your reply that references the actual tweet content]
+**STRATEGY 2 - CONTRARIAN** (REQUIRED for Reply 2):
+Politely challenge or present an alternative view on their SPECIFIC POINT. Not trolling, but thoughtful pushback that makes them want to defend or clarify. This is MEMORABLE.
 
-REPLY 3:
-[Your reply that references the actual tweet content]
+**STRATEGY 3 - ADD-VALUE** (REQUIRED for Reply 3):
+Expand on their idea with a real insight, connection, or example. Build on what they said, don't just agree. Add something NEW to the conversation.
 
-**CRITICAL**: Your replies should be SO specific to this tweet that they wouldn't make sense on a different tweet. Generic = FAIL.`;
+**FORMAT** (return EXACTLY this, WITH strategy labels):
+REPLY 1 (QUESTION):
+[Your question reply]
+
+REPLY 2 (CONTRARIAN):
+[Your contrarian reply]
+
+REPLY 3 (ADD-VALUE):
+[Your add-value reply]
+
+**CRITICAL**: 
+- Each strategy MUST be DIFFERENT from the others
+- NO two question replies allowed
+- Your replies should be SO specific to this tweet that they wouldn't make sense on a different tweet
+- Generic = INSTANT FAIL`;
 }
 
 function parseRepliesFromResponse(response: string): string[] {
   const replies: string[] = [];
   
-  // Try to extract replies using various patterns
+  // Try to extract replies using various patterns (updated for strategy labels)
   const patterns = [
+    /REPLY \d+ \([A-Z\-]+\):\s*\n(.+?)(?=\n\nREPLY \d+|\n*$)/gs, // New format with strategy labels
     /REPLY \d+:\s*\n(.+?)(?=\n\nREPLY \d+:|\n*$)/gs,
     /\d+\.\s*"(.+?)"/gs,
     /\d+\)\s*(.+?)(?=\n\d+\)|$)/gs,

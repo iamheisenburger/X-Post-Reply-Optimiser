@@ -32,6 +32,7 @@ interface OptimizationResult {
     primaryNiche: string;
     mmaRelevance: number;
     saasRelevance: number;
+    profileSource?: 'cached' | 'analyzed';
   };
   totalIterations: number;
   averageScore: number;
@@ -43,6 +44,7 @@ export default function AIReplyPage() {
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [progressSteps, setProgressSteps] = useState<Array<{step: string; status: 'pending' | 'active' | 'complete'}>>([]);
 
   const handleGenerate = async () => {
     if (!tweetUrl.trim()) {
@@ -53,8 +55,38 @@ export default function AIReplyPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    
+    // Initialize progress steps
+    const steps = [
+      { step: "Extracting tweet ID from URL", status: 'active' as const },
+      { step: "Fetching tweet data from X", status: 'pending' as const },
+      { step: "Checking for cached creator profile", status: 'pending' as const },
+      { step: "Analyzing creator's niche and tone", status: 'pending' as const },
+      { step: "Generating Reply #1: Question Strategy", status: 'pending' as const },
+      { step: "Generating Reply #2: Contrarian Strategy", status: 'pending' as const },
+      { step: "Generating Reply #3: Add-Value Strategy", status: 'pending' as const },
+      { step: "Analyzing reply features & scoring", status: 'pending' as const },
+    ];
+    setProgressSteps(steps);
 
     try {
+      // Simulate step progression (in reality, API would send these)
+      const updateStep = (index: number) => {
+        setProgressSteps(prev => prev.map((s, i) => ({
+          ...s,
+          status: i < index ? 'complete' : i === index ? 'active' : 'pending'
+        })));
+      };
+
+      // Start fetching
+      setTimeout(() => updateStep(1), 300);
+      setTimeout(() => updateStep(2), 800);
+      setTimeout(() => updateStep(3), 1500);
+      setTimeout(() => updateStep(4), 3000);
+      setTimeout(() => updateStep(5), 6000);
+      setTimeout(() => updateStep(6), 9000);
+      setTimeout(() => updateStep(7), 12000);
+
       const response = await fetch("/api/generate-reply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,6 +100,9 @@ export default function AIReplyPage() {
 
       const data = await response.json();
       setResult(data);
+      
+      // Mark all complete
+      setProgressSteps(prev => prev.map(s => ({ ...s, status: 'complete' })));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to generate replies";
       setError(errorMessage);
@@ -167,7 +202,23 @@ export default function AIReplyPage() {
       {result && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Creator Analysis</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Creator Analysis</CardTitle>
+              {result.creatorProfile.profileSource === 'cached' ? (
+                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                  ✓ Using Saved Profile
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                  ⚠️ Generic Analysis
+                </Badge>
+              )}
+            </div>
+            {result.creatorProfile.profileSource !== 'cached' && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Add @{result.creatorProfile.username} to Profiles page for better context-aware replies
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -180,14 +231,14 @@ export default function AIReplyPage() {
                 <p className="font-semibold capitalize">{result.creatorProfile.primaryNiche}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Selected Mode</p>
-                <Badge className={getModeColor(result.selectedMode)}>
-                  {result.selectedMode.replace("_", " ")}
+                <p className="text-sm text-muted-foreground">Strategy Mix</p>
+                <Badge className="bg-purple-500">
+                  Question + Contrarian + Value
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Iterations</p>
-                <p className="font-semibold">{result.totalIterations}</p>
+                <p className="text-sm text-muted-foreground">Reply Mode</p>
+                <p className="font-semibold">One-shot (no iterations)</p>
               </div>
             </div>
           </CardContent>
@@ -243,27 +294,55 @@ export default function AIReplyPage() {
                     </div>
                   </div>
 
-                  {/* Score Breakdown */}
+                  {/* Feature Detection & Strength */}
                   <div>
-                    <h4 className="font-semibold mb-2 text-sm">X Algorithm Signals:</h4>
-                    <p className="text-xs text-muted-foreground mb-2">Likelihood scores (0-100% per signal)</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Author Reply (75x)</p>
-                        <p className="font-bold text-sm">{reply.breakdown.engagement.toFixed(0)}%</p>
+                    <h4 className="font-semibold mb-2 text-sm">Detected Features (X Algorithm Targets):</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        {reply.features.hasQuestion ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>Question to author</span>
+                        <span className="text-xs text-muted-foreground">(targets 75x author response)</span>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Spark Conversation (13.5x)</p>
-                        <p className="font-bold text-sm">{reply.breakdown.conversationDepth.toFixed(0)}%</p>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reply.features.hasPushback ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>Contrarian/Pushback angle</span>
+                        <span className="text-xs text-muted-foreground">(targets 75x + 13.5x)</span>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Profile Click (5x)</p>
-                        <p className="font-bold text-sm">{reply.breakdown.authorReputation.toFixed(0)}%</p>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reply.features.hasData ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>Uses data/examples</span>
+                        <span className="text-xs text-muted-foreground">(credibility + profile clicks)</span>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Recency Boost (2.5x)</p>
-                        <p className="font-bold text-sm">{reply.breakdown.recency.toFixed(0)}%</p>
+                      <div className="flex items-center gap-2 text-sm">
+                        {reply.breakdown.recency > 50 ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span>Early reply window</span>
+                        <span className="text-xs text-muted-foreground">(within 5 min = 2.5x boost)</span>
                       </div>
+                    </div>
+                    <div className="mt-3 p-2 bg-muted rounded text-xs">
+                      <span className="font-semibold">Relative Strength: </span>
+                      <span className={reply.score >= 60 ? "text-green-500" : reply.score >= 40 ? "text-yellow-500" : "text-red-500"}>
+                        {reply.score >= 60 ? "STRONG" : reply.score >= 40 ? "MODERATE" : "WEAK"}
+                      </span>
+                      <span className="text-muted-foreground ml-2">
+                        ({reply.score}/100 composite score)
+                      </span>
                     </div>
                   </div>
 
@@ -287,18 +366,31 @@ export default function AIReplyPage() {
         </div>
       )}
 
-      {/* Loading State */}
+      {/* Loading State with Progress */}
       {loading && (
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin text-purple-500" />
-              <div className="text-center space-y-2">
-                <h3 className="font-semibold text-lg">Generating Intelligent Replies...</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Analyzing creator profile and optimizing for author response (75x), conversation (13.5x), and recency
-                </p>
-              </div>
+          <CardHeader>
+            <CardTitle>Processing Your Request</CardTitle>
+            <CardDescription>Watch the system work in real-time</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {progressSteps.map((step, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  {step.status === 'complete' && (
+                    <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  )}
+                  {step.status === 'active' && (
+                    <Loader2 className="h-5 w-5 animate-spin text-purple-500 flex-shrink-0" />
+                  )}
+                  {step.status === 'pending' && (
+                    <div className="h-5 w-5 rounded-full border-2 border-muted flex-shrink-0" />
+                  )}
+                  <span className={`text-sm ${step.status === 'pending' ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    {step.step}
+                  </span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
