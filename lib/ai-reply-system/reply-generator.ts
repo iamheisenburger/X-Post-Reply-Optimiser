@@ -196,6 +196,7 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
     replies,
     qualityReport: qualityReport || {
       passed: false,
+      grammarPassed: false,
       bestScore: 0,
       issues: ['Generation failed'],
       improvements: {},
