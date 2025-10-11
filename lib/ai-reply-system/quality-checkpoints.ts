@@ -137,18 +137,17 @@ function evaluateEngagementHooks(
   creator: CreatorIntelligence
 ): QualityCheckpoint {
   
-  let score = 50; // Start neutral
+  let score = 30; // Start LOWER (was 50) - specificity is hard
   const feedback: string[] = [];
   const replyLower = reply.toLowerCase();
   
   // CHECK 1: Has a question?
   const hasQuestion = reply.includes("?");
   if (hasQuestion) {
-    // Count questions
     const questionCount = (reply.match(/\?/g) || []).length;
     
     if (questionCount === 1) {
-      score += 30;
+      score += 25; // Reduced from 30
       feedback.push(`✅ Has one focused question (optimal for engagement)`);
     } else if (questionCount === 2) {
       score -= 20;
@@ -162,52 +161,45 @@ function evaluateEngagementHooks(
     feedback.push(`❌ No question - add an open-ended question to drive engagement`);
   }
   
-  // CHECK 2: Personal insight/expertise?
-  const expertiseSignals = [
-    "in my experience",
-    "i've found",
-    "what worked for me",
-    "i've seen",
-    "from my perspective",
-    "i discovered",
-    "when i built",
-    "in building",
-    "i noticed"
+  // CHECK 2: CONCRETE expertise? (NEW - stricter check)
+  const concreteExpertise = [
+    /\b(at|when|building|during)\s+(we|I|our)\s+\w+/i, // "at our company", "when we built"
+    /\b\d+[KM]?\s*(MRR|users|%|x)/i, // Numbers with context
+    /(last|over|for)\s+(week|month|year|quarter)/i, // Specific timeframe
+    /\b(tested|implemented|built|launched|discovered|analyzed)\b/i, // Concrete verbs
   ];
   
-  if (expertiseSignals.some(signal => replyLower.includes(signal))) {
-    score += 20;
-    feedback.push(`✅ Shares personal insight/experience`);
+  const concreteCount = concreteExpertise.filter(pattern => pattern.test(reply)).length;
+  
+  if (concreteCount >= 2) {
+    score += 35; // Big reward for concrete details
+    feedback.push(`✅ Shares CONCRETE experience with specific details (${concreteCount} elements)`);
+  } else if (concreteCount === 1) {
+    score += 10;
+    feedback.push(`⚠️ Some specifics (${concreteCount}) but need MORE concrete details`);
+    feedback.push(`   → Add: numbers/metrics, timeframes, or specific scenarios`);
   } else {
-    feedback.push(`💡 TIP: Add personal experience or observation ("I've found..." or "In building X, I noticed...")`);
+    score -= 15;
+    feedback.push(`❌ No concrete details - too generic`);
+    feedback.push(`   → Required: "At 5K MRR" or "tested for 3 weeks" or "saw 40% improvement"`);
   }
   
   // CHECK 3: Generic praise (NEGATIVE) - STRICT ENFORCEMENT
   const genericPhrases = [
-    "great point",
-    "love this",
-    "so true",
-    "absolutely",
-    "totally agree",
-    "this is awesome",
-    "well said",
-    "amazing",
-    "perfectly said",
-    "you're spot on",
-    "you're right",
-    "i agree",
-    "this resonates",
-    "100%"
+    "great point", "love this", "so true", "absolutely", "totally agree",
+    "this is awesome", "well said", "amazing", "perfectly said",
+    "you're spot on", "you're right", "i agree", "this resonates", "100%"
   ];
   
   const genericCount = genericPhrases.filter(phrase => replyLower.includes(phrase)).length;
   
   if (genericCount === 0) {
-    score += 20;
+    score += 15;
     feedback.push(`✅ No generic filler praise`);
   } else {
-    score -= genericCount * 25; // Increased penalty
-    feedback.push(`❌ Contains generic praise ("${genericPhrases.find(p => replyLower.includes(p))}") - FORBIDDEN`);
+    score -= genericCount * 30; // Increased penalty (was 25)
+    feedback.push(`❌ Contains ${genericCount}x generic praise - FORBIDDEN`);
+    feedback.push(`   → Remove: "${genericPhrases.find(p => replyLower.includes(p))}"`);
   }
   
   // CHECK 4: Specific to creator's niche?
@@ -221,14 +213,14 @@ function evaluateEngagementHooks(
     score += 15;
     feedback.push(`✅ References niche-specific concepts (${creator.primaryNiche})`);
   } else {
-    feedback.push(`💡 TIP: Connect to their niche interests: ${creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}`);
+    feedback.push(`💡 TIP: Connect to their niche: ${creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}`);
   }
   
   return {
     id: "engagement_hooks",
     name: "Engagement Hooks",
     weight: 30,
-    passed: score >= 75, // Raised from 65 - must be stricter
+    passed: score >= 80, // Raised from 75
     score: Math.min(100, Math.max(0, score)),
     feedback,
     critical: true

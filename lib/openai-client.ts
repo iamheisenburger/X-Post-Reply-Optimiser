@@ -139,7 +139,8 @@ export async function generateReply(
   systemPrompt: string,
   context: string,
   previousAttempt?: string,
-  feedback?: string
+  feedback?: string,
+  iteration: number = 1  // NEW: Track which iteration we're on
 ): Promise<string> {
   const messages: OpenAIMessage[] = [
     { role: "system", content: systemPrompt },
@@ -157,8 +158,17 @@ export async function generateReply(
     });
   }
 
+  // DYNAMIC MODEL SELECTION
+  // Use gpt-4o-mini for first 2 iterations (fast, cheap exploration)
+  // Use gpt-4o for iterations 3+ (better quality, understands nuance)
+  const model = iteration <= 2 ? "gpt-4o-mini" : "gpt-4o";
+  const temperature = iteration <= 2 ? 0.7 : 0.9; // More creative for later iterations
+  
+  console.log(`   🤖 Using ${model} for iteration ${iteration} (temp: ${temperature})`);
+
   return generateWithOpenAI(messages, {
-    temperature: 0.8, // More creative for reply generation
+    model,
+    temperature,
     maxTokens: 300
   });
 }

@@ -1,6 +1,7 @@
 // Mode Selector - Intelligently select reply mode based on context
 
 import type { ReplyMode, CreatorIntelligence, TweetData, UserProfile } from "./types";
+import { getExamplesByNiche } from "./example-library";
 
 export function selectOptimalMode(
   creator: CreatorIntelligence,
@@ -80,6 +81,25 @@ export function getModePrompt(
   post: TweetData,
   userProfile: UserProfile
 ): string {
+  // Get 5 real examples for this niche (few-shot learning)
+  const examples = getExamplesByNiche(creator.primaryNiche, 5);
+  
+  // Format examples for prompt
+  const examplesSection = examples.map((ex, i) => `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REAL EXAMPLE ${i + 1} (Score: ${ex.score}/100${ex.gotAuthorReply ? ', Got Author Reply ✅' : ''})
+
+Original Tweet:
+"${ex.tweet}"
+
+Reply:
+"${ex.reply}"
+
+Why ${ex.score}/100:
+${ex.why}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `).join("\n");
+  
   const baseContext = `
 Creator: @${creator.username}
 Their niche: ${creator.primaryNiche}
@@ -91,40 +111,39 @@ Post: "${post.text}"
     pure_saas: `
 You are @${userProfile.handle}, a SaaS builder focused on ${userProfile.currentProject}.
 
-=== MANDATORY CONSTRAINTS (STRICT ENFORCEMENT) ===
-1. LENGTH: 35-55 words MAXIMUM (will be rejected if longer)
-2. QUESTIONS: Exactly ONE question, no more (will be rejected if multiple)
-3. NO GENERIC OPENINGS: Do NOT use "absolutely", "love this", "great point", "you're spot on", "this is so true"
-4. START WITH: Direct reference to their tweet OR specific SaaS insight
-5. FOCUS: SaaS, startups, metrics, growth, indie hacking ONLY
-6. NO MMA: Do NOT mention fighting, MMA, combat sports
+🎯 YOUR GOAL: Generate a 90%+ reply by learning from REAL examples below.
 
-=== EXAMPLES OF 90+ REPLIES ===
+=== 5 REAL HIGH-PERFORMING REPLIES (Study These!) ===
 
-Example 1 (94/100):
-"Your point about founder-market fit resonates. When you scaled from 0-100 customers, what was your one metric that predicted retention better than anything else?"
-→ Why 94: Direct reference ✓, ONE specific question ✓, 32 words ✓, SaaS-specific ✓
+${examplesSection}
 
-Example 2 (91/100):
-"The indie hacker journey is 90% learning what not to build. What validated your PMF hypothesis before you committed to full development?"
-→ Why 91: Strong insight ✓, ONE question ✓, 28 words ✓, data-driven ✓
+=== 🔑 KEY PATTERN (From Examples Above) ===
 
-Example 3 (DO NOT DO - 65/100):
-"Great post! I totally agree with your thoughts. Do you have any advice? What tools do you use? How did you start?"
-→ Why BAD: Generic opening ✗, multiple questions ✗, no expertise ✗
+All 90%+ replies share:
+1. CONCRETE DETAILS: Specific numbers ("5K MRR", "3x"), timeframes ("last month", "3 weeks"), scenarios ("At [Company]", "When we built X")
+2. MEASURABLE RESULTS: "40% faster", "50 users in 2 weeks", "2.3x better conversion"
+3. TECHNICAL SPECIFICITY: Actual tools/techniques ("Redis cache", "circuit breakers", "automated testing gates")
+4. ONE FOCUSED QUESTION: Specific to their context, not generic
+
+AVOID:
+❌ "I've found that..." (too vague)
+❌ "In my experience..." (needs specific context)
+❌ "Great point!" (no filler praise)
+❌ Multiple questions
 
 === YOUR TASK ===
-Post: "${post.text}"
-Audience: ${creator.audience.demographics.primaryInterests.join(", ")}
 
-Generate ONE reply that:
-- References their post directly OR starts with SaaS insight
-- Has EXACTLY ONE data/process-focused question
-- Is 35-55 words (strict)
-- Shows SaaS building expertise
-- No generic filler phrases
+Creator: @${creator.username} (${creator.primaryNiche})
+Tweet: "${post.text}"
+Audience cares about: ${creator.audience.demographics.primaryInterests.join(", ")}
 
-CRITICAL: If you violate ANY constraint above, the reply will be rejected and you'll regenerate.
+Generate ONE reply that matches the SPECIFICITY and CONCRETENESS of the examples above.
+- 35-55 words
+- Include at least 2 concrete elements (numbers, timeframe, specific scenario, action verbs)
+- End with ONE specific question
+- Model your reply on the examples' level of detail
+
+CRITICAL: Your reply should be as specific as the examples. If it could apply to any tweet, it's too generic.
     `,
 
     pure_mma: `
@@ -151,40 +170,40 @@ Generate a reply that:
     mindset_crossover: `
 You are @${userProfile.handle}, bridging high-performance concepts across domains.
 
-=== MANDATORY CONSTRAINTS (STRICT ENFORCEMENT) ===
-1. LENGTH: 35-55 words MAXIMUM (will be rejected if longer)
-2. QUESTIONS: Exactly ONE question, no more (will be rejected if multiple)
-3. NO GENERIC OPENINGS: Do NOT use "absolutely", "love this", "great point", "you're spot on", "this is so true"
-4. START WITH: Direct reference to their tweet OR specific insight
-5. USE NICHE LANGUAGE: ${creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}
-6. NO MMA TERMS: No "fighter", "MMA", "UFC", "cage" - frame universally
+🎯 YOUR GOAL: Generate a 90%+ reply by learning from REAL examples below.
 
-=== EXAMPLES OF 90+ REPLIES ===
+=== 5 REAL HIGH-PERFORMING REPLIES (Study These!) ===
 
-Example 1 (95/100):
-"When you mentioned feeding hope over doubt, it reminded me of how elite performers reframe pressure as opportunity. What specific practices help you maintain that positive inner voice during challenging moments?"
-→ Why 95: Direct reference ✓, ONE question ✓, 40 words ✓, no filler ✓, niche-relevant ✓
+${examplesSection}
 
-Example 2 (92/100):
-"The concept of self-talk shaping reality resonates with peak performance psychology. What's your process for catching and reframing negative self-talk before it impacts your mindset?"
-→ Why 92: Strong insight ✓, ONE question ✓, 32 words ✓, specific to audience ✓
+=== 🔑 KEY PATTERN (From Examples Above) ===
 
-Example 3 (DO NOT DO - 68/100):
-"Absolutely love this! You're so right that our inner voice matters. I totally agree with your point about feeding hope. Do you have any tips? What works for you?"
-→ Why BAD: Generic opening ✗, multiple questions ✗, no insight ✗, too long ✗
+All 90%+ replies share:
+1. CONCRETE PERSONAL EXPERIENCES: Specific experiments ("tracked for 30 days", "tested over 3 years"), actual numbers ("68% negative", "5-year portfolio")
+2. MEASURABLE TRANSFORMATIONS: "output doubled", "decision time cut 70%", "mental clarity 10x better"
+3. SPECIFIC TECHNIQUES: Actual practices ("'yet' reframes", "courage compass", "evidence journals"), not generic advice
+4. ONE FOCUSED QUESTION: About their specific practice/framework, not generic "any tips?"
+
+AVOID:
+❌ "I've found that..." (needs specifics: when? what exactly?)
+❌ "This resonates" (no filler - jump to your experience)
+❌ "Great point!" (never start with praise)
+❌ Multiple questions
 
 === YOUR TASK ===
-Post: "${post.text}"
-Audience: ${creator.audience.demographics.primaryInterests.join(", ")}
 
-Generate ONE reply that:
-- References their post directly OR starts with specific insight
-- Has EXACTLY ONE open-ended question
-- Is 35-55 words (strict)
-- No generic filler phrases
-- Matches their audience's sophistication (${creator.audience.demographics.sophisticationLevel})
+Creator: @${creator.username} (${creator.primaryNiche})
+Tweet: "${post.text}"
+Audience cares about: ${creator.audience.demographics.primaryInterests.join(", ")}
+Sophistication: ${creator.audience.demographics.sophisticationLevel}
 
-CRITICAL: If you violate ANY constraint above, the reply will be rejected and you'll regenerate.
+Generate ONE reply that matches the SPECIFICITY and CONCRETENESS of the examples above.
+- 35-55 words
+- Include at least 2 concrete elements (numbers, timeframe, specific practice/framework, measurable results)
+- End with ONE specific question about their approach/framework
+- Model your reply on the examples' level of detail
+
+CRITICAL: Your reply should be as specific as the examples. If it could apply to any mindset tweet, it's too generic.
     `,
 
     technical: `

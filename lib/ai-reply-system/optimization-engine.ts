@@ -14,6 +14,7 @@ import { calculateQualityScore, type ScoringContext } from "../x-algorithm-v2";
 import { generateReply } from "../openai-client";
 import { selectOptimalMode, getModePrompt } from "./mode-selector";
 import { evaluateCheckpoints } from "./quality-checkpoints";
+import { validateSpecificity } from "./specificity-validator";
 
 export async function generateOptimizedReplies(
   tweet: TweetData,
@@ -98,15 +99,62 @@ async function optimizeSingleReply(
     console.log(`\n   📍 Iteration ${iteration}/${MAX_ITERATIONS}...`);
 
     try {
-      // Generate candidate
+      // Generate candidate (pass iteration number for dynamic model selection)
       const candidate = await generateReply(
         systemPrompt,
         buildContextString(context),
         previousAttempt,
-        feedback
+        feedback,
+        iteration  // NEW: Pass iteration number for gpt-4o-mini → gpt-4o upgrade
       );
 
       console.log(`   Generated: "${candidate.substring(0, 80)}${candidate.length > 80 ? "..." : ""}"`);
+
+      // STEP 0: Check specificity FIRST (before checkpoints)
+      const specificityCheck = validateSpecificity(candidate);
+      
+      if (!specificityCheck.passed) {
+        console.log(`   ❌ Specificity check failed (${specificityCheck.score}/100)`);
+        console.log(`   Issues found:`);
+        for (const issue of specificityCheck.issues.slice(0, 3)) {
+          console.log(`      ${issue}`);
+        }
+        
+        previousAttempt = candidate;
+        feedback = [
+          "🚨 SPECIFICITY FAILURE - Reply is too generic/vague",
+          "",
+          "❌ ISSUES FOUND:",
+          ...specificityCheck.issues,
+          "",
+          "✅ REQUIRED FIXES:",
+          ...specificityCheck.suggestions,
+          "",
+          "🎯 CONCRETE EXAMPLE:",
+          `"Your point about [key phrase] resonates. At 5K MRR we implemented [specific solution], saw 3x improvement in [metric] over 2 weeks. What specific approach did you take?"`,
+          "",
+          "⚠️  CRITICAL RULES:",
+          "1. MUST include at least 2 of: [specific numbers/metrics, timeframe, concrete scenario, action verbs]",
+          "2. NEVER use vague phrases: 'I've found', 'in my experience', 'this works' without specifics",
+          "3. ALWAYS add: When? Where? How much? What result?",
+          "",
+          "Examples of concrete details:",
+          "✅ 'At 5K MRR' or 'When we hit 10K users'",
+          "✅ 'tested for 3 weeks' or 'over 30 days' or 'last quarter'",
+          "✅ '3x improvement' or '40% faster' or 'reduced by 2 hours'",
+          "✅ 'implemented circuit breakers' or 'automated testing' or 'built cache layer'",
+          "",
+          "Regenerate with CONCRETE details, not generic statements."
+        ].join("\n");
+        continue;
+      }
+      
+      console.log(`   ✅ Specificity check passed (${specificityCheck.score}/100)`);
+      const concreteElements = Object.entries(specificityCheck.concreteElementsFound)
+        .filter(([,v]) => v)
+        .map(([k]) => k.replace('has', '').replace(/([A-Z])/g, ' $1').trim().toLowerCase())
+        .join(", ");
+      console.log(`      Concrete elements: ${concreteElements}`);
 
       // STEP 1: Validate mode compliance
       const modeValidation = validateModeCompliance(candidate, context.mode, context.creator);
@@ -118,7 +166,7 @@ async function optimizeSingleReply(
         continue;
       }
 
-      // STEP 2: Run checkpoint evaluation FIRST
+      // STEP 2: Run checkpoint evaluation
       const checkpointEval = evaluateCheckpoints(
         context.post.text,
         candidate,
@@ -349,18 +397,59 @@ function validateModeCompliance(
 
 // Helper to generate a concrete 90+ example reply
 function generateExampleReply(originalTweet: string, creator: CreatorIntelligence): string {
-  // Extract key phrases from the tweet
   const keyPhrase = extractKeyPhrase(originalTweet);
   
-  // Generate a template based on creator niche
+  // Multiple concrete templates per niche (rotate for variety)
   const examples = {
-    mindset: `"Your point about ${keyPhrase.toLowerCase()} resonates deeply. I've found that consciously reframing limiting beliefs into empowering narratives has transformed my decision-making under pressure. What specific mental frameworks have you found most effective when self-doubt creeps in during critical moments?"`,
-    saas: `"When you mentioned ${keyPhrase.toLowerCase()}, it reminded me of our pivot at 5K MRR. We tested this hypothesis by running split cohorts for 3 weeks - surprising result. How did you validate this pattern in your early-stage product iterations?"`,
-    mma: `"Your analysis of ${keyPhrase.toLowerCase()} is spot-on. Watching Volkanovski's last fight, you could see this exact principle in rounds 3-4. What specific adjustments would you expect against a pressure wrestler who exploits this?"`,
-    other: `"Your insight about ${keyPhrase.toLowerCase()} hits home. I've noticed this pattern play out repeatedly in high-stakes situations. What conditions do you think amplify this effect most dramatically?"`
+    mindset: [
+      `"Your point about ${keyPhrase.toLowerCase()} hits home. Last year I tracked my self-talk for 30 days - found 68% was negative. Started 'yet' reframes ('can't do this YET') + evidence journaling. Shifted from fear-based to possibility-based decisions. What specific reframe works when doubt creeps in?"`,
+      
+      `"When you mentioned ${keyPhrase.toLowerCase()}, reminded me of a turning point in Q3 2024. Implemented morning 'possibility audit' - list 3 ways I could be wrong about my limits. Over 90 days, doubled my output. What practice has been most transformative for you?"`,
+      
+      `"Your insight about ${keyPhrase.toLowerCase()} resonates deeply. During my product launch last month, I noticed limiting beliefs cost me 2 weeks of paralysis. Built 'courage compass' - rate fear vs regret on each decision. Cut decision time 70%. What frameworks help you push past fear?"`,
+    ],
+    
+    saas: [
+      `"Your point about ${keyPhrase.toLowerCase()} is spot-on. At 5K MRR we implemented this exact approach - ran A/B test with 500 users for 3 weeks, cohort B converted 2.3x better. Game-changer. How did you first validate this pattern?"`,
+      
+      `"When you mentioned ${keyPhrase.toLowerCase()}, reminded me of our pivot last quarter. Cut approval steps in our CI/CD pipeline, deploys went from 2hrs to 15min. But we added automated quality gates to catch issues. What safety nets did you implement?"`,
+      
+      `"The ${keyPhrase.toLowerCase()} challenge is real. Last month at our startup we solved by implementing Redis caching + circuit breakers - reduced API latency by 40% in 10 days but created bottleneck at database layer. What was your first obstacle with this?"`,
+      
+      `"Your insight about ${keyPhrase.toLowerCase()} resonates. At 8K MRR we faced this exact issue. Removed manual code reviews, saw 3x faster deployments but had to add automated test coverage thresholds (80% minimum). What quality gates work for your stack?"`,
+    ],
+    
+    mma: [
+      `"Your analysis of ${keyPhrase.toLowerCase()} is dead-on. Watching Volkanovski vs Holloway 3, rounds 2-4 showed this exact pattern - stance switch at 2:15 forced defensive adjustment, but counter in round 4 neutralized. Against a pressure wrestler, what adjustment would you expect?"`,
+      
+      `"When you broke down ${keyPhrase.toLowerCase()}, reminded me of Oliveira's submission sequence at UFC 280. Level change feint → Thai clinch → back take → RNC, all in 47 seconds. Textbook execution. What's the most technically perfect sequence you've analyzed recently?"`,
+      
+      `"Your point about ${keyPhrase.toLowerCase()} is spot-on. Islam's cage control in the Volkanovski fight was masterclass - used 17 different takedown setups over 25 minutes but only committed to 6. Efficiency over volume. How do you rate patience vs pressure for title fights?"`,
+    ],
+    
+    tech: [
+      `"Your point about ${keyPhrase.toLowerCase()} is critical. At our company we hit this exact issue at 10K concurrent users - implemented rate limiting + circuit breakers + Redis cache with 300ms TTL. Load times dropped from 4.2s to 380ms. What caching strategy worked for you?"`,
+      
+      `"When you mentioned ${keyPhrase.toLowerCase()}, reminded me of our microservices migration last quarter. Broke monolith into 7 services over 6 weeks - deployment frequency increased 5x but debugging complexity tripled. How did you handle service observability?"`,
+    ],
+    
+    finance: [
+      `"Your insight about ${keyPhrase.toLowerCase()} is crucial. Analyzing portfolio risk last quarter, found 40% concentration in tech - rebalanced to 15% over 30 days, reduced drawdown by 22% during the correction. What's your target sector allocation for market uncertainty?"`,
+    ],
+    
+    other: [
+      `"Your insight about ${keyPhrase.toLowerCase()} resonates. I've noticed this pattern in 3 different contexts over 6 months - most recent was at a 500-person conference where this exact principle drove 80% of meaningful connections. What conditions amplify this effect most?"`,
+      
+      `"When you mentioned ${keyPhrase.toLowerCase()}, reminded me of implementing this at our organization. Tested the approach with 50 team members over 4 weeks - engagement scores improved 35% but required 2 hours weekly facilitation. What's been your implementation challenge?"`,
+    ]
   };
   
-  return examples[creator.primaryNiche as keyof typeof examples] || examples.other;
+  const nicheExamples = examples[creator.primaryNiche as keyof typeof examples] || examples.other;
+  
+  // Rotate through examples (use modulo for variety)
+  const exampleIndex = Math.floor(Math.random() * nicheExamples.length);
+  
+  return nicheExamples[exampleIndex];
 }
 
 // Helper to extract a key phrase from the tweet
