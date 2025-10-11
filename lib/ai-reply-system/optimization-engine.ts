@@ -238,11 +238,17 @@ function validateModeCompliance(
   
   const lowerReply = reply.toLowerCase();
 
+  // Helper to check for whole word matches (not substrings)
+  const containsWholeWord = (text: string, word: string): boolean => {
+    const regex = new RegExp(`\\b${word}\\b`, 'i');
+    return regex.test(text);
+  };
+
   // Check for mode-specific violations
   if (mode === "pure_saas") {
-    const mmaKeywords = ["fighter", "fight", "mma", "ufc", "combat", "training camp", "cage", "octagon", "bout"];
+    const mmaKeywords = ["fighter", "fight", "mma", "ufc", "combat", "training camp", "cage", "octagon"];
     for (const keyword of mmaKeywords) {
-      if (lowerReply.includes(keyword)) {
+      if (containsWholeWord(reply, keyword)) {
         return {
           passed: false,
           reason: `Pure SaaS mode but mentioned "${keyword}". Creator's audience (${creator.primaryNiche}) doesn't care about MMA.`
@@ -252,10 +258,10 @@ function validateModeCompliance(
   }
 
   if (mode === "pure_mma") {
-    const saasKeywords = ["startup", "saas", "product-market fit", "revenue", "indie hacker"];
+    const saasKeywords = ["startup", "saas", "revenue", "indie hacker"];
     let saasCount = 0;
     for (const keyword of saasKeywords) {
-      if (lowerReply.includes(keyword)) saasCount++;
+      if (containsWholeWord(reply, keyword)) saasCount++;
     }
     if (saasCount > 1) {
       return {
@@ -269,7 +275,7 @@ function validateModeCompliance(
     // Should NOT explicitly mention "fighter", "MMA", or "UFC"
     const explicitMMA = ["fighter", "mma", "ufc", "cage", "octagon"];
     for (const keyword of explicitMMA) {
-      if (lowerReply.includes(keyword)) {
+      if (containsWholeWord(reply, keyword)) {
         return {
           passed: false,
           reason: `Crossover mode should frame concepts universally, not MMA-specific. Avoid explicit mentions of "${keyword}".`
@@ -278,9 +284,9 @@ function validateModeCompliance(
     }
   }
 
-  // Check for irrelevant topics to this specific audience
+  // Check for irrelevant topics to this specific audience (use whole word matching)
   for (const irrelevant of creator.audience.demographics.irrelevantTopics) {
-    if (lowerReply.includes(irrelevant.toLowerCase())) {
+    if (containsWholeWord(reply, irrelevant)) {
       return {
         passed: false,
         reason: `Mentioned "${irrelevant}" which is irrelevant to @${creator.username}'s audience.`

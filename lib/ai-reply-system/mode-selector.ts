@@ -7,57 +7,66 @@ export function selectOptimalMode(
   post: TweetData
 ): ReplyMode {
   console.log(`🎯 Selecting optimal mode for @${creator.username}...`);
+  console.log(`   Primary Niche: ${creator.primaryNiche}`);
+  console.log(`   SaaS Relevance: ${creator.crossoverPotential.saasRelevance}/5`);
+  console.log(`   MMA Relevance: ${creator.crossoverPotential.mmaRelevance}/5`);
 
-  // RULE 1: If MMA is irrelevant to creator, NEVER use MMA mode
-  if (creator.crossoverPotential.mmaRelevance <= 1) {
-    console.log(`   MMA relevance: ${creator.crossoverPotential.mmaRelevance}/5 - Too low for MMA content`);
-    
-    // Check if post is about discipline/mindset AND they're receptive
-    if (
-      containsKeywords(post.text, ["discipline", "mindset", "focus", "performance", "execution", "mental"]) &&
-      creator.crossoverPotential.disciplineTopics >= 3
-    ) {
-      console.log(`   Post about discipline + audience receptive → mindset_crossover`);
-      return "mindset_crossover";
-    }
-    
-    console.log(`   Default to pure_saas mode`);
-    return "pure_saas";
+  // RULE 1: Check PRIMARY NICHE first (most important!)
+  
+  // If mindset/personal development niche → always use mindset_crossover
+  if (creator.primaryNiche === "mindset" || 
+      creator.secondaryNiches.includes("mindset") ||
+      creator.audience.demographics.primaryInterests.some(i => 
+        i.includes("mindset") || i.includes("personal development") || 
+        i.includes("self-improvement") || i.includes("positivity")
+      )) {
+    console.log(`   ✅ Mindset-focused creator → mindset_crossover`);
+    return "mindset_crossover";
   }
-
-  // RULE 2: If creator is MMA-focused, use MMA mode
+  
+  // If pure MMA niche
   if (creator.primaryNiche === "mma" || creator.crossoverPotential.mmaRelevance >= 4) {
-    console.log(`   MMA relevance: ${creator.crossoverPotential.mmaRelevance}/5 - High → pure_mma`);
+    console.log(`   ✅ MMA-focused creator → pure_mma`);
     return "pure_mma";
   }
 
-  // RULE 3: If creator is SaaS-focused, use SaaS mode
-  if (creator.primaryNiche === "saas" || creator.crossoverPotential.saasRelevance >= 4) {
-    console.log(`   SaaS relevance: ${creator.crossoverPotential.saasRelevance}/5 - High → pure_saas`);
+  // If pure SaaS niche
+  if (creator.primaryNiche === "saas" || 
+      creator.primaryNiche === "tech" ||
+      creator.crossoverPotential.saasRelevance >= 4) {
+    console.log(`   ✅ SaaS/Tech-focused creator → pure_saas`);
+    return "pure_saas";
+  }
+  
+  // RULE 2: Check if finance/business niche
+  if (creator.primaryNiche === "finance" || creator.primaryNiche === "business") {
+    console.log(`   ✅ Finance/Business creator → pure_saas`);
     return "pure_saas";
   }
 
-  // RULE 4: Check if crossover makes sense
-  if (
-    containsKeywords(post.text, ["discipline", "mental", "mindset", "performance", "execution", "focus"]) &&
-    creator.crossoverPotential.disciplineTopics >= 3 &&
-    creator.audience.demographics.primaryInterests.some(i => 
-      i.includes("personal development") || i.includes("mindset") || i.includes("performance")
-    )
-  ) {
-    console.log(`   Discipline post + receptive audience → mindset_crossover`);
-    return "mindset_crossover";
-  }
-
-  // RULE 5: If technical post, use technical mode
-  if (containsKeywords(post.text, ["code", "api", "architecture", "system", "technical", "engineering"])) {
-    console.log(`   Technical content → technical mode`);
+  // RULE 3: Check if post is technical
+  if (containsKeywords(post.text, ["code", "api", "architecture", "system", "database", "engineering"])) {
+    console.log(`   ✅ Technical content → technical mode`);
     return "technical";
   }
 
-  // Default: pure_saas (we've already checked for MMA/SaaS-specific cases above)
-  console.log(`   Defaulting to pure_saas mode`);
-  return "pure_saas";
+  // RULE 4: Check for discipline/mindset crossover potential
+  if (
+    containsKeywords(post.text, ["discipline", "mental", "mindset", "performance", "execution", "focus"]) &&
+    creator.crossoverPotential.disciplineTopics >= 3
+  ) {
+    console.log(`   ✅ Discipline post + receptive audience → mindset_crossover`);
+    return "mindset_crossover";
+  }
+
+  // Default based on highest relevance score
+  if (creator.crossoverPotential.saasRelevance >= creator.crossoverPotential.mmaRelevance) {
+    console.log(`   ⚠️  Defaulting to pure_saas (SaaS score higher)`);
+    return "pure_saas";
+  } else {
+    console.log(`   ⚠️  Defaulting to mindset_crossover (balanced approach)`);
+    return "mindset_crossover";
+  }
 }
 
 function containsKeywords(text: string, keywords: string[]): boolean {
