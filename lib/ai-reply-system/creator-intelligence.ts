@@ -54,6 +54,10 @@ export async function buildCreatorIntelligence(
         verified: cached.verified,
         primaryNiche: cached.primaryNiche as "saas" | "mma" | "tech" | "finance" | "mindset" | "other",
         secondaryNiches: cached.secondaryNiches,
+        metrics: {
+          followers: cached.followerCount,
+          engagementRate: 0.03, // Default heuristic for cached profiles
+        },
         audience: {
           demographics: {
             primaryInterests: cached.audiencePrimaryInterests,
