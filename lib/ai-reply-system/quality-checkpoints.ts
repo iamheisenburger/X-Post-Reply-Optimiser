@@ -170,8 +170,8 @@ function evaluateEngagementHooks(
   ];
   
   // SPECIAL: For question-based replies, ratios/percentages count as concrete analytical thinking
-  const hasRatios = /\b\d+%\s+(to|vs|versus|and)\s+\d+%/i.test(reply) || 
-                    /\b\d+\s+(to|vs|versus|and)\s+\d+\b/i.test(reply); // "60% to 40%" or "60 to 40"
+  const hasRatios = /\b\d+%[^0-9]{1,15}\d+%/i.test(reply) || // Any "60%...40%" with 1-15 chars between
+                    /\b\d+[^0-9]{1,15}\d+\s+(ratio|balance|split)/i.test(reply); // "60...40 ratio"
   
   let concreteCount = concreteExpertise.filter(pattern => pattern.test(reply)).length;
   
