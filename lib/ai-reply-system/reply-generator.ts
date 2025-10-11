@@ -143,7 +143,7 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
             hasQuestion: features.hasQuestion,
             hasPushback: features.hasPushback,
             hasSpecificData: features.hasSpecificData,
-            referencesOriginalTweet: features.specificity > 60,
+            referencesOriginalTweet: true,
             matchesCreatorNiche: true,
             matchesCreatorTone: true,
           },
