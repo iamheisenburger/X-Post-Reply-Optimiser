@@ -99,39 +99,61 @@ function scoreContentRelevance(
   reply: string,
   feedback: string[]
 ): number {
-  let score = 50; // Start at middle
+  let score = 60; // Start higher - replies don't need exact word matches
   
   const tweetLower = originalTweet.toLowerCase();
   const replyLower = reply.toLowerCase();
   
-  // Extract key concepts from original tweet
+  // Remove common stop words for better concept matching
+  const stopWords = new Set(['the', 'and', 'but', 'for', 'are', 'this', 'that', 'with', 'from', 'have', 'been', 'will', 'would', 'could', 'should', 'what', 'when', 'where', 'who', 'why', 'how', 'can', 'its', 'not', 'you', 'your', 'they', 'their', 'there', 'were', 'was', 'been']);
+  
+  // Extract key concepts from original tweet (meaningful words only)
   const tweetWords = tweetLower
     .split(/\W+/)
-    .filter(w => w.length > 4) // Meaningful words only
-    .slice(0, 15); // Top 15 words
+    .filter(w => w.length > 3 && !stopWords.has(w))
+    .slice(0, 20); // Analyze top 20 words
   
-  // How many key concepts does the reply address?
+  // Check for concept matches (exact or partial)
   let conceptsAddressed = 0;
+  let partialMatches = 0;
+  
   for (const word of tweetWords) {
     if (replyLower.includes(word)) {
       conceptsAddressed++;
+    } else {
+      // Check for partial/related matches (e.g., "approval" matches "approve")
+      if (word.length > 5) {
+        const stem = word.substring(0, Math.floor(word.length * 0.7));
+        if (replyLower.includes(stem)) {
+          partialMatches++;
+        }
+      }
     }
   }
   
-  const relevanceRatio = conceptsAddressed / Math.min(tweetWords.length, 10);
+  const totalMatches = conceptsAddressed + (partialMatches * 0.5);
+  const relevanceRatio = totalMatches / Math.max(tweetWords.length, 1);
   
-  if (relevanceRatio > 0.4) {
-    score = 80 + (relevanceRatio - 0.4) * 33; // 80-100
-    feedback.push(`✅ Content Relevance: Strong (${Math.round(relevanceRatio * 100)}% key concepts addressed)`);
-  } else if (relevanceRatio > 0.2) {
-    score = 60 + (relevanceRatio - 0.2) * 100; // 60-80
-    feedback.push(`⚠️  Content Relevance: Moderate (${Math.round(relevanceRatio * 100)}% key concepts)`);
-    feedback.push(`   → Address more of the original tweet's themes`);
+  // IMPROVED THRESHOLDS (less harsh)
+  if (relevanceRatio > 0.3) {
+    score = 85 + (relevanceRatio - 0.3) * 21; // 85-100
+    feedback.push(`✅ Content Relevance: Strong (addresses key themes)`);
+  } else if (relevanceRatio > 0.15) {
+    score = 70 + (relevanceRatio - 0.15) * 100; // 70-85
+    feedback.push(`✅ Content Relevance: Good (${Math.round(relevanceRatio * 100)}% concept overlap)`);
+  } else if (relevanceRatio > 0.05) {
+    score = 55 + (relevanceRatio - 0.05) * 150; // 55-70
+    feedback.push(`⚠️  Content Relevance: Moderate - try to reference more specific themes`);
   } else {
-    score = 30 + relevanceRatio * 150; // 30-60
-    feedback.push(`❌ Content Relevance: Low (${Math.round(relevanceRatio * 100)}% key concepts)`);
-    feedback.push(`   → Reply seems off-topic or generic`);
-    feedback.push(`   → Reference specific points from the original tweet`);
+    score = 40; // Base score for any reply that attempts to engage
+    feedback.push(`❌ Content Relevance: Low - reply should address the original tweet's main point`);
+    feedback.push(`   → Tweet is about: ${tweetWords.slice(0, 3).join(', ')}...`);
+  }
+  
+  // BONUS: Check if reply directly quotes or references the tweet
+  if (replyLower.includes('you mentioned') || replyLower.includes('your point') || replyLower.includes('you said')) {
+    score += 5;
+    feedback.push(`✅ Bonus: Directly references the original tweet`);
   }
   
   return Math.min(100, Math.max(0, score));

@@ -173,6 +173,19 @@ export const twitterApi = {
         console.log(`   Full Response (first 1000 chars):`, JSON.stringify(data, null, 2).substring(0, 1000));
       }
       
+      // ===== DETECT "UNAVAILABLE" RESPONSES FIRST =====
+      // TwitterAPI.io returns this format when they can't fetch timeline:
+      // { "status": "success", "data": { "unavailable": true, "message": "User is suspended" } }
+      // This happens for rate limits, suspended accounts, or protected accounts
+      if (data.data && typeof data.data === 'object' && data.data.unavailable === true) {
+        const reason = data.data.message || data.data.unavailableReason || "Timeline unavailable";
+        console.warn(`⚠️ TwitterAPI.io reports timeline unavailable: ${reason}`);
+        console.warn(`   NOTE: This might be a FALSE POSITIVE - the account may not actually be suspended`);
+        console.warn(`   Common causes: Rate limiting, protected account, or API limitation`);
+        console.warn(`   Will continue with single-tweet analysis as fallback`);
+        return [];
+      }
+      
       // ===== ATTEMPT MULTIPLE PARSING STRATEGIES =====
       
       // Strategy 1: Check for direct tweets array
@@ -187,7 +200,7 @@ export const twitterApi = {
         return data;
       }
       
-      // Strategy 3: Check for nested data.data
+      // Strategy 3: Check for nested data.data (but NOT the unavailable format)
       if (data.data && Array.isArray(data.data)) {
         console.log(`✅ SUCCESS: Found ${data.data.length} tweets in data.data`);
         return data.data;
@@ -210,7 +223,7 @@ export const twitterApi = {
         return data.statuses;
       }
       
-      // Strategy 6: Check for error messages about suspended/unavailable accounts
+      // Strategy 6: Check for error messages
       if (data.error || data.errors) {
         const errorMsg = data.error?.message || data.errors?.[0]?.message || JSON.stringify(data.error || data.errors);
         console.warn(`⚠️ API returned error: ${errorMsg}`);
