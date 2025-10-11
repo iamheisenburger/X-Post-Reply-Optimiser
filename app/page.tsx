@@ -107,7 +107,7 @@ export default function AIReplyPage() {
           AI Reply Generator
         </h1>
         <p className="text-muted-foreground">
-          Paste a tweet URL and get 3 algorithm-optimized replies tuned to X's ranking signals
+          Paste a tweet URL and get 3 algorithm-optimized replies tuned to X{'\''}s ranking signals
         </p>
       </div>
 
