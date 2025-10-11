@@ -13,6 +13,7 @@ import type {
 import { calculateQualityScore, type ScoringContext } from "../x-algorithm-v2";
 import { generateReply } from "../openai-client";
 import { selectOptimalMode, getModePrompt } from "./mode-selector";
+import { evaluateCheckpoints } from "./quality-checkpoints";
 
 export async function generateOptimizedReplies(
   tweet: TweetData,
@@ -76,7 +77,7 @@ async function optimizeSingleReply(
   context: FullContext
 ): Promise<{ reply: ScoredReply; iterations: number } | null> {
   
-  const MAX_ITERATIONS = 10;
+  const MAX_ITERATIONS = 6; // Reduced from 10 - checkpoints make iterations more efficient
   const TARGET_SCORE = 90;
 
   let iteration = 0;
@@ -94,7 +95,7 @@ async function optimizeSingleReply(
 
   while (iteration < MAX_ITERATIONS && bestScore < TARGET_SCORE) {
     iteration++;
-    console.log(`   Iteration ${iteration}/${MAX_ITERATIONS}...`);
+    console.log(`\n   📍 Iteration ${iteration}/${MAX_ITERATIONS}...`);
 
     try {
       // Generate candidate
@@ -107,7 +108,7 @@ async function optimizeSingleReply(
 
       console.log(`   Generated: "${candidate.substring(0, 80)}${candidate.length > 80 ? "..." : ""}"`);
 
-      // Validate mode compliance FIRST
+      // STEP 1: Validate mode compliance
       const modeValidation = validateModeCompliance(candidate, context.mode, context.creator);
       
       if (!modeValidation.passed) {
@@ -117,7 +118,32 @@ async function optimizeSingleReply(
         continue;
       }
 
-      // Score with NEW quality-based algorithm
+      // STEP 2: Run checkpoint evaluation FIRST
+      const checkpointEval = evaluateCheckpoints(
+        context.post.text,
+        candidate,
+        context.creator,
+        context.mode
+      );
+
+      console.log(`   📋 Checkpoints: ${checkpointEval.checkpoints.filter(cp => cp.passed).length}/${checkpointEval.checkpoints.length} passed`);
+      
+      // Show checkpoint summary
+      for (const cp of checkpointEval.checkpoints) {
+        const icon = cp.passed ? "✅" : "❌";
+        const critical = cp.critical ? " [CRITICAL]" : "";
+        console.log(`      ${icon} ${cp.name}${critical}: ${cp.score}/100`);
+      }
+
+      // If critical checkpoints failed, use checkpoint feedback (skip full scoring for efficiency)
+      if (!checkpointEval.allCriticalPassed) {
+        console.log(`   ⚠️  Critical checkpoints failed - using structured feedback`);
+        previousAttempt = candidate;
+        feedback = checkpointEval.detailedFeedback;
+        continue;
+      }
+
+      // STEP 3: All checkpoints passed - run full quality scoring
       const scoringContext: ScoringContext = {
         originalTweet: context.post.text,
         replyText: candidate,
@@ -128,7 +154,7 @@ async function optimizeSingleReply(
       
       const qualityScore = calculateQualityScore(scoringContext);
 
-      console.log(`   Score: ${qualityScore.score}/100`);
+      console.log(`   🎯 Final Score: ${qualityScore.score}/100`);
 
       // Check if this is better
       if (qualityScore.score > bestScore) {
@@ -159,21 +185,32 @@ async function optimizeSingleReply(
 
       // Generate detailed feedback for next iteration
       if (bestScore < TARGET_SCORE) {
-        // Build enhanced feedback with creator-specific context
-        const enhancedFeedback = [
-          ...qualityScore.feedback,
-          "",
-          "CREATOR-SPECIFIC OPTIMIZATION:",
-          `• This audience (${context.creator.primaryNiche}) responds best to: ${context.creator.audience.engagementPatterns.respondsTo[0]}`,
-          `• Avoid: ${context.creator.audience.engagementPatterns.ignores[0]}`,
-          qualityScore.breakdown.contentRelevance < 70 ? 
-            `• Connect more clearly to audience interests: ${context.creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}` : 
-            null
-        ].filter(Boolean);
+        // Use checkpoint evaluation for structured, actionable feedback
+        const failedCheckpoints = checkpointEval.checkpoints.filter(cp => !cp.passed);
         
-        feedback = enhancedFeedback.join("\n");
+        if (failedCheckpoints.length > 0) {
+          // Still have checkpoint failures - use checkpoint feedback
+          feedback = checkpointEval.detailedFeedback;
+        } else {
+          // All checkpoints passed but score < 90 - use algorithm feedback + hints
+          const enhancedFeedback = [
+            "CLOSE! All checkpoints passed but need higher quality:",
+            "",
+            ...qualityScore.feedback,
+            "",
+            "🎯 OPTIMIZATION HINTS:",
+            `• This audience (${context.creator.primaryNiche}) responds best to: ${context.creator.audience.engagementPatterns.respondsTo[0]}`,
+            `• Make it even more specific to: ${context.creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}`,
+            qualityScore.breakdown.contentRelevance < 75 ? 
+              `• Reference more specific themes from the original tweet` : 
+              null
+          ].filter(Boolean);
+          
+          feedback = enhancedFeedback.join("\n");
+        }
+        
         previousAttempt = candidate;
-        console.log(`   📋 Feedback: ${feedback.substring(0, 150)}...`);
+        console.log(`   📋 Feedback preview: ${feedback.substring(0, 200).replace(/\n/g, " | ")}...`);
       }
 
     } catch (error) {
