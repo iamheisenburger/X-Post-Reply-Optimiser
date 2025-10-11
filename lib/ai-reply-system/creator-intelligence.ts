@@ -162,7 +162,14 @@ export async function buildCreatorIntelligence(
     
     metrics: {
       followers: profile.followers_count,
-      engagementRate: calculateEngagementRate(recentTweets),
+      engagementRate: calculateEngagementRate(
+        recentTweets.map(t => ({
+          like_count: t.public_metrics?.like_count,
+          retweet_count: t.public_metrics?.retweet_count,
+          reply_count: t.public_metrics?.reply_count,
+          impressionCount: t.public_metrics?.impression_count,
+        }))
+      ),
     },
     
     audience: {
