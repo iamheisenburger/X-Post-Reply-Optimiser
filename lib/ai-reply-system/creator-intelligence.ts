@@ -188,7 +188,7 @@ export async function buildCreatorIntelligence(
     },
     
     contentPatterns: {
-      topics: analyzeTopicFrequency(tweetTexts),
+      topics: analyzeTopicFrequency(tweetTexts).map(t => t.topic),
       postTypes: analyzePostTypes(tweetTexts),
       toneProfile: analyzeToneProfile(tweetTexts),
     },
