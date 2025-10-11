@@ -332,13 +332,14 @@ export default function AIReplyPage() {
                         <span className="text-xs text-muted-foreground">(credibility + profile clicks)</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        {reply.breakdown.recency > 50 ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span>Early reply window</span>
-                        <span className="text-xs text-muted-foreground">(within 5 min = 2.5x boost)</span>
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span>Matches creator{'\''}s niche</span>
+                        <span className="text-xs text-muted-foreground">(template system = relevance)</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span>Matches creator tone</span>
+                        <span className="text-xs text-muted-foreground">(uses profile intelligence)</span>
                       </div>
                     </div>
                     <div className="mt-3 p-2 bg-muted rounded text-xs">
