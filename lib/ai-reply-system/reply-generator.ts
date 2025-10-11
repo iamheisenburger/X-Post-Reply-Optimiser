@@ -3,8 +3,8 @@
 import OpenAI from "openai";
 import { analyzeReplyFeatures, predictEngagement } from "../x-algorithm";
 import type { CreatorIntelligence } from "./types";
-import { analyzeTweetContent } from "./content-analyzer";
-import { assessQuality, shouldIterate, getImprovementSummary, type QualityReport } from "./quality-gate";
+import { analyzeTweetContent, type TweetContent } from "./content-analyzer";
+import { assessQuality, shouldIterate, getImprovementSummary, type QualityReport, type ReplyConstraints } from "./quality-gate";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
