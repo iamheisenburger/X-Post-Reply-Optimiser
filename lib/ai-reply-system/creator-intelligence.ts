@@ -90,7 +90,7 @@ export async function buildCreatorIntelligence(
         };
       }
     }
-  } catch (error) {
+  } catch {
     console.log(`No cached profile for @${username}, building fresh...`);
   }
 

@@ -112,7 +112,6 @@ export interface FullContext {
   creator: CreatorIntelligence;
   post: TweetData;
   mode: ReplyMode;
-  algorithmWeights: Record<string, number>;
 }
 
 export interface ScoredReply {

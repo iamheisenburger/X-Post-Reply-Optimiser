@@ -30,8 +30,7 @@ export async function generateOptimizedReplies(
     userProfile,
     creator,
     post: tweet,
-    mode,
-    algorithmWeights: X_ALGORITHM_WEIGHTS
+    mode
   };
 
   // 3. Generate 3 optimized replies
