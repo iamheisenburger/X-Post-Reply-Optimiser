@@ -1,7 +1,8 @@
-// reply-builder.ts - Core reply building system (NO AI, pure rules + intelligence)
+// reply-builder.ts - Core reply building system with content-aware templates
 
 import type { CreatorIntelligence } from './types';
 import { extractTopic, identifyNicheElements, type ExtractedTopic } from './topic-extractor';
+import { analyzeTweetContent, type TweetContent } from './content-analyzer';
 import { 
   buildSaaSQuestion, buildSaaSContrarian, buildSaaSAddValue, selectSaaSTemplate 
 } from './templates/saas-templates';
@@ -51,8 +52,8 @@ export interface ReplyBuilderContext {
 }
 
 /**
- * Main reply builder - builds 3 replies using templates + intelligence
- * NO AI GENERATION - just smart template selection
+ * Main reply builder - builds 3 replies using content-aware templates
+ * References ACTUAL tweet content, not generic patterns
  */
 export async function buildReplies(context: ReplyBuilderContext): Promise<BuiltReply[]> {
   const { tweetText, creatorProfile, minutesSincePosted } = context;
@@ -61,20 +62,25 @@ export async function buildReplies(context: ReplyBuilderContext): Promise<BuiltR
   const topic = extractTopic(tweetText);
   const nicheElements = identifyNicheElements(tweetText);
   
-  console.log(`📊 Topic extracted: ${topic.mainTopic} (${topic.tweetType}, ${topic.sentiment})`);
-  console.log(`🎯 Niche elements: SaaS=${nicheElements.isSaaS}, MMA=${nicheElements.isMMA}, Mindset=${nicheElements.isMindset}`);
+  // 2. EXTRACT ACTUAL TWEET CONTENT (this is the key!)
+  const tweetContent = analyzeTweetContent(tweetText);
   
-  // 2. Select template system based on creator niche + tweet content
+  console.log(`📊 Topic: ${topic.mainTopic} (${topic.tweetType})`);
+  console.log(`📝 Main claim: ${tweetContent.mainClaim}`);
+  console.log(`🔑 Key phrases: ${tweetContent.keyPhrases.slice(0, 3).join(', ')}`);
+  console.log(`🎯 Niche: SaaS=${nicheElements.isSaaS}, MMA=${nicheElements.isMMA}, Mindset=${nicheElements.isMindset}`);
+  
+  // 3. Select template system based on creator niche + tweet content
   const templateSystem = selectTemplateSystem(creatorProfile, nicheElements);
   console.log(`🛠️  Using template system: ${templateSystem}`);
   
-  // 3. Build 3 different replies using selected templates
-  const replies = await buildDiverseReplies(templateSystem, topic, creatorProfile, context);
+  // 4. Build 3 different replies using content-aware templates
+  const replies = await buildDiverseReplies(templateSystem, topic, tweetContent, creatorProfile, context);
   
-  // 4. Score each reply deterministically
+  // 5. Score each reply deterministically
   const scoredReplies = replies.map(reply => scoreReply(reply, minutesSincePosted));
   
-  // 5. Sort by score (descending)
+  // 6. Sort by score (descending)
   return scoredReplies.sort((a, b) => b.score - a.score);
 }
 
@@ -109,10 +115,12 @@ function selectTemplateSystem(
 
 /**
  * Build 3 diverse replies using the selected template system
+ * Now passes tweetContent so templates can reference specific content
  */
 async function buildDiverseReplies(
   system: 'saas' | 'mma' | 'mindset',
   topic: ExtractedTopic,
+  tweetContent: TweetContent,
   creator: CreatorIntelligence,
   context: ReplyBuilderContext
 ): Promise<ReplyTemplate[]> {
@@ -120,23 +128,23 @@ async function buildDiverseReplies(
   const replies: ReplyTemplate[] = [];
   
   if (system === 'saas') {
-    replies.push(buildSaaSQuestion(topic, creator, context.tweetText));
-    replies.push(buildSaaSContrarian(topic, creator, context.tweetText));
-    replies.push(buildSaaSAddValue(topic, creator, context.tweetText));
+    replies.push(buildSaaSQuestion(topic, tweetContent, creator, context.tweetText));
+    replies.push(buildSaaSContrarian(topic, tweetContent, creator, context.tweetText));
+    replies.push(buildSaaSAddValue(topic, tweetContent, creator, context.tweetText));
   } else if (system === 'mma') {
-    replies.push(buildMMAQuestion(topic, creator, context.tweetText));
-    replies.push(buildMMAContrarian(topic, creator, context.tweetText));
-    replies.push(buildMMAAddValue(topic, creator, context.tweetText));
+    replies.push(buildMMAQuestion(topic, tweetContent, creator, context.tweetText));
+    replies.push(buildMMAContrarian(topic, tweetContent, creator, context.tweetText));
+    replies.push(buildMMAAddValue(topic, tweetContent, creator, context.tweetText));
   } else {
     // Mindset/crossover system
-    replies.push(buildMindsetQuestion(topic, creator, context.tweetText));
-    replies.push(buildMindsetContrarian(topic, creator, context.tweetText));
+    replies.push(buildMindsetQuestion(topic, tweetContent, creator, context.tweetText));
+    replies.push(buildMindsetContrarian(topic, tweetContent, creator, context.tweetText));
     
     // Use crossover if applicable, otherwise add-value
     if (creator.crossoverPotential.disciplineTopics >= 4) {
-      replies.push(buildCrossoverReply(topic, creator, context.tweetText, context.yourNiche || 'saas'));
+      replies.push(buildCrossoverReply(topic, tweetContent, creator, context.tweetText, context.yourNiche || 'saas'));
     } else {
-      replies.push(buildMindsetAddValue(topic, creator, context.tweetText));
+      replies.push(buildMindsetAddValue(topic, tweetContent, creator, context.tweetText));
     }
   }
   

@@ -1,7 +1,8 @@
-// mma-templates.ts - MMA-specific reply templates
+// mma-templates.ts - Content-aware MMA reply templates
 
 import type { CreatorIntelligence } from '../types';
 import type { ExtractedTopic } from '../topic-extractor';
+import type { TweetContent } from '../content-analyzer';
 
 export interface ReplyTemplate {
   hook: string;
@@ -14,6 +15,7 @@ export interface ReplyTemplate {
  */
 export function buildMMAQuestion(
   topic: ExtractedTopic,
+  tweetContent: TweetContent,
   creator: CreatorIntelligence,
   tweetText: string
 ): ReplyTemplate {
@@ -54,6 +56,7 @@ export function buildMMAQuestion(
  */
 export function buildMMAContrarian(
   topic: ExtractedTopic,
+  tweetContent: TweetContent,
   creator: CreatorIntelligence,
   tweetText: string
 ): ReplyTemplate {
@@ -93,6 +96,7 @@ export function buildMMAContrarian(
  */
 export function buildMMAAddValue(
   topic: ExtractedTopic,
+  tweetContent: TweetContent,
   creator: CreatorIntelligence,
   tweetText: string
 ): ReplyTemplate {

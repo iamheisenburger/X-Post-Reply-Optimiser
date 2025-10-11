@@ -1,7 +1,8 @@
-// saas-templates.ts - SaaS-specific reply templates
+// saas-templates.ts - Content-aware SaaS reply templates
 
 import type { CreatorIntelligence } from '../types';
 import type { ExtractedTopic } from '../topic-extractor';
+import type { TweetContent } from '../content-analyzer';
 
 export interface ReplyTemplate {
   hook: string;
@@ -15,6 +16,7 @@ export interface ReplyTemplate {
  */
 export function buildSaaSQuestion(
   topic: ExtractedTopic,
+  tweetContent: TweetContent,
   creator: CreatorIntelligence,
   tweetText: string
 ): ReplyTemplate {
@@ -73,6 +75,7 @@ export function buildSaaSQuestion(
  */
 export function buildSaaSContrarian(
   topic: ExtractedTopic,
+  tweetContent: TweetContent,
   creator: CreatorIntelligence,
   tweetText: string
 ): ReplyTemplate {
@@ -121,6 +124,7 @@ export function buildSaaSContrarian(
  */
 export function buildSaaSAddValue(
   topic: ExtractedTopic,
+  tweetContent: TweetContent,
   creator: CreatorIntelligence,
   tweetText: string
 ): ReplyTemplate {
