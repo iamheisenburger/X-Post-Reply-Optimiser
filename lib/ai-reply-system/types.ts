@@ -73,6 +73,12 @@ export interface CreatorIntelligence {
     questionStyle: string;
   };
   
+  // Metrics
+  metrics: {
+    followers: number;
+    engagementRate: number;
+  };
+  
   // Metadata
   lastUpdated: number;
   tweetAnalysisCount: number;
@@ -92,6 +98,9 @@ export interface TweetData {
   isThread: boolean;
   conversationId: string;
   createdAt: string;
+  likeCount?: number;
+  replyCount?: number;
+  retweetCount?: number;
 }
 
 export interface UserProfile {
@@ -107,39 +116,20 @@ export interface UserProfile {
   currentProject: string;
 }
 
-export interface FullContext {
-  userProfile: UserProfile;
-  creator: CreatorIntelligence;
-  post: TweetData;
-  mode: ReplyMode;
-  keywords?: import("./keyword-extractor").KeywordExtractionResult;
-}
-
 export interface ScoredReply {
   text: string;
-  score: number;
-  breakdown: {
-    engagement: number;
-    recency: number;
-    mediaPresence: number;
-    conversationDepth: number;
-    authorReputation: number;
+  score: number; // Engagement probability (0-100)
+  mode: string; // Always "engagement_optimized"
+  engagement: {
+    authorRespondProb: number;
+    likesProb: number;
+    repliesProb: number;
   };
-  mode: ReplyMode;
-  iteration: number;
-  reasoning: string[];
-}
-
-export interface ModeValidation {
-  passed: boolean;
-  reason?: string;
 }
 
 export interface OptimizationResult {
   replies: ScoredReply[];
-  selectedMode: ReplyMode;
-  creatorProfile: CreatorIntelligence;
-  totalIterations: number;
-  averageScore: number;
+  selectedMode: string; // Always "engagement_optimized"
+  averageIterations: number;
 }
 
