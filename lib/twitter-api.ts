@@ -200,25 +200,32 @@ export const twitterApi = {
         return data.tweets.slice(0, count);
       }
       
-      // Strategy 2: Check if data itself is an array
+      // Strategy 2: Check for nested data.data.tweets (ACTUAL FORMAT returned by API)
+      if (data.data?.tweets && Array.isArray(data.data.tweets)) {
+        console.log(`✅ SUCCESS: Found ${data.data.tweets.length} tweets in data.data.tweets`);
+        // Return only the requested count (API might return up to 20)
+        return data.data.tweets.slice(0, count);
+      }
+      
+      // Strategy 3: Check if data itself is an array
       if (Array.isArray(data)) {
         console.log(`✅ SUCCESS: Response is direct array with ${data.length} tweets`);
         return data;
       }
       
-      // Strategy 3: Check for nested data.data (but NOT the unavailable format)
+      // Strategy 4: Check for nested data.data as array (but NOT the unavailable format)
       if (data.data && Array.isArray(data.data)) {
         console.log(`✅ SUCCESS: Found ${data.data.length} tweets in data.data`);
         return data.data;
       }
       
-      // Strategy 4: Check for results array (some APIs use this)
+      // Strategy 5: Check for results array (some APIs use this)
       if (data.results && Array.isArray(data.results)) {
         console.log(`✅ SUCCESS: Found ${data.results.length} tweets in data.results`);
         return data.results;
       }
       
-      // Strategy 5: Check for timeline or statuses (Twitter standard)
+      // Strategy 6: Check for timeline or statuses (Twitter standard)
       if (data.timeline && Array.isArray(data.timeline)) {
         console.log(`✅ SUCCESS: Found ${data.timeline.length} tweets in data.timeline`);
         return data.timeline;
