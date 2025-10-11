@@ -1,10 +1,14 @@
 // COMPLETE REPLY GENERATION SYSTEM WITH OPENAI + FEEDBACK LOOP
 
-import { buildIntelligentPrompt, generateWithPrompt } from "./prompt-builder";
-import { assessQuality, shouldIterate, getImprovementSummary, type QualityReport } from "./quality-gate";
-import { analyzeTweetContent } from "./content-analyzer";
+import OpenAI from "openai";
 import { analyzeReplyFeatures, predictEngagement } from "../x-algorithm";
 import type { CreatorIntelligence } from "./types";
+import { analyzeTweetContent } from "./content-analyzer";
+import { assessQuality, shouldIterate, type QualityReport } from "./quality-gate";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export interface ReplyGenerationContext {
   tweetText: string;
@@ -14,43 +18,67 @@ export interface ReplyGenerationContext {
   yourHandle: string;
 }
 
-export interface BuiltReply {
+export interface GeneratedReply {
   text: string;
-  strategy: 'question' | 'contrarian' | 'add_value';
   score: number;
   features: {
     hasQuestion: boolean;
     hasPushback: boolean;
     hasSpecificData: boolean;
   };
-  reasoning: string;
   prediction: {
     authorReplyProb: number;
     repliesExpected: number;
     likesExpected: number;
     profileClicksExpected: number;
   };
+  reasoning: string;
 }
 
 export interface GenerationResult {
-  replies: BuiltReply[];
+  replies: GeneratedReply[];
   qualityReport: QualityReport;
   totalAttempts: number;
 }
 
 const MAX_ATTEMPTS = 3;
 
+const SYSTEM_PROMPT = `You are an X (Twitter) reply expert who crafts high-engagement replies optimized for the platform's algorithm.
+
+CORE RULES:
+- ALWAYS reference the SPECIFIC tweet content provided - never generic responses
+- Use the creator's preferred tone and sophistication level
+- Target X algorithm: 75x author response (questions, pushback), 13.5x conversation (spark discussion)
+- Keep under 280 characters
+- Start with @username for notification
+- Be authentic - no fake stories, no self-promotion
+- Write complete, natural sentences - no fragments or awkward phrasing
+- 3 DISTINCT strategies: Question (expertise), Contrarian (thoughtful challenge), Add-Value (build on their idea)
+
+FORMAT (EXACT):
+REPLY 1 (QUESTION):
+[Your reply]
+
+REPLY 2 (CONTRARIAN):
+[Your reply]
+
+REPLY 3 (ADD-VALUE):
+[Your reply]`;
+
 /**
- * Generate replies with OpenAI + intelligence + feedback loop
+ * Generate 3 high-quality replies with feedback loop
  */
 export async function generateOptimizedReplies(context: ReplyGenerationContext): Promise<GenerationResult> {
-  console.log("🚀 Starting OpenAI generation with feedback loop...");
+  console.log("🚀 Starting hybrid generation with feedback loop...");
+  console.log(`   Creator: @${context.creatorProfile.username}`);
+  console.log(`   Niche: ${context.creatorProfile.primaryNiche}`);
+  console.log(`   Tweet age: ${context.minutesSincePosted} minutes`);
   
   // Extract tweet content
   const tweetContent = analyzeTweetContent(context.tweetText);
   
   let attemptNumber = 0;
-  let replies: BuiltReply[] = [];
+  let replies: GeneratedReply[] = [];
   let qualityReport: QualityReport | null = null;
   
   while (attemptNumber < MAX_ATTEMPTS) {
@@ -61,45 +89,53 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
     console.log(`${'='.repeat(60)}`);
     
     try {
-      // Build intelligent prompt with full context + constraints
+      // Build supercharged prompt
       const prompt = buildIntelligentPrompt(
         tweetContent,
         context.creatorProfile,
         qualityReport?.improvements
       );
       
-      console.log(`📝 Using OpenAI model: ${prompt.model}`);
+      // Call OpenAI
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 800,
+      });
       
-      // Generate replies with OpenAI
-      const rawReplies = await generateWithPrompt(prompt);
+      const response = completion.choices[0]?.message?.content || '';
+      console.log(`✅ OpenAI response received`);
       
-      console.log(`✅ OpenAI generated ${rawReplies.length} replies`);
+      // Parse replies
+      const rawReplies = parseReplies(response);
       
-      // Analyze and score each reply
+      // Score each reply
       replies = rawReplies.map((text, idx) => {
         const features = analyzeReplyFeatures(text);
         const prediction = predictEngagement(features, context.minutesSincePosted);
-        const strategy = classifyStrategy(text, features);
         const score = calculateCompositeScore(prediction);
         
-        console.log(`   Reply ${idx + 1} (${strategy}): ${score}/100`);
+        console.log(`   Reply ${idx + 1}: ${score}/100`);
         
         return {
           text,
-          strategy,
           score,
           features: {
             hasQuestion: features.hasQuestion,
             hasPushback: features.hasPushback,
             hasSpecificData: features.hasSpecificData,
           },
-          reasoning: `OpenAI generation (attempt ${attemptNumber}). Score: ${score}/100. Features: Q${features.hasQuestion ? '+' : '-'} P${features.hasPushback ? '+' : '-'} D${features.hasSpecificData ? '+' : '-'}`,
           prediction: {
             authorReplyProb: prediction.authorReplyProb,
             repliesExpected: prediction.repliesExpected,
             likesExpected: prediction.likesExpected,
             profileClicksExpected: prediction.profileClicksExpected,
           },
+          reasoning: `Attempt ${attemptNumber}. Score: ${score}/100`,
         };
       });
       
@@ -151,13 +187,57 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
   };
 }
 
-function classifyStrategy(text: string, features: ReturnType<typeof analyzeReplyFeatures>): BuiltReply['strategy'] {
-  if (features.hasQuestion) return 'question';
-  if (features.hasPushback) return 'contrarian';
-  return 'add_value';
+function buildIntelligentPrompt(
+  tweetContent: TweetContent,
+  creator: CreatorIntelligence,
+  constraints?: ReplyConstraints
+): string {
+  const tweetSummary = buildTweetSummary(tweetContent);
+  const creatorSummary = buildCreatorSummary(creator);
+  const constraintInstructions = buildConstraintInstructions(constraints);
+  
+  return `Generate 3 X replies for this tweet:
+
+TWEET ANALYSIS:
+${tweetSummary}
+
+CREATOR PROFILE (@${creator.username}):
+${creatorSummary}
+
+CONSTRAINTS:
+${constraintInstructions}
+
+REQUIREMENTS:
+1. Reply 1 (QUESTION): Ask something requiring THEIR expertise. Reference tweet content + their emphasized topics.
+2. Reply 2 (CONTRARIAN): Thoughtful challenge to specific point. Connect to what they care about.
+3. Add-Value: Expand with insight/example from their niche. Build on tweet + their interests.
+- Tone: ${creator.audience.engagementPatterns.preferredTone || 'conversational'}
+- Sophistication: ${creator.audience.demographics.sophisticationLevel || 'intermediate'}
+- Start each with @${creator.username}`;
+
+  // Helper functions for buildTweetSummary, buildCreatorSummary, buildConstraintInstructions
+  // (implement as in previous code)
+}
+
+function parseReplies(response: string): string[] {
+  // Implementation as in previous code
+  const patterns = [
+    /REPLY \d+ \([A-Z\-]+\):\s*(.+?)(?=\n\nREPLY \d+|\n*$)/gs,
+    /REPLY \d+:\s*(.+?)(?=\n\nREPLY \d+:|\n*$)/gs,
+  ];
+  
+  for (const pattern of patterns) {
+    const matches = [...response.matchAll(pattern)];
+    if (matches.length >= 3) {
+      return matches.slice(0, 3).map(match => match[1].trim()).filter(r => r.length > 20);
+    }
+  }
+  
+  return response.split(/\n\n+/).slice(0, 3).map(r => r.trim()).filter(r => r.length > 20);
 }
 
 function calculateCompositeScore(prediction: ReturnType<typeof predictEngagement>): number {
+  // Implementation as in previous code
   const authorWeight = 0.50;
   const conversationWeight = 0.30;
   const profileClickWeight = 0.15;
@@ -172,4 +252,82 @@ function calculateCompositeScore(prediction: ReturnType<typeof predictEngagement
     profileClickScore * profileClickWeight + likeScore * likeWeight;
   
   return Math.round(Math.max(1, Math.min(100, composite)));
+}
+
+function buildTweetSummary(content: TweetContent): string {
+  const parts: string[] = [];
+  
+  parts.push(`Main claim: "${content.mainClaim}"`);
+  
+  if (content.keyPhrases.length > 0) {
+    parts.push(`Key phrases: ${content.keyPhrases.slice(0, 3).join(', ')}`);
+  }
+  
+  if (content.entities.length > 0) {
+    parts.push(`Mentions: ${content.entities.join(', ')}`);
+  }
+  
+  if (content.numbers.length > 0) {
+    parts.push(`Numbers: ${content.numbers.join(', ')}`);
+  }
+  
+  if (content.problemMentioned) {
+    parts.push(`Problem: "${content.problemMentioned}"`);
+  }
+  
+  if (content.solutionMentioned) {
+    parts.push(`Solution: "${content.solutionMentioned}"`);
+  }
+  
+  return parts.join('\n');
+}
+
+function buildCreatorSummary(creator: CreatorIntelligence): string {
+  const parts: string[] = [];
+  
+  parts.push(`Primary niche: ${creator.primaryNiche}`);
+  parts.push(`Emphasized topics: ${creator.optimalReplyStrategy.emphasizeTopics.join(', ')}`);
+  parts.push(`Avoid: ${creator.optimalReplyStrategy.avoidTopics.join(', ')}`);
+  parts.push(`Reply mode: ${creator.optimalReplyStrategy.mode}`);
+  parts.push(`Responds to: ${creator.audience.engagementPatterns.respondsTo.join(', ')}`);
+  parts.push(`Preferred tone: ${creator.audience.engagementPatterns.preferredTone || 'conversational'}`);
+  parts.push(`Audience level: ${creator.audience.demographics.sophisticationLevel || 'intermediate'}`);
+  
+  return parts.join('\n');
+}
+
+function buildConstraintInstructions(constraints?: ReplyConstraints): string {
+  if (!constraints) return 'No specific constraints.';
+  
+  const instructions: string[] = [];
+  
+  if (constraints.mustIncludeQuestion) {
+    instructions.push(`MUST ask question about: ${constraints.mustIncludeQuestion}`);
+  }
+  
+  if (constraints.mustReferencePhrases && constraints.mustReferencePhrases.length > 0) {
+    instructions.push(`MUST reference: ${constraints.mustReferencePhrases.join(', ')}`);
+  }
+  
+  if (constraints.emphasizeCreatorTopics && constraints.emphasizeCreatorTopics.length > 0) {
+    instructions.push(`Connect to creator topics: ${constraints.emphasizeCreatorTopics.join(', ')}`);
+  }
+  
+  if (constraints.mustHaveFeature && constraints.mustHaveFeature.length > 0) {
+    instructions.push(`Ensure features: ${constraints.mustHaveFeature.join(', ')}`);
+  }
+  
+  if (constraints.mustUseTone) {
+    instructions.push(`Use tone: ${constraints.mustUseTone}`);
+  }
+  
+  if (constraints.avoidGenericPhrases) {
+    instructions.push('Avoid generic phrases like "great point", "love this"');
+  }
+  
+  if (constraints.ensureGrammar) {
+    instructions.push('Ensure complete sentences and natural flow - no fragments or awkward phrasing');
+  }
+  
+  return instructions.length > 0 ? instructions.join('\n') : 'No specific constraints.';
 }
