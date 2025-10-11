@@ -42,6 +42,12 @@ interface OptimizationResult {
   };
   totalIterations: number;
   averageScore: number;
+  qualityReport?: {
+    passed: boolean;
+    bestScore: number;
+    issues: string[];
+    attemptNumber: number;
+  };
 }
 
 export default function AIReplyPage() {
@@ -246,6 +252,65 @@ export default function AIReplyPage() {
                 <p className="text-sm text-muted-foreground">Reply Mode</p>
                 <p className="font-semibold">One-shot (no iterations)</p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quality Report */}
+      {result?.qualityReport && (
+        <Card className={`mb-6 ${result.qualityReport.passed ? 'border-green-500/50' : 'border-yellow-500/50'}`}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                {result.qualityReport.passed ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-yellow-500" />
+                )}
+                Quality Report
+              </CardTitle>
+              <Badge variant="outline" className={result.qualityReport.passed ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}>
+                {result.qualityReport.passed ? 'PASSED' : 'ISSUES DETECTED'}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Attempts</p>
+                  <p className="font-semibold">{result.totalIterations}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Best Score</p>
+                  <p className="font-semibold text-lg">{result.qualityReport.bestScore}/100</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Issues Found</p>
+                  <p className="font-semibold">{result.qualityReport.issues.length}</p>
+                </div>
+              </div>
+              
+              {result.qualityReport.issues.length > 0 && (
+                <div className="mt-4 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded">
+                  <p className="text-sm font-semibold mb-2">Remaining Quality Issues:</p>
+                  <ul className="text-sm space-y-1">
+                    {result.qualityReport.issues.map((issue, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-yellow-500">•</span>
+                        <span className="text-muted-foreground">{issue}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {result.totalIterations > 1 && (
+                <div className="text-xs text-muted-foreground">
+                  System iterated {result.totalIterations}x to improve quality based on X algorithm targets
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -131,17 +131,19 @@ export async function POST(request: NextRequest) {
 
     console.log(`⏱️  Tweet posted ${minutesSincePosted} minutes ago ${minutesSincePosted <= 5 ? '(RECENCY BOOST!)' : ''}`);
 
-    // 5. Generate algorithm-optimized replies using NEW system
-    const replies = await generateOptimizedReplies({
-      tweetText: tweet.text,
-      tweetAuthor: tweet.author.username,
-      creatorProfile: creatorIntelligence,
-      minutesSincePosted,
-      yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",
-    });
+      // 5. Generate algorithm-optimized replies with feedback loop
+      const result = await generateOptimizedReplies({
+        tweetText: tweet.text,
+        tweetAuthor: tweet.author.username,
+        creatorProfile: creatorIntelligence,
+        minutesSincePosted,
+        yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",
+      });
 
-    console.log(`✨ Generated ${replies.length} algorithm-optimized replies`);
-    console.log(`📊 Score range: ${replies[replies.length-1].score} - ${replies[0].score}`);
+      console.log(`✨ Generated ${result.replies.length} algorithm-optimized replies`);
+      console.log(`📊 Quality: ${result.qualityReport.passed ? 'PASSED' : 'ISSUES'}`);
+      console.log(`📊 Attempts: ${result.totalAttempts}`);
+      console.log(`📊 Best score: ${result.qualityReport.bestScore}/100`);
 
     // 6. Transform for frontend
     const classifyMode = (text: string, f: { hasQuestion: boolean; hasPushback: boolean; hasSpecificData: boolean; }) => {
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
       return "add_value";
     };
 
-    const transformedReplies = replies.map((reply, idx) => {
+    const transformedReplies = result.replies.map((reply, idx) => {
       const p = reply.prediction;
       
       // Show probability/likelihood scores (0-100) for each signal - these are interpretable
@@ -209,8 +211,14 @@ export async function POST(request: NextRequest) {
         preferredTone: creatorIntelligence.audience.engagementPatterns.preferredTone,
         profileSource: profileSource,
       },
-      totalIterations: 1, // One-shot generation!
+      totalIterations: result.totalAttempts,
       averageScore: averageScore,
+      qualityReport: {
+        passed: result.qualityReport.passed,
+        bestScore: result.qualityReport.bestScore,
+        issues: result.qualityReport.issues,
+        attemptNumber: result.qualityReport.attemptNumber,
+      },
       algorithmInsights: {
         authorReplyWeight: "75x (TARGET THIS!)",
         conversationWeight: "13.5x",

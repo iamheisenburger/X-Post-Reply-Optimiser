@@ -1,19 +1,16 @@
-// reply-builder.ts - Core reply building system with content-aware templates
+// reply-builder.ts - Reply building with feedback loop integration
 
 import type { CreatorIntelligence } from './types';
 import { extractTopic, identifyNicheElements, type ExtractedTopic } from './topic-extractor';
 import { analyzeTweetContent, type TweetContent } from './content-analyzer';
-import { 
-  buildSaaSQuestion, buildSaaSContrarian, buildSaaSAddValue, selectSaaSTemplate 
-} from './templates/saas-templates';
-import { 
-  buildMMAQuestion, buildMMAContrarian, buildMMAAddValue, selectMMATemplate 
-} from './templates/mma-templates';
-import { 
-  buildMindsetQuestion, buildMindsetContrarian, buildMindsetAddValue, 
-  buildCrossoverReply, selectMindsetTemplate 
-} from './templates/mindset-templates';
 import { analyzeReplyFeatures, predictEngagement } from '../x-algorithm';
+import { 
+  buildIntelligentQuestion, 
+  buildIntelligentContrarian, 
+  buildIntelligentAddValue,
+  type IntelligentReply
+} from './intelligent-reply-builder';
+import type { ReplyConstraints } from './quality-gate';
 
 export interface ReplyTemplate {
   hook: string;
@@ -49,155 +46,84 @@ export interface ReplyBuilderContext {
   minutesSincePosted: number;
   yourHandle: string;
   yourNiche?: 'saas' | 'mma';
+  constraints?: ReplyConstraints; // Added for feedback loop
 }
 
 /**
- * Main reply builder - builds 3 replies using content-aware templates
- * References ACTUAL tweet content, not generic patterns
+ * Main reply builder with FULL intelligence integration
+ * Uses creator profile + tweet content + constraints from quality gate
  */
 export async function buildReplies(context: ReplyBuilderContext): Promise<BuiltReply[]> {
-  const { tweetText, creatorProfile, minutesSincePosted } = context;
+  const { tweetText, creatorProfile, minutesSincePosted, constraints } = context;
   
-  // 1. Extract topic from tweet (NLP, no AI)
+  // 1. Extract topic from tweet
   const topic = extractTopic(tweetText);
   const nicheElements = identifyNicheElements(tweetText);
   
-  // 2. EXTRACT ACTUAL TWEET CONTENT (this is the key!)
+  // 2. Extract actual tweet content
   const tweetContent = analyzeTweetContent(tweetText);
   
-  console.log(`📊 Topic: ${topic.mainTopic} (${topic.tweetType})`);
-  console.log(`📝 Main claim: ${tweetContent.mainClaim}`);
-  console.log(`🔑 Key phrases: ${tweetContent.keyPhrases.slice(0, 3).join(', ')}`);
-  console.log(`🎯 Niche: SaaS=${nicheElements.isSaaS}, MMA=${nicheElements.isMMA}, Mindset=${nicheElements.isMindset}`);
+  console.log(`\n📊 Analysis:`);
+  console.log(`   Topic: ${topic.mainTopic} (${topic.tweetType})`);
+  console.log(`   Main: "${tweetContent.mainClaim.substring(0, 60)}..."`);
+  console.log(`   Key phrases: ${tweetContent.keyPhrases.slice(0, 2).join(', ')}`);
+  console.log(`   Creator emphasized: ${creatorProfile.optimalReplyStrategy.emphasizeTopics.join(', ')}`);
+  console.log(`   Creator responds to: ${creatorProfile.audience.engagementPatterns.respondsTo.join(', ')}`);
   
-  // 3. Select template system based on creator niche + tweet content
-  const templateSystem = selectTemplateSystem(creatorProfile, nicheElements);
-  console.log(`🛠️  Using template system: ${templateSystem}`);
-  
-  // 4. Build 3 different replies using content-aware templates
-  const replies = await buildDiverseReplies(templateSystem, topic, tweetContent, creatorProfile, context);
-  
-  // 5. Score each reply deterministically
-  const scoredReplies = replies.map(reply => scoreReply(reply, minutesSincePosted));
-  
-  // 6. Sort by score (descending)
-  return scoredReplies.sort((a, b) => b.score - a.score);
-}
-
-/**
- * Select which template system to use based on creator + tweet
- */
-function selectTemplateSystem(
-  creator: CreatorIntelligence,
-  nicheElements: ReturnType<typeof identifyNicheElements>
-): 'saas' | 'mma' | 'mindset' {
-  // If creator is primarily one niche, use that system
-  if (creator.primaryNiche === 'saas' || creator.primaryNiche === 'tech') {
-    return 'saas';
-  }
-  
-  if (creator.primaryNiche === 'mma') {
-    return 'mma';
-  }
-  
-  // If tweet has strong niche signals, match them
-  if (nicheElements.isSaaS || nicheElements.isTech) {
-    return 'saas';
-  }
-  
-  if (nicheElements.isMMA) {
-    return 'mma';
-  }
-  
-  // Default: mindset/crossover system
-  return 'mindset';
-}
-
-/**
- * Build 3 diverse replies using the selected template system
- * Now passes tweetContent so templates can reference specific content
- */
-async function buildDiverseReplies(
-  system: 'saas' | 'mma' | 'mindset',
-  topic: ExtractedTopic,
-  tweetContent: TweetContent,
-  creator: CreatorIntelligence,
-  context: ReplyBuilderContext
-): Promise<ReplyTemplate[]> {
-  
-  const replies: ReplyTemplate[] = [];
-  
-  if (system === 'saas') {
-    replies.push(buildSaaSQuestion(topic, tweetContent, creator, context.tweetText));
-    replies.push(buildSaaSContrarian(topic, tweetContent, creator, context.tweetText));
-    replies.push(buildSaaSAddValue(topic, tweetContent, creator, context.tweetText));
-  } else if (system === 'mma') {
-    replies.push(buildMMAQuestion(topic, tweetContent, creator, context.tweetText));
-    replies.push(buildMMAContrarian(topic, tweetContent, creator, context.tweetText));
-    replies.push(buildMMAAddValue(topic, tweetContent, creator, context.tweetText));
-  } else {
-    // Mindset/crossover system
-    replies.push(buildMindsetQuestion(topic, tweetContent, creator, context.tweetText));
-    replies.push(buildMindsetContrarian(topic, tweetContent, creator, context.tweetText));
-    
-    // Use crossover if applicable, otherwise add-value
-    if (creator.crossoverPotential.disciplineTopics >= 4) {
-      replies.push(buildCrossoverReply(topic, tweetContent, creator, context.tweetText, context.yourNiche || 'saas'));
-    } else {
-      replies.push(buildMindsetAddValue(topic, tweetContent, creator, context.tweetText));
+  if (constraints) {
+    console.log(`\n🔧 Applying constraints from quality gate:`);
+    if (constraints.mustIncludeQuestion) {
+      console.log(`   - Must include: ${constraints.mustIncludeQuestion}`);
+    }
+    if (constraints.mustReferencePhrases) {
+      console.log(`   - Must reference: ${constraints.mustReferencePhrases.join(', ')}`);
+    }
+    if (constraints.emphasizeCreatorTopics) {
+      console.log(`   - Emphasize: ${constraints.emphasizeCreatorTopics.join(', ')}`);
     }
   }
   
-  return replies;
-}
-
-/**
- * Score a reply deterministically using X algorithm
- */
-function scoreReply(reply: ReplyTemplate, minutesSincePosted: number): BuiltReply {
-  // Assemble full reply text
-  const text = [reply.hook, reply.body, reply.closer].filter(Boolean).join(' ');
+  // 3. Build 3 intelligent replies using FULL profile data
+  const intelligentReplies: IntelligentReply[] = [
+    buildIntelligentQuestion(tweetContent, topic, creatorProfile, constraints),
+    buildIntelligentContrarian(tweetContent, topic, creatorProfile, constraints),
+    buildIntelligentAddValue(tweetContent, topic, creatorProfile, constraints),
+  ];
   
-  // Analyze features
-  const features = analyzeReplyFeatures(text);
+  console.log(`\n✨ Generated 3 intelligent replies`);
   
-  // Predict engagement using X algorithm weights
-  const prediction = predictEngagement(features, minutesSincePosted);
+  // 4. Score each reply with X algorithm
+  const scoredReplies = intelligentReplies.map((reply, idx) => {
+    const features = analyzeReplyFeatures(reply.text);
+    const prediction = predictEngagement(features, minutesSincePosted);
+    const score = calculateCompositeScore(prediction);
+    
+    console.log(`   Reply ${idx + 1} (${reply.strategy}): ${score}/100`);
+    
+    return {
+      text: reply.text,
+      strategy: reply.strategy,
+      score,
+      features: {
+        hasQuestion: features.hasQuestion,
+        hasPushback: features.hasPushback,
+        hasSpecificData: features.hasSpecificData,
+        referencesOriginalTweet: features.callsOutOP,
+        matchesCreatorNiche: true, // Intelligent builder guarantees this
+        matchesCreatorTone: true, // Intelligent builder guarantees this
+      },
+      reasoning: reply.reasoning,
+      prediction: {
+        authorReplyProb: prediction.authorReplyProb,
+        repliesExpected: prediction.repliesExpected,
+        likesExpected: prediction.likesExpected,
+        profileClicksExpected: prediction.profileClicksExpected,
+      },
+    };
+  });
   
-  // Determine strategy
-  let strategy: BuiltReply['strategy'] = 'add_value';
-  if (features.hasQuestion) strategy = 'question';
-  else if (features.hasPushback) strategy = 'contrarian';
-  
-  // Build feature breakdown
-  const featureBreakdown = {
-    hasQuestion: features.hasQuestion,
-    hasPushback: features.hasPushback,
-    hasSpecificData: features.hasSpecificData,
-    referencesOriginalTweet: features.callsOutOP,
-    matchesCreatorNiche: true,  // Templates are niche-matched
-    matchesCreatorTone: true,   // Templates are tone-matched
-  };
-  
-  // Generate reasoning
-  const reasoning = generateReasoning(strategy, featureBreakdown, prediction);
-  
-  // Calculate composite score (0-100)
-  const score = calculateCompositeScore(prediction);
-  
-  return {
-    text,
-    strategy,
-    score,
-    features: featureBreakdown,
-    reasoning,
-    prediction: {
-      authorReplyProb: prediction.authorReplyProb,
-      repliesExpected: prediction.repliesExpected,
-      likesExpected: prediction.likesExpected,
-      profileClicksExpected: prediction.profileClicksExpected,
-    },
-  };
+  // 5. Sort by score (descending)
+  return scoredReplies.sort((a, b) => b.score - a.score);
 }
 
 /**
@@ -224,44 +150,3 @@ function calculateCompositeScore(prediction: ReturnType<typeof predictEngagement
   
   return Math.round(Math.max(1, Math.min(100, composite)));
 }
-
-/**
- * Generate human-readable reasoning for why this reply is good
- */
-function generateReasoning(
-  strategy: BuiltReply['strategy'],
-  features: BuiltReply['features'],
-  prediction: ReturnType<typeof predictEngagement>
-): string {
-  const reasons: string[] = [];
-  
-  // Strategy-specific reasoning
-  if (strategy === 'question') {
-    reasons.push(`Asks a specific question targeting ${Math.round(prediction.authorReplyProb * 100)}% author response probability (75x X algorithm weight)`);
-  } else if (strategy === 'contrarian') {
-    reasons.push(`Polite pushback creates memorable engagement (increases author response + conversation)`);
-  } else if (strategy === 'add_value') {
-    reasons.push(`Adds specific insight that expands the conversation`);
-  } else if (strategy === 'crossover') {
-    reasons.push(`Connects concepts across domains to stand out`);
-  }
-  
-  // Feature-based reasoning
-  if (features.hasSpecificData) {
-    reasons.push(`References specific examples/data to build credibility`);
-  }
-  
-  if (features.referencesOriginalTweet) {
-    reasons.push(`Directly engages with tweet author for notification priority`);
-  }
-  
-  if (features.matchesCreatorNiche) {
-    reasons.push(`Matches creator's ${features.matchesCreatorNiche} niche for relevance`);
-  }
-  
-  // Engagement prediction
-  reasons.push(`Expects ${prediction.repliesExpected} replies (13.5x weight), ${prediction.likesExpected} likes`);
-  
-  return reasons.join('. ');
-}
-
