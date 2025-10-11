@@ -159,9 +159,30 @@ export async function POST(request: NextRequest) {
 
     console.log(`Generated ${result.replies.length} replies with avg ${result.averageIterations.toFixed(1)} iterations`);
 
-    // 6. Return result
+    // 6. Transform replies to match frontend expectations
+    const transformedReplies = result.replies.map(reply => ({
+      text: reply.text,
+      score: reply.score,
+      breakdown: {
+        engagement: Math.round(reply.engagement.authorRespondProb * 100),
+        recency: 50, // Static value for now
+        mediaPresence: 0, // No media in text replies
+        conversationDepth: Math.round(reply.engagement.repliesProb * 100),
+        authorReputation: Math.round(reply.engagement.likesProb * 100),
+      },
+      mode: reply.mode,
+      iteration: reply.iteration,
+      reasoning: [], // Empty for simple generation
+    }));
+
+    // Calculate average score
+    const averageScore = Math.round(
+      transformedReplies.reduce((sum, r) => sum + r.score, 0) / transformedReplies.length
+    );
+
+    // 7. Return result
     return NextResponse.json({
-      replies: result.replies,
+      replies: transformedReplies,
       selectedMode: "engagement_optimized",
       creatorProfile: {
         username: creatorIntelligence.username,
@@ -171,6 +192,7 @@ export async function POST(request: NextRequest) {
         saasRelevance: creatorIntelligence.crossoverPotential.saasRelevance,
       },
       totalIterations: result.totalIterations,
+      averageScore: averageScore,
     });
 
   } catch (error) {
