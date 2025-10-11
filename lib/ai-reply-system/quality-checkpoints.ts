@@ -161,7 +161,7 @@ function evaluateEngagementHooks(
     feedback.push(`❌ No question - add an open-ended question to drive engagement`);
   }
   
-  // CHECK 2: CONCRETE expertise? (NEW - stricter check)
+  // CHECK 2: CONCRETE expertise? - HONEST QUESTIONS get special treatment
   const concreteExpertise = [
     /\b(at|when|building|during)\s+(we|I|our)\s+\w+/i, // "at our company", "when we built"
     /\b\d+[KM]?\s*(MRR|users|%|x)/i, // Numbers with context
@@ -169,19 +169,29 @@ function evaluateEngagementHooks(
     /\b(tested|implemented|built|launched|discovered|analyzed)\b/i, // Concrete verbs
   ];
   
-  const concreteCount = concreteExpertise.filter(pattern => pattern.test(reply)).length;
+  // SPECIAL: For question-based replies, ratios/percentages count as concrete analytical thinking
+  const hasRatios = /\b\d+%\s+(to|vs|versus|and)\s+\d+%/i.test(reply) || 
+                    /\b\d+\s+(to|vs|versus|and)\s+\d+\b/i.test(reply); // "60% to 40%" or "60 to 40"
+  
+  let concreteCount = concreteExpertise.filter(pattern => pattern.test(reply)).length;
+  
+  // Boost score for question-based replies with ratios (shows analytical thinking)
+  if (hasQuestion && hasRatios) {
+    concreteCount += 2; // Ratios in questions = analytical concrete thinking
+    feedback.push(`✅ Uses ratio-based analytical question (counts as concrete thinking)`);
+  }
   
   if (concreteCount >= 2) {
     score += 35; // Big reward for concrete details
-    feedback.push(`✅ Shares CONCRETE experience with specific details (${concreteCount} elements)`);
+    feedback.push(`✅ Shares CONCRETE details (${concreteCount} elements)`);
   } else if (concreteCount === 1) {
     score += 10;
     feedback.push(`⚠️ Some specifics (${concreteCount}) but need MORE concrete details`);
-    feedback.push(`   → Add: numbers/metrics, timeframes, or specific scenarios`);
+    feedback.push(`   → Add: ratios (60% to 40%), timeframes (over 30 days), or scenarios`);
   } else {
     score -= 15;
     feedback.push(`❌ No concrete details - too generic`);
-    feedback.push(`   → Required: "At 5K MRR" or "tested for 3 weeks" or "saw 40% improvement"`);
+    feedback.push(`   → Required: "70% vs 30%" or "over 30 days" or specific scenarios`);
   }
   
   // CHECK 3: Generic praise (NEGATIVE) - STRICT ENFORCEMENT
