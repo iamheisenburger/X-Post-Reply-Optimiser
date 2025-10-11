@@ -58,22 +58,6 @@ export async function POST(request: NextRequest) {
           verified: cachedProfile.verified,
           primaryNiche: cachedProfile.primaryNiche as "saas" | "mma" | "tech" | "finance" | "mindset" | "other",
           secondaryNiches: cachedProfile.secondaryNiches,
-          engagementStyle: cachedProfile.toneMatch || "professional",
-          averageEngagement: {
-            replies: 10, // Heuristic based on follower count
-            likes: Math.round(cachedProfile.followerCount * 0.02),
-            retweets: Math.round(cachedProfile.followerCount * 0.005),
-          },
-          responsiveness: {
-            respondsToReplies: cachedProfile.respondsTo.includes("questions") || cachedProfile.respondsTo.includes("insights"),
-            avgResponseTime: "< 2 hours",
-          },
-          crossoverPotential: {
-            mmaRelevance: cachedProfile.mmaRelevance as 0 | 1 | 2 | 3 | 4 | 5,
-            saasRelevance: cachedProfile.saasRelevance as 0 | 1 | 2 | 3 | 4 | 5,
-            disciplineTopics: cachedProfile.disciplineTopics as 0 | 1 | 2 | 3 | 4 | 5,
-            philosophyTopics: cachedProfile.philosophyTopics as 0 | 1 | 2 | 3 | 4 | 5,
-          },
           metrics: {
             followers: cachedProfile.followerCount,
             engagementRate: 0.03,
@@ -95,6 +79,12 @@ export async function POST(request: NextRequest) {
             topics: [],
             postTypes: { insights: 0, questions: 0, announcements: 0, personal: 0 },
             toneProfile: { serious: 0, humorous: 0, technical: 0, philosophical: 0 },
+          },
+          crossoverPotential: {
+            mmaRelevance: cachedProfile.mmaRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+            saasRelevance: cachedProfile.saasRelevance as 0 | 1 | 2 | 3 | 4 | 5,
+            disciplineTopics: cachedProfile.disciplineTopics as 0 | 1 | 2 | 3 | 4 | 5,
+            philosophyTopics: cachedProfile.philosophyTopics as 0 | 1 | 2 | 3 | 4 | 5,
           },
           optimalReplyStrategy: {
             mode: cachedProfile.optimalMode as "pure_saas" | "pure_mma" | "mindset_crossover" | "technical" | "storytelling",
