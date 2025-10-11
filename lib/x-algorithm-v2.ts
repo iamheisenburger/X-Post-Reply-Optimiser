@@ -1,8 +1,6 @@
 // X Algorithm V2 - Quality-Based Scoring
 // Measures ACTUAL reply quality, not just features
 
-import { X_ALGORITHM_WEIGHTS } from "./x-algorithm";
-
 export interface QualityScoreResult {
   score: number;
   breakdown: {

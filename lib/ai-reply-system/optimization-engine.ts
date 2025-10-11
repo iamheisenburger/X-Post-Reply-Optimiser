@@ -10,11 +10,9 @@ import type {
   OptimizationResult,
   FullContext
 } from "./types";
-import { calculateAlgorithmScore, type ContentAnalysisResult } from "../x-algorithm";
-import { calculateQualityScore, type QualityScoreResult, type ScoringContext } from "../x-algorithm-v2";
+import { calculateQualityScore, type ScoringContext } from "../x-algorithm-v2";
 import { generateReply } from "../openai-client";
 import { selectOptimalMode, getModePrompt } from "./mode-selector";
-import { X_ALGORITHM_WEIGHTS } from "../x-algorithm";
 
 export async function generateOptimizedReplies(
   tweet: TweetData,
@@ -188,65 +186,6 @@ Replying to @${context.creator.username}'s post:
 Your goal: Generate ONE high-quality reply that maximizes engagement.
 Target: 90%+ algorithm score, with focus on author engagement (75x weight in X algorithm).
   `.trim();
-}
-
-function generateAlgorithmFeedback(
-  analysis: ContentAnalysisResult,
-  context: FullContext
-): string {
-  const feedback: string[] = [];
-
-  feedback.push(`Current score: ${analysis.score}/100 - NEEDS IMPROVEMENT TO REACH 90%+`);
-  feedback.push("");
-  feedback.push("ALGORITHM ANALYSIS:");
-
-  // Conversation depth (critical for replies)
-  if (analysis.breakdown.conversationDepth < 70) {
-    feedback.push(`❌ Conversation Depth: ${analysis.breakdown.conversationDepth.toFixed(0)}/100`);
-    feedback.push(`   → X Algorithm: Replies have 13.5x weight`);
-    feedback.push(`   → FIX: Add a specific, thoughtful question that invites discussion`);
-    feedback.push(`   → Avoid yes/no questions - ask about process, reasoning, or specifics`);
-  }
-
-  // Engagement signals
-  if (analysis.breakdown.engagement < 70) {
-    feedback.push(`❌ Engagement Signals: ${analysis.breakdown.engagement.toFixed(0)}/100`);
-    feedback.push(`   → X Algorithm: Author engagement is 75x weight (HIGHEST)`);
-    feedback.push(`   → FIX: Make the reply more thought-provoking or add unique insight`);
-    feedback.push(`   → Show expertise that makes @${context.creator.username} want to respond`);
-  }
-
-  // Author reputation building
-  if (analysis.breakdown.authorReputation < 70) {
-    feedback.push(`❌ Profile Click Potential: ${analysis.breakdown.authorReputation.toFixed(0)}/100`);
-    feedback.push(`   → X Algorithm: Profile clicks have 12x weight`);
-    feedback.push(`   → FIX: Show YOUR unique expertise (${context.userProfile.niche})`);
-    feedback.push(`   → Make people curious about who YOU are`);
-  }
-
-  feedback.push("");
-  feedback.push("MODE-SPECIFIC GUIDANCE:");
-  
-  if (context.mode === "pure_saas") {
-    feedback.push(`→ Remember: This is pure SaaS mode - NO MMA references`);
-    feedback.push(`→ Audience cares about: ${context.creator.audience.demographics.primaryInterests.slice(0, 3).join(", ")}`);
-    feedback.push(`→ Avoid: ${context.creator.audience.demographics.irrelevantTopics.slice(0, 3).join(", ")}`);
-  } else if (context.mode === "pure_mma") {
-    feedback.push(`→ Remember: This is pure MMA mode - focus on fight analysis`);
-    feedback.push(`→ Minimal SaaS talk unless directly relevant`);
-  } else if (context.mode === "mindset_crossover") {
-    feedback.push(`→ Remember: Bridge concepts WITHOUT explicit "fighter" or "MMA" references`);
-    feedback.push(`→ Frame universally: "High performers...", "Elite execution..."`);
-  }
-
-  // Add AI suggestions
-  if (analysis.suggestions.length > 0) {
-    feedback.push("");
-    feedback.push("SUGGESTIONS:");
-    analysis.suggestions.forEach(s => feedback.push(`→ ${s}`));
-  }
-
-  return feedback.join("\n");
 }
 
 function validateModeCompliance(

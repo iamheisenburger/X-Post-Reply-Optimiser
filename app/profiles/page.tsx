@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -51,9 +52,9 @@ export default function ProfilesPage() {
     }
   };
 
-  const handleDelete = async (profileId: string) => {
+  const handleDelete = async (profileId: Id<"creators">) => {
     if (confirm("Delete this profile?")) {
-      await removeProfile({ id: profileId as any });
+      await removeProfile({ id: profileId });
     }
   };
 
