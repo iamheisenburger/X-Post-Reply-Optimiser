@@ -222,7 +222,7 @@ export default function AIReplyPage() {
                     <div className="bg-muted p-4 rounded-lg font-mono text-sm whitespace-pre-wrap">
                       {reply.text}
                     </div>
-                    <div className="mt-2 md:mt-0 md:absolute md:top-2 md:right-2">
+                    <div className="mt-2">
                       <Button
                         variant="outline"
                         size="sm"

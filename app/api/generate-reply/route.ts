@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Score range: ${replies[replies.length-1].score} - ${replies[0].score}`);
 
     // 6. Transform for frontend
-    const MAX_TOTAL_SCORE = 300; // Normalization cap for 0-100 UI score
+    const MAX_TOTAL_SCORE = 300; // internal normalization reference
     const classifyMode = (text: string, f: { hasQuestion: boolean; hasPushback: boolean; hasSpecificData: boolean; }) => {
       if (f.hasPushback) return "contrarian";
       if (f.hasQuestion) return "question";
@@ -153,19 +153,29 @@ export async function POST(request: NextRequest) {
     const transformedReplies = replies.map((reply, idx) => {
       const sb = reply.prediction.scoreBreakdown;
       const total = Math.max(1, (sb.authorReply || 0) + (sb.replies || 0) + (sb.likes || 0) + (sb.profileClicks || 0) + (sb.recencyBonus || 0));
-      // Derive score from the same visible components to avoid 0 values and keep consistent with breakdown
-      const rawForUi = (sb.authorReply || 0) + (sb.replies || 0) + (sb.profileClicks || 0) + (sb.likes || 0) + (sb.recencyBonus || 0);
-      const normalizedScore = Math.max(1, Math.min(100, Math.round((rawForUi / MAX_TOTAL_SCORE) * 100)));
+      // Percent breakdowns (what we display)
+      const engagementPct = ((sb.authorReply || 0) + (sb.replies || 0)) / total * 100;
+      const conversationPct = (sb.replies || 0) / total * 100;
+      const authorRepPct = (sb.profileClicks || 0) / total * 100;
+      const recencyPct = (sb.recencyBonus || 0) / total * 100;
+      const mediaPct = 0;
+      // UI score derived directly from displayed percentages so it aligns visually
+      const uiScore = Math.max(1, Math.min(100, Math.round(
+        engagementPct * 0.55 +
+        conversationPct * 0.25 +
+        authorRepPct * 0.15 +
+        recencyPct * 0.05
+      )));
 
       return {
         text: reply.text,
-        score: normalizedScore,
+        score: uiScore,
         breakdown: {
-          engagement: Math.round((((sb.authorReply || 0) + (sb.replies || 0)) / total) * 100),
-          recency: Math.round(((sb.recencyBonus || 0) / total) * 100),
-          mediaPresence: 0,
-          conversationDepth: Math.round(((sb.replies || 0) / total) * 100),
-          authorReputation: Math.round(((sb.profileClicks || 0) / total) * 100),
+          engagement: Math.round(engagementPct),
+          recency: Math.round(recencyPct),
+          mediaPresence: Math.round(mediaPct),
+          conversationDepth: Math.round(conversationPct),
+          authorReputation: Math.round(authorRepPct),
         },
         mode: classifyMode(reply.text, reply.features),
         iteration: idx + 1,
