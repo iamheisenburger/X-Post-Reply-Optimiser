@@ -93,59 +93,78 @@ const SYSTEM_PROMPT = `You are an X (Twitter) reply expert who understands the p
 
 Your goal: Generate replies that maximize AUTHOR RESPONSE (75x weight) and CONVERSATION (13.5x weight).
 
-KEY PRINCIPLES:
-1. **Author Engagement is King**: Ask questions, challenge takes, add unique insights that BEG a response
-2. **Spark Conversation**: Make others want to reply to YOUR reply (questions, hot takes, specific data)
-3. **Be Authentic**: No fake stories, no humble brags, no generic praise
-4. **Be Specific**: Use numbers, examples, personal experience (builds credibility)
+CRITICAL RULES:
+1. **USE ALL PROVIDED CONTEXT**: Reference the creator's profile analysis, their niche, their engagement style
+2. **REFERENCE THE ACTUAL TWEET**: React to what they ACTUALLY said, not generic topics
+3. **NO FABRICATION**: Never make up stats, stories, or experiences that aren't real
+4. **NO GENERIC RESPONSES**: "Great point!" and "Love this!" are WORTHLESS
+
+X ALGORITHM OPTIMIZATION:
+1. **Author Engagement is King (75x weight)**: Ask questions, challenge takes, add unique insights that BEG a response
+2. **Spark Conversation (13.5x weight)**: Make others want to reply to YOUR reply (questions, hot takes, specific data)
+3. **Be Authentic**: Real insights only - no fake stories, no humble brags
+4. **Be Specific**: When you add data/examples, they must be REAL and RELEVANT to the tweet
 5. **Be Concise**: Under 280 chars = readable = more engagement
 6. **Be Strategic**: Contrarian takes > agreement (memorable + defensible by author)
 
 AVOID:
-- Generic praise ("Great point!", "Love this!") = IGNORED
+- Generic praise = IGNORED by algorithm
 - Purely negative/trolling = BLOCKED
-- Self-promotion in reply body (put in bio/profile)
-- Fake stats or made-up stories
-- Essay-length replies nobody reads`;
+- Self-promotion in reply body (put in bio)
+- Made-up stats or fake stories = DESTROYS credibility
+- Essay-length replies nobody reads
+- Replies that could work on ANY tweet = WORTHLESS`;
 
 function buildOptimizationPrompt(context: ReplyGenerationContext): string {
   const { tweetText, tweetAuthor, creatorProfile, minutesSincePosted, yourHandle } = context;
 
+  // Extract key profile insights
+  const profileContext = creatorProfile.audience?.engagementPatterns 
+    ? `Responds to: ${creatorProfile.audience.engagementPatterns.respondsTo.join(', ')}. Ignores: ${creatorProfile.audience.engagementPatterns.ignores.join(', ')}`
+    : "No specific engagement patterns available";
+
+  const audienceLevel = creatorProfile.audience?.demographics?.sophisticationLevel || "mixed";
+  
   return `Generate 3 DIFFERENT high-engagement replies to this tweet:
 
-**TWEET**: ${tweetText}
+**TWEET CONTENT**: "${tweetText}"
 **AUTHOR**: @${tweetAuthor}
 
-**CREATOR INTEL**:
-- Niche: ${creatorProfile.primaryNiche}
-- Style: ${creatorProfile.engagementStyle}
+**CREATOR PROFILE ANALYSIS** (USE THIS CONTEXT):
+- Primary Niche: ${creatorProfile.primaryNiche}
+- Engagement Style: ${creatorProfile.engagementStyle}
 - Avg Engagement: ${creatorProfile.averageEngagement.replies} replies, ${creatorProfile.averageEngagement.likes} likes
-- Response Rate: ${((creatorProfile.responsiveness.respondsToReplies ? 1 : 0) * 100).toFixed(0)}%
+- Responds to Replies: ${creatorProfile.responsiveness.respondsToReplies ? 'YES (High value!)' : 'Rarely'}
+- Audience Level: ${audienceLevel}
+- ${profileContext}
 
 **YOUR HANDLE**: @${yourHandle}
-**TIME SINCE POST**: ${minutesSincePosted} minutes (early = recency boost!)
+**TIME SINCE POST**: ${minutesSincePosted} minutes ${minutesSincePosted <= 5 ? '(RECENCY BOOST ACTIVE!)' : '(recency decaying)'}
+
+**REQUIREMENTS**:
+1. Each reply must DIRECTLY reference the tweet content (not generic)
+2. Match the creator's ${creatorProfile.engagementStyle} style
+3. Target their ${creatorProfile.primaryNiche} niche with relevant context
+4. Use ONLY real insights - NO made-up stats or fake stories
+5. Each reply < 280 characters
+6. @ mention @${tweetAuthor} at start for notification priority
 
 **REPLY STRATEGIES** (use different approach for each):
-1. **Question Reply**: Ask a specific question that requires author's expertise
-2. **Contrarian Reply**: Polite pushback or alternative perspective with data
-3. **Add-Value Reply**: Expand with personal experience or specific example
+1. **Question Reply**: Ask a specific question about WHAT THEY SAID that requires their expertise
+2. **Contrarian Reply**: Polite pushback or alternative perspective on THEIR SPECIFIC POINT
+3. **Add-Value Reply**: Expand on THEIR IDEA with a real relevant insight or connection
 
 **FORMAT** (return EXACTLY this):
 REPLY 1:
-[Your reply text here]
+[Your reply that references the actual tweet content]
 
 REPLY 2:
-[Your reply text here]
+[Your reply that references the actual tweet content]
 
 REPLY 3:
-[Your reply text here]
+[Your reply that references the actual tweet content]
 
-**CONSTRAINTS**:
-- Each reply < 280 characters
-- @ mention the author at start
-- NO generic praise
-- NO fake stories or made-up stats
-- Each reply uses different tactic`;
+**CRITICAL**: Your replies should be SO specific to this tweet that they wouldn't make sense on a different tweet. Generic = FAIL.`;
 }
 
 function parseRepliesFromResponse(response: string): string[] {
