@@ -78,6 +78,14 @@ function extractKeyPhrases(text: string): string[] {
     }
   }
   
+  // If no phrases found, generate fallback from main claim
+  if (phrases.length === 0) {
+    const mainWords = text.split(/\s+/).filter(w => w.length > 3 && !/^(the|a|an|to|for|of|in|on|at|is|are)$/.test(w.toLowerCase()));
+    if (mainWords.length >= 2) {
+      phrases.push(mainWords.slice(0, 3).join(' '));
+    }
+  }
+  
   // Return unique, sorted by length (longer = more specific)
   return [...new Set(phrases)].sort((a, b) => b.length - a.length).slice(0, 5);
 }
@@ -98,6 +106,11 @@ function extractEntities(text: string): string[] {
     if (/^[A-Z][a-zA-Z]+$/.test(word) && word.length > 2) {
       entities.push(word);
     }
+  }
+  
+  // Edge case: If no entities, try to infer from common patterns
+  if (entities.length === 0) {
+    // No fallback for now - leave empty
   }
   
   return [...new Set(entities)];

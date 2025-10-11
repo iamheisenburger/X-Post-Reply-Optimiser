@@ -1,17 +1,9 @@
-/**
- * COMPLETE REPLY GENERATION SYSTEM WITH FEEDBACK LOOP
- * 
- * ARCHITECTURE:
- * 1. Build replies using full intelligence (creator profile + tweet content)
- * 2. Score with X algorithm
- * 3. Assess quality with quality gate
- * 4. If quality fails: iterate with improvements
- * 5. Return best replies (guaranteed quality)
- */
+// COMPLETE REPLY GENERATION SYSTEM WITH OPENAI + FEEDBACK LOOP
 
-import { buildReplies, type ReplyBuilderContext, type BuiltReply } from "./reply-builder";
+import { buildIntelligentPrompt, generateWithPrompt } from "./prompt-builder";
 import { assessQuality, shouldIterate, getImprovementSummary, type QualityReport } from "./quality-gate";
 import { analyzeTweetContent } from "./content-analyzer";
+import { analyzeReplyFeatures, predictEngagement } from "../x-algorithm";
 import type { CreatorIntelligence } from "./types";
 
 export interface ReplyGenerationContext {
@@ -22,25 +14,26 @@ export interface ReplyGenerationContext {
   yourHandle: string;
 }
 
-export interface GeneratedReply {
+export interface BuiltReply {
   text: string;
+  strategy: 'question' | 'contrarian' | 'add_value';
   score: number;
   features: {
     hasQuestion: boolean;
     hasPushback: boolean;
     hasSpecificData: boolean;
   };
+  reasoning: string;
   prediction: {
     authorReplyProb: number;
     repliesExpected: number;
     likesExpected: number;
     profileClicksExpected: number;
   };
-  reasoning: string;
 }
 
 export interface GenerationResult {
-  replies: GeneratedReply[];
+  replies: BuiltReply[];
   qualityReport: QualityReport;
   totalAttempts: number;
 }
@@ -48,25 +41,18 @@ export interface GenerationResult {
 const MAX_ATTEMPTS = 3;
 
 /**
- * Generate replies with quality feedback loop
- * Won't return garbage - iterates until quality threshold met or max attempts
+ * Generate replies with OpenAI + intelligence + feedback loop
  */
 export async function generateOptimizedReplies(context: ReplyGenerationContext): Promise<GenerationResult> {
-  console.log("🚀 Starting reply generation with feedback loop...");
-  console.log(`   Creator: @${context.creatorProfile.username}`);
-  console.log(`   Niche: ${context.creatorProfile.primaryNiche}`);
-  console.log(`   Tweet age: ${context.minutesSincePosted} minutes`);
+  console.log("🚀 Starting OpenAI generation with feedback loop...");
   
-  // Extract tweet content for quality assessment
+  // Extract tweet content
   const tweetContent = analyzeTweetContent(context.tweetText);
   
   let attemptNumber = 0;
   let replies: BuiltReply[] = [];
   let qualityReport: QualityReport | null = null;
   
-  // ====================================================================
-  // FEEDBACK LOOP
-  // ====================================================================
   while (attemptNumber < MAX_ATTEMPTS) {
     attemptNumber++;
     
@@ -75,22 +61,47 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
     console.log(`${'='.repeat(60)}`);
     
     try {
-      // Build context for reply builder
-      const builderContext: ReplyBuilderContext = {
-        tweetText: context.tweetText,
-        tweetAuthor: context.tweetAuthor,
-        creatorProfile: context.creatorProfile,
-        minutesSincePosted: context.minutesSincePosted,
-        yourHandle: context.yourHandle,
-        yourNiche: 'saas', // TODO: Make configurable
-        constraints: qualityReport?.improvements || undefined, // Pass improvements from previous attempt
-      };
+      // Build intelligent prompt with full context + constraints
+      const prompt = buildIntelligentPrompt(
+        tweetContent,
+        context.creatorProfile,
+        qualityReport?.improvements
+      );
       
-      // Generate replies
-      replies = await buildReplies(builderContext);
+      console.log(`📝 Using OpenAI model: ${prompt.model}`);
       
-      console.log(`\n📊 Generated ${replies.length} replies`);
-      console.log(`   Scores: ${replies.map(r => r.score).join(', ')}`);
+      // Generate replies with OpenAI
+      const rawReplies = await generateWithPrompt(prompt);
+      
+      console.log(`✅ OpenAI generated ${rawReplies.length} replies`);
+      
+      // Analyze and score each reply
+      replies = rawReplies.map((text, idx) => {
+        const features = analyzeReplyFeatures(text);
+        const prediction = predictEngagement(features, context.minutesSincePosted);
+        const strategy = classifyStrategy(text, features);
+        const score = calculateCompositeScore(prediction);
+        
+        console.log(`   Reply ${idx + 1} (${strategy}): ${score}/100`);
+        
+        return {
+          text,
+          strategy,
+          score,
+          features: {
+            hasQuestion: features.hasQuestion,
+            hasPushback: features.hasPushback,
+            hasSpecificData: features.hasSpecificData,
+          },
+          reasoning: `OpenAI generation (attempt ${attemptNumber}). Score: ${score}/100. Features: Q${features.hasQuestion ? '+' : '-'} P${features.hasPushback ? '+' : '-'} D${features.hasSpecificData ? '+' : '-'}`,
+          prediction: {
+            authorReplyProb: prediction.authorReplyProb,
+            repliesExpected: prediction.repliesExpected,
+            likesExpected: prediction.likesExpected,
+            profileClicksExpected: prediction.profileClicksExpected,
+          },
+        };
+      });
       
       // Assess quality
       qualityReport = assessQuality(
@@ -103,77 +114,62 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
       // Check if we should iterate
       if (qualityReport.passed) {
         console.log(`\n✅ Quality gate PASSED on attempt ${attemptNumber}!`);
-        console.log(`   Best score: ${qualityReport.bestScore}/100`);
         break;
       }
       
-      // Check if we should keep iterating
       if (!shouldIterate(qualityReport, MAX_ATTEMPTS)) {
         console.log(`\n⚠️  Stopping after ${attemptNumber} attempts`);
-        console.log(`   Best score achieved: ${qualityReport.bestScore}/100`);
         break;
       }
       
-      // Prepare for next iteration
-      console.log(`\n🔧 Preparing iteration ${attemptNumber + 1} with improvements:`);
+      console.log(`\n🔧 Preparing iteration ${attemptNumber + 1}:`);
       console.log(`   ${getImprovementSummary(qualityReport.improvements)}`);
       
     } catch (error) {
-      console.error(`\n❌ Error in attempt ${attemptNumber}:`, error);
-      
-      // If we have replies from previous attempt, use those
-      if (replies.length > 0) {
-        console.log(`   Using replies from previous attempt`);
-        break;
-      }
-      
+      console.error(`❌ Error in attempt ${attemptNumber}:`, error);
+      if (replies.length > 0) break;
       throw error;
     }
   }
   
-  // ====================================================================
-  // FINAL REPORT
-  // ====================================================================
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`📋 FINAL REPORT`);
-  console.log(`${'='.repeat(60)}`);
-  console.log(`   Total attempts: ${attemptNumber}`);
-  console.log(`   Quality passed: ${qualityReport?.passed ? 'YES' : 'NO'}`);
-  console.log(`   Best score: ${qualityReport?.bestScore || 0}/100`);
-  console.log(`   Issues remaining: ${qualityReport?.issues.length || 0}`);
-  
-  if (qualityReport && !qualityReport.passed) {
-    console.log(`\n⚠️  Quality issues remaining:`);
-    qualityReport.issues.forEach(issue => console.log(`     - ${issue}`));
-  }
-  
-  // Transform for frontend
-  const transformedReplies = replies.map((reply) => ({
-    text: reply.text,
-    score: reply.score,
-    features: {
-      hasQuestion: reply.features.hasQuestion,
-      hasPushback: reply.features.hasPushback,
-      hasSpecificData: reply.features.hasSpecificData,
-    },
-    prediction: {
-      authorReplyProb: reply.prediction.authorReplyProb,
-      repliesExpected: reply.prediction.repliesExpected,
-      likesExpected: reply.prediction.likesExpected,
-      profileClicksExpected: reply.prediction.profileClicksExpected,
-    },
-    reasoning: reply.reasoning,
-  }));
+  // Final report
+  console.log(`\n📋 FINAL RESULTS`);
+  console.log(`   Attempts: ${attemptNumber}`);
+  console.log(`   Passed: ${qualityReport?.passed ? 'YES' : 'NO'}`);
+  console.log(`   Best: ${qualityReport?.bestScore || 0}/100`);
   
   return {
-    replies: transformedReplies,
+    replies,
     qualityReport: qualityReport || {
       passed: false,
       bestScore: 0,
-      issues: ['No replies generated'],
+      issues: ['Generation failed'],
       improvements: {},
-      attemptNumber: 0,
+      attemptNumber,
     },
     totalAttempts: attemptNumber,
   };
+}
+
+function classifyStrategy(text: string, features: ReturnType<typeof analyzeReplyFeatures>): BuiltReply['strategy'] {
+  if (features.hasQuestion) return 'question';
+  if (features.hasPushback) return 'contrarian';
+  return 'add_value';
+}
+
+function calculateCompositeScore(prediction: ReturnType<typeof predictEngagement>): number {
+  const authorWeight = 0.50;
+  const conversationWeight = 0.30;
+  const profileClickWeight = 0.15;
+  const likeWeight = 0.05;
+  
+  const authorScore = prediction.authorReplyProb * 100;
+  const conversationScore = Math.min(100, (prediction.repliesExpected / 10) * 100);
+  const profileClickScore = Math.min(100, (prediction.profileClicksExpected / 10) * 100);
+  const likeScore = Math.min(100, (prediction.likesExpected / 20) * 100);
+  
+  const composite = authorScore * authorWeight + conversationScore * conversationWeight + 
+    profileClickScore * profileClickWeight + likeScore * likeWeight;
+  
+  return Math.round(Math.max(1, Math.min(100, composite)));
 }

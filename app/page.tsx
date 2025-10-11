@@ -47,6 +47,7 @@ interface OptimizationResult {
     bestScore: number;
     issues: string[];
     attemptNumber: number;
+    grammarPassed: boolean;
   };
 }
 
@@ -277,7 +278,7 @@ export default function AIReplyPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Attempts</p>
                   <p className="font-semibold">{result.totalIterations}</p>
@@ -285,6 +286,14 @@ export default function AIReplyPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Best Score</p>
                   <p className="font-semibold text-lg">{result.qualityReport.bestScore}/100</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Grammar/Coherence</p>
+                  {result.qualityReport.grammarPassed ? (
+                    <p className="font-semibold text-green-500">✓ Passed</p>
+                  ) : (
+                    <p className="font-semibold text-red-500">✗ Issues</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Issues Found</p>

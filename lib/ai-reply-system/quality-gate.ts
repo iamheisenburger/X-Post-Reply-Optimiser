@@ -6,6 +6,7 @@ import type { BuiltReply } from './reply-builder';
 
 export interface QualityReport {
   passed: boolean;
+  grammarPassed: boolean;
   bestScore: number;
   issues: string[];
   improvements: ReplyConstraints;
@@ -20,10 +21,12 @@ export interface ReplyConstraints {
   mustHaveFeature?: ('question' | 'pushback' | 'data' | 'example')[];
   avoidGenericPhrases?: boolean;
   emphasizeCreatorTopics?: string[];
+  ensureGrammar?: boolean; // New for grammar fixes
 }
 
 const QUALITY_THRESHOLD = 60;
 const MIN_FEATURE_SCORE = 40;
+const MIN_READABILITY = 60; // Flesch-like score
 
 /**
  * Assess quality of generated replies and provide improvement instructions
@@ -44,6 +47,27 @@ export function assessQuality(
   console.log(`\n🔍 Quality Assessment - Attempt ${attemptNumber}`);
   console.log(`   Best score: ${bestScore}/100`);
   
+  let grammarPassed = true;
+  
+  // ============================================
+  // NEW: CHECK 0: Grammar/Coherence Validation
+  // ============================================
+  replies.forEach((reply, idx) => {
+    const grammarCheck = validateGrammar(reply.text);
+    if (!grammarCheck.passed) {
+      grammarPassed = false;
+      issues.push(`Reply ${idx + 1}: Grammar/coherence issues (readability ${grammarCheck.readability.toFixed(0)})`);
+      console.log(`   ❌ Reply ${idx + 1} grammar failed: ${grammarCheck.reason}`);
+      improvements.ensureGrammar = true;
+    }
+  });
+  
+  if (grammarPassed) {
+    console.log(`   ✅ All replies pass grammar/coherence`);
+  } else {
+    console.log(`   ❌ Grammar issues detected`);
+  }
+  
   // ============================================
   // CHECK 1: Score Threshold
   // ============================================
@@ -51,7 +75,6 @@ export function assessQuality(
     issues.push(`Low engagement potential (best: ${bestScore}/100, need: ${QUALITY_THRESHOLD})`);
     console.log(`   ❌ Score too low: ${bestScore} < ${QUALITY_THRESHOLD}`);
     
-    // Identify what's missing for higher scores
     const bestReply = sorted[0];
     if (!bestReply.features.hasQuestion) {
       improvements.mustHaveFeature = improvements.mustHaveFeature || [];
@@ -170,9 +193,9 @@ export function assessQuality(
   }
   
   // ============================================
-  // PASS/FAIL DECISION
+  // PASS/FAIL DECISION (now includes grammar)
   // ============================================
-  const passed = issues.length === 0 && bestScore >= QUALITY_THRESHOLD;
+  const passed = issues.length === 0 && bestScore >= QUALITY_THRESHOLD && grammarPassed;
   
   if (passed) {
     console.log(`\n✅ QUALITY GATE PASSED on attempt ${attemptNumber}`);
@@ -184,11 +207,45 @@ export function assessQuality(
   
   return {
     passed,
+    grammarPassed,
     bestScore,
     issues,
     improvements,
     attemptNumber,
   };
+}
+
+/**
+ * Grammar and coherence validation
+ */
+function validateGrammar(text: string): { passed: boolean; readability: number; reason: string } {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  const words = text.split(/\s+/).length;
+  const chars = text.replace(/\s/g, '').length;
+  
+  // Check 1: Complete sentences
+  if (sentences.length < 1) {
+    return { passed: false, readability: 0, reason: 'No complete sentences' };
+  }
+  
+  // Check 2: No fragments (ends with colon or incomplete)
+  if (text.trim().endsWith(':') || text.includes('...') && sentences.length === 1) {
+    return { passed: false, readability: 30, reason: 'Incomplete/fragmented' };
+  }
+  
+  // Check 3: Readability (simple Flesch-like)
+  // AS = 206.835 - 1.015 (total words / total sentences) - 84.6 (total syllables / total words)
+  const avgWordsPerSentence = words / sentences.length;
+  const avgSyllablesPerWord = chars / words * 0.3; // Rough estimate
+  const as = 206.835 - 1.015 * avgWordsPerSentence - 84.6 * avgSyllablesPerWord;
+  
+  const readability = Math.min(100, Math.max(0, as));
+  
+  if (readability < MIN_READABILITY) {
+    return { passed: false, readability, reason: 'Low readability' };
+  }
+  
+  return { passed: true, readability, reason: 'OK' };
 }
 
 /**
