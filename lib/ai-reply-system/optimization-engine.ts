@@ -192,18 +192,33 @@ async function optimizeSingleReply(
           // Still have checkpoint failures - use checkpoint feedback
           feedback = checkpointEval.detailedFeedback;
         } else {
-          // All checkpoints passed but score < 90 - use algorithm feedback + hints
+          // All checkpoints passed but score < 90 - provide SURGICAL feedback with examples
           const enhancedFeedback = [
-            "CLOSE! All checkpoints passed but need higher quality:",
+            "❌ SCORE TOO LOW - Need specific improvements to reach 90+",
             "",
+            "📊 YOUR CURRENT REPLY ANALYSIS:",
             ...qualityScore.feedback,
             "",
-            "🎯 OPTIMIZATION HINTS:",
-            `• This audience (${context.creator.primaryNiche}) responds best to: ${context.creator.audience.engagementPatterns.respondsTo[0]}`,
-            `• Make it even more specific to: ${context.creator.audience.demographics.primaryInterests.slice(0, 2).join(", ")}`,
-            qualityScore.breakdown.contentRelevance < 75 ? 
-              `• Reference more specific themes from the original tweet` : 
-              null
+            "🎯 CONCRETE EXAMPLE OF A 90+ REPLY FOR THIS TWEET:",
+            generateExampleReply(context.post.text, context.creator),
+            "",
+            "🔧 SPECIFIC CHANGES YOU MUST MAKE:",
+            qualityScore.breakdown.contentRelevance < 80 ? 
+              `• CONTENT: Your reply doesn't use enough vocabulary from the original tweet. Weave in the exact phrases above.` : null,
+            qualityScore.breakdown.engagementPotential < 80 ?
+              `• ENGAGEMENT: Your question is too generic. Ask something SPECIFIC to ${context.creator.primaryNiche} (see example).` : null,
+            qualityScore.breakdown.valueAdd < 80 ?
+              `• VALUE: You're restating the tweet. Add NEW insight - a framework, data point, or contrarian angle (see example).` : null,
+            qualityScore.breakdown.conversationDepth < 80 ?
+              `• DEPTH: Make your question more specific to the creator's expertise in ${context.creator.primaryNiche}.` : null,
+            "",
+            "✅ WHAT THE 90+ EXAMPLE DOES RIGHT:",
+            `• Uses exact phrases from original tweet ("${extractKeyPhrase(context.post.text)}")`,
+            `• Adds specific personal experience (not generic)`,
+            `• Asks ONE focused question about ${context.creator.primaryNiche}`,
+            `• 35-55 words, conversational tone`,
+            "",
+            "⚠️  CRITICAL: Model your next reply on the EXAMPLE above. Don't just improve, TRANSFORM."
           ].filter(Boolean);
           
           feedback = enhancedFeedback.join("\n");
@@ -330,6 +345,39 @@ function validateModeCompliance(
   }
 
   return { passed: true };
+}
+
+// Helper to generate a concrete 90+ example reply
+function generateExampleReply(originalTweet: string, creator: any): string {
+  // Extract key phrases from the tweet
+  const keyPhrase = extractKeyPhrase(originalTweet);
+  
+  // Generate a template based on creator niche
+  const examples = {
+    mindset: `"Your point about ${keyPhrase.toLowerCase()} resonates deeply. I've found that consciously reframing limiting beliefs into empowering narratives has transformed my decision-making under pressure. What specific mental frameworks have you found most effective when self-doubt creeps in during critical moments?"`,
+    saas: `"When you mentioned ${keyPhrase.toLowerCase()}, it reminded me of our pivot at 5K MRR. We tested this hypothesis by running split cohorts for 3 weeks - surprising result. How did you validate this pattern in your early-stage product iterations?"`,
+    mma: `"Your analysis of ${keyPhrase.toLowerCase()} is spot-on. Watching Volkanovski's last fight, you could see this exact principle in rounds 3-4. What specific adjustments would you expect against a pressure wrestler who exploits this?"`,
+    other: `"Your insight about ${keyPhrase.toLowerCase()} hits home. I've noticed this pattern play out repeatedly in high-stakes situations. What conditions do you think amplify this effect most dramatically?"`
+  };
+  
+  return examples[creator.primaryNiche as keyof typeof examples] || examples.other;
+}
+
+// Helper to extract a key phrase from the tweet
+function extractKeyPhrase(tweet: string): string {
+  // Remove stop words and extract the most meaningful 3-5 word phrase
+  const sentences = tweet.split(/[.!?\n]+/);
+  const firstMeaningful = sentences[0] || tweet;
+  
+  // Get first 8 words as the key phrase
+  const words = firstMeaningful.trim().split(/\s+/).slice(0, 8);
+  return words.join(' ');
+}
+
+// Helper to check if a word exists as a whole word (not part of another word)
+function containsWholeWord(text: string, word: string): boolean {
+  const regex = new RegExp(`\\b${word.toLowerCase()}\\b`, 'i');
+  return regex.test(text);
 }
 
 

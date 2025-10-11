@@ -114,17 +114,25 @@ function scoreContentRelevance(
   // Check for concept matches (exact or partial)
   let conceptsAddressed = 0;
   let partialMatches = 0;
+  const matchedWords: string[] = [];
+  const missingWords: string[] = [];
   
   for (const word of tweetWords) {
     if (replyLower.includes(word)) {
       conceptsAddressed++;
+      matchedWords.push(word);
     } else {
       // Check for partial/related matches (e.g., "approval" matches "approve")
       if (word.length > 5) {
         const stem = word.substring(0, Math.floor(word.length * 0.7));
         if (replyLower.includes(stem)) {
           partialMatches++;
+          matchedWords.push(word);
+        } else {
+          missingWords.push(word);
         }
+      } else {
+        missingWords.push(word);
       }
     }
   }
@@ -139,19 +147,28 @@ function scoreContentRelevance(
   } else if (relevanceRatio > 0.15) {
     score = 70 + (relevanceRatio - 0.15) * 100; // 70-85
     feedback.push(`✅ Content Relevance: Good (${Math.round(relevanceRatio * 100)}% concept overlap)`);
+    // ADD SPECIFIC IMPROVEMENT GUIDANCE
+    if (missingWords.length > 0) {
+      feedback.push(`   💡 TO REACH 90+: Try incorporating these key concepts: "${missingWords.slice(0, 3).join('", "')}"`);
+    }
   } else if (relevanceRatio > 0.05) {
     score = 55 + (relevanceRatio - 0.05) * 150; // 55-70
-    feedback.push(`⚠️  Content Relevance: Moderate - try to reference more specific themes`);
+    feedback.push(`⚠️  Content Relevance: Moderate - need more specific theme references`);
+    feedback.push(`   ❌ MISSING KEY CONCEPTS: "${missingWords.slice(0, 4).join('", "')}"`);
+    feedback.push(`   ✅ You addressed: "${matchedWords.slice(0, 3).join('", "')}"`);
   } else {
     score = 40; // Base score for any reply that attempts to engage
-    feedback.push(`❌ Content Relevance: Low - reply should address the original tweet's main point`);
-    feedback.push(`   → Tweet is about: ${tweetWords.slice(0, 3).join(', ')}...`);
+    feedback.push(`❌ Content Relevance: Low - reply doesn't address the tweet's core message`);
+    feedback.push(`   🎯 TWEET'S CORE CONCEPTS: "${tweetWords.slice(0, 5).join('", "')}"`);
+    feedback.push(`   ❌ YOUR REPLY MUST REFERENCE AT LEAST 2-3 OF THESE CONCEPTS`);
   }
   
   // BONUS: Check if reply directly quotes or references the tweet
-  if (replyLower.includes('you mentioned') || replyLower.includes('your point') || replyLower.includes('you said')) {
+  if (replyLower.includes('you mentioned') || replyLower.includes('your point') || replyLower.includes('you said') || replyLower.includes('when you')) {
     score += 5;
     feedback.push(`✅ Bonus: Directly references the original tweet`);
+  } else {
+    feedback.push(`   💡 TIP: Start with "Your point about..." or "When you mentioned..." for higher relevance`);
   }
   
   return Math.min(100, Math.max(0, score));
