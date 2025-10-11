@@ -348,7 +348,7 @@ function validateModeCompliance(
 }
 
 // Helper to generate a concrete 90+ example reply
-function generateExampleReply(originalTweet: string, creator: any): string {
+function generateExampleReply(originalTweet: string, creator: CreatorIntelligence): string {
   // Extract key phrases from the tweet
   const keyPhrase = extractKeyPhrase(originalTweet);
   
@@ -373,11 +373,3 @@ function extractKeyPhrase(tweet: string): string {
   const words = firstMeaningful.trim().split(/\s+/).slice(0, 8);
   return words.join(' ');
 }
-
-// Helper to check if a word exists as a whole word (not part of another word)
-function containsWholeWord(text: string, word: string): boolean {
-  const regex = new RegExp(`\\b${word.toLowerCase()}\\b`, 'i');
-  return regex.test(text);
-}
-
-
