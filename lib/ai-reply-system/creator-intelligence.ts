@@ -468,7 +468,17 @@ function createHeuristicAnalysis(
   };
 }
 
-function calculateEngagementRate(tweets: any[]): number {
+function calculateEngagementRate(tweets: Array<{
+  likeCount?: number;
+  like_count?: number;
+  retweetCount?: number;
+  retweet_count?: number;
+  replyCount?: number;
+  reply_count?: number;
+  viewCount?: number;
+  view_count?: number;
+  impressionCount?: number;
+}>): number {
   if (tweets.length === 0) return 0;
   
   let totalEngagement = 0;

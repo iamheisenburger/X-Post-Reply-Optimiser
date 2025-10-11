@@ -12,7 +12,7 @@
 
 export interface EngagementSignals {
   // From reply content
-  hasQuestion: boolean;
+  replyType: 'question' | 'story' | 'insight' | 'agreement';
   hasSpecificNumbers: boolean;
   mentionsCreator: boolean;
   length: number;
@@ -20,6 +20,7 @@ export interface EngagementSignals {
   // From creator's profile
   creatorFollowers: number;
   creatorEngagementRate: number;
+  creatorRespondsToReplies: boolean; // CRITICAL: Does creator actually respond?
   
   // From original tweet
   tweetHasEngagement: boolean;
@@ -46,10 +47,37 @@ export function predictEngagement(
   let likesProb = 0.15; // Base 15%
   let repliesProb = 0.03; // Base 3%
 
-  // FACTOR 1: Does reply have a thoughtful question?
-  if (signals.hasQuestion) {
-    authorRespondProb += 0.25;
-    reasoning.push("✅ Has question → +25% author response chance");
+  // CRITICAL FACTOR 0: Does creator even respond to replies?
+  if (!signals.creatorRespondsToReplies) {
+    authorRespondProb = 0.01; // Drop to 1% - they rarely respond
+    reasoning.push("⚠️ Creator rarely responds to replies → 75x boost unlikely");
+    reasoning.push("   → Focus on likes/replies from others instead");
+  } else {
+    reasoning.push("✅ Creator responds to replies → 75x boost possible");
+  }
+
+  // FACTOR 1: Reply type determines engagement pattern
+  switch (signals.replyType) {
+    case 'question':
+      if (signals.creatorRespondsToReplies) {
+        authorRespondProb += 0.25;
+        reasoning.push("✅ Thoughtful question → +25% author response");
+      }
+      break;
+    case 'insight':
+      likesProb += 0.25;
+      repliesProb += 0.15;
+      reasoning.push("✅ Valuable insight → +25% likes, +15% replies");
+      break;
+    case 'story':
+      likesProb += 0.20;
+      authorRespondProb += 0.10;
+      reasoning.push("✅ Personal story → +20% likes, +10% author response");
+      break;
+    case 'agreement':
+      likesProb += 0.10;
+      reasoning.push("⚠️ Simple agreement → +10% likes only");
+      break;
   }
 
   // FACTOR 2: Early reply timing (within 5 min)
@@ -111,11 +139,48 @@ export function predictEngagement(
 }
 
 /**
+ * Detect reply type from content
+ */
+function detectReplyType(reply: string): 'question' | 'story' | 'insight' | 'agreement' {
+  const replyLower = reply.toLowerCase();
+  
+  // Question: ends with ? or has questioning words
+  if (reply.includes('?') || /\b(how|what|why|when|which|where|does)\b/i.test(reply)) {
+    return 'question';
+  }
+  
+  // Story: has personal narrative markers
+  if (/\b(i|my|me|when i|i've|i had|my experience)\b/i.test(replyLower) && 
+      (replyLower.includes('last') || replyLower.includes('when') || replyLower.includes('during'))) {
+    return 'story';
+  }
+  
+  // Insight: has actionable/analytical content
+  if (/\b(found that|discovered|realized|key is|important to|strategy|approach)\b/i.test(replyLower) ||
+      /\b\d+%/.test(reply)) { // Has data/percentages
+    return 'insight';
+  }
+  
+  // Agreement: short affirmation
+  if (replyLower.length < 100 && /\b(exactly|agreed|this|yes|true)\b/i.test(replyLower)) {
+    return 'agreement';
+  }
+  
+  // Default to insight if unclear
+  return 'insight';
+}
+
+/**
  * Extract engagement signals from reply + context
  */
 export function extractSignals(
   reply: string,
-  creator: { username: string; followers: number; engagement_rate?: number },
+  creator: { 
+    username: string; 
+    followers: number; 
+    engagement_rate?: number;
+    respondsToReplies?: boolean; // NEW: Track if creator responds
+  },
   tweet: { text: string; created_at: string; reply_count: number; like_count: number }
 ): EngagementSignals {
   const now = new Date();
@@ -123,12 +188,13 @@ export function extractSignals(
   const tweetAgeMinutes = (now.getTime() - tweetTime.getTime()) / (1000 * 60);
 
   return {
-    hasQuestion: reply.includes('?'),
+    replyType: detectReplyType(reply),
     hasSpecificNumbers: /\b\d+[KM%]?\b/.test(reply) || /\b\d+\s+(to|vs|versus)\s+\d+\b/i.test(reply),
     mentionsCreator: reply.toLowerCase().includes(creator.username.toLowerCase()),
     length: reply.split(/\s+/).length,
     creatorFollowers: creator.followers,
     creatorEngagementRate: creator.engagement_rate || (tweet.reply_count / Math.max(tweet.like_count, 1)),
+    creatorRespondsToReplies: creator.respondsToReplies !== false, // Default to true if unknown
     tweetHasEngagement: tweet.like_count > 5 || tweet.reply_count > 2,
     tweetAge: tweetAgeMinutes
   };

@@ -99,7 +99,8 @@ async function optimizeSingleReply(
       {
         username: creator.username,
         followers: creator.metrics.followers,
-        engagement_rate: creator.metrics.engagementRate
+        engagement_rate: creator.metrics.engagementRate,
+        respondsToReplies: creator.metrics.engagementRate > 0.03 // Heuristic: >3% engagement = responds
       },
       {
         text: tweet.text,
@@ -157,46 +158,48 @@ function buildEngagementPrompt(
   tweet: TweetData,
   userProfile: UserProfile
 ): string {
+  const respondsToReplies = creator.metrics.engagementRate > 0.03; // Rough heuristic
+  
   return `
 You are @${userProfile.handle}, replying to @${creator.username}'s tweet within 5 minutes.
 
-🎯 YOUR GOAL: Maximize engagement probability (likes, replies, author response)
+🎯 YOUR GOAL: Maximize engagement probability
 
 === ORIGINAL TWEET ===
 "${tweet.text}"
 
-=== ENGAGEMENT STRATEGY ===
+=== CREATOR ANALYSIS ===
+${respondsToReplies 
+  ? "✅ This creator RESPONDS to replies → Author response (75x boost) is possible"
+  : "⚠️ This creator RARELY responds → Focus on likes (1x) and replies from others (13.5x)"
+}
 
-From X's algorithm, engagement is predicted based on:
+=== REPLY STRATEGIES ===
 
-1. **AUTHOR RESPONSE (75x boost)**
-   - Ask a thoughtful, specific question
-   - Show genuine curiosity about their point
-   - Make it easy to answer (not too complex)
+Choose ONE approach (35-75 words):
 
-2. **LIKES (1x boost)**
-   - Be 35-75 words (not too long, not too short)
-   - Include specific numbers/data if relevant
-   - Add value to the conversation
+1. **THOUGHTFUL QUESTION** (Best if creator responds to replies)
+   - Ask about implementation, edge cases, or tradeoffs
+   - Make it specific to their tweet
+   - Easy to answer but thought-provoking
 
-3. **REPLIES (13.5x boost)**
-   - Introduce a thoughtful perspective
-   - Ask something that sparks discussion
-   - Be specific, not generic
+2. **VALUABLE INSIGHT** (Best for likes + replies from others)
+   - Share a specific observation or data point
+   - Add new angle to their point
+   - Include numbers/metrics if relevant
 
-=== YOUR TASK ===
+3. **PERSONAL STORY** (Good for relatability)
+   - Brief relevant experience (if genuine)
+   - Shows you understand their point
+   - Makes human connection
 
-Generate ONE reply (35-75 words) that:
-✅ Has a focused question at the end
-✅ Shows you read and understood their tweet
-✅ Adds a specific insight or perspective
-✅ Is conversational, not robotic
+❌ AVOID:
+- Generic praise ("Great point!")
+- Multiple questions
+- Fake scenarios you didn't experience
+- Just agreeing without adding value
 
-❌ NO generic praise ("Great point!")
-❌ NO multiple questions
-❌ NO fake scenarios you didn't experience
-
-Remember: You're replying within 5 minutes. Be early, be valuable, be engaging.
+Remember: Be early (< 5 min), be specific, be valuable.
   `.trim();
 }
 
