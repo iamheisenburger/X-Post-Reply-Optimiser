@@ -111,8 +111,10 @@ Primary Keywords: ${keywords.primaryKeywords.map(k => `"${k}"`).join(", ")}
 ${keywords.emotionalWords.length > 0 ? `Emotional Words: ${keywords.emotionalWords.map(k => `"${k}"`).join(", ")}` : ''}
 ${keywords.actionVerbs.length > 0 ? `Action Verbs: ${keywords.actionVerbs.map(k => `"${k}"`).join(", ")}` : ''}
 
-⚠️  You MUST use at least 3-4 of these EXACT keywords in your reply. The X algorithm scores keyword matches, not synonyms.
+⚠️  You MUST use at least 6-7 of these EXACT keywords in your reply. The X algorithm needs 30%+ keyword overlap for high scores.
 Example: If tweet says "yourself" → use "yourself", NOT "self-talk" or "inner dialogue"
+
+🎯 CRITICAL: If the tweet has 20 key words, your reply must include 6-7 of them (30%+ overlap) to score 90+.
 ` : '';
   
   const baseContext = `
@@ -159,14 +161,16 @@ AVOID COMPLETELY:
 ${baseContext}
 
 Generate ONE HONEST reply that:
-1. Uses 3-4 of the EXACT keywords from above (not synonyms!)
-2. Asks a thoughtful specific question with NUMBERS/SPECIFICS
+1. Uses 6-7 of the EXACT keywords from above (CRITICAL - 30%+ overlap needed for 90+ score!)
+2. Asks a thoughtful specific question with NUMBERS/SPECIFICS  
 3. Shows analytical thinking about tradeoffs/thresholds/edge cases
 4. Is 35-55 words
 5. NO FAKE SCENARIOS - only honest curiosity
 
 EXAMPLE FORMAT:
-"When you mention [EXACT KEYWORD] - [thoughtful question with specific numbers/ratios/thresholds]? [Follow-up exploring edge case or tradeoff]?"
+"When you [KEYWORD] to [KEYWORD] [KEYWORD], does the [KEYWORD] to [KEYWORD] ratio matter? Like 60% [KEYWORD] to 40% [KEYWORD] over 30 days?"
+
+Notice how the example uses 7+ keywords naturally in the question structure.
     `,
 
     pure_mma: `
@@ -228,14 +232,16 @@ Tweet: "${post.text}"
 Audience cares about: ${creator.audience.demographics.primaryInterests.join(", ")}
 
 Generate ONE HONEST reply that:
-1. Uses 3-4 of the EXACT keywords from above (not synonyms!)
+1. Uses 6-7 of the EXACT keywords from above (CRITICAL - 30%+ overlap needed for 90+ score!)
 2. Asks a thoughtful question with SPECIFIC NUMBERS/RATIOS/TIMEFRAMES
 3. Explores practical implementation or boundary conditions
 4. Is 35-55 words
 5. NO FAKE EXPERIENCES - only honest curiosity and analytical thinking
 
 EXAMPLE FORMAT:
-"When you say [EXACT KEYWORD] - [question with specific numbers/ratios]? [Follow-up about implementation or edge case]?"
+"When you [KEYWORD] to [KEYWORD] [KEYWORD], does the [KEYWORD] to [KEYWORD] ratio matter? Like 60% [KEYWORD] vs 40% [KEYWORD] over 30 days?"
+
+Notice how the example naturally weaves 7+ keywords into the question structure.
     `,
 
     technical: `

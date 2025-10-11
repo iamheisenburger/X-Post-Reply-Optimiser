@@ -130,7 +130,12 @@ export function validateKeywordUsage(
   score += (usedEmotional.length / Math.max(keywords.emotionalWords.length, 1)) * 15; // Emotional worth 15%
   score += (usedPhrases.length / Math.max(keywords.uniquePhrases.length, 1)) * 10;    // Phrases worth 10%
 
-  const passed = score >= 40; // Need at least 40% keyword match
+  // X algorithm needs 30% overlap of ALL words (15-20 words) to score 85-100
+  // My extractor is more selective (8 primary keywords), so need higher % here
+  // To hit 30% of 20 words = 6 words, need 6/8 = 75% of my keywords
+  // But scoring is weighted (60% primary, 15% verbs, 15% emotional)
+  // So effective threshold: need 60% score (covers ~75% of primary keywords + some others)
+  const passed = score >= 60; // Raised from 40 to match X algorithm's 30% overlap requirement
 
   const missingKeywords = [
     ...keywords.primaryKeywords.filter(k => !replyLower.includes(k)),
