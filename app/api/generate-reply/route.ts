@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
           verified: cachedProfile.verified,
           primaryNiche: cachedProfile.primaryNiche as "saas" | "mma" | "tech" | "finance" | "mindset" | "other",
           secondaryNiches: cachedProfile.secondaryNiches,
+          metrics: {
+            followers: cachedProfile.followerCount,
+            engagementRate: 0.03, // Default heuristic, TODO: Calculate from cached data
+          },
           audience: {
             demographics: {
               primaryInterests: cachedProfile.audiencePrimaryInterests,
@@ -153,7 +157,7 @@ export async function POST(request: NextRequest) {
       MADMANHAKIM_PROFILE
     );
 
-    console.log(`Generated ${result.replies.length} replies with avg score ${result.averageScore.toFixed(1)}`);
+    console.log(`Generated ${result.replies.length} replies with avg ${result.averageIterations.toFixed(1)} iterations`);
 
     // 6. Return result
     return NextResponse.json({
@@ -166,8 +170,7 @@ export async function POST(request: NextRequest) {
         mmaRelevance: creatorIntelligence.crossoverPotential.mmaRelevance,
         saasRelevance: creatorIntelligence.crossoverPotential.saasRelevance,
       },
-      totalIterations: result.totalIterations,
-      averageScore: result.averageScore,
+      averageIterations: result.averageIterations,
     });
 
   } catch (error) {
