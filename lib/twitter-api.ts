@@ -87,28 +87,32 @@ export const twitterApi = {
       const data = await response.json();
       
       console.log(`📦 User API Response Keys: [${Object.keys(data).join(', ')}]`);
-      console.log(`   User ID: ${data.id || data.userId || 'NOT FOUND'}`);
-      console.log(`   Username: ${data.userName || data.username || data.screenName || 'NOT FOUND'}`);
-      console.log(`   Followers: ${data.followersCount || data.followers_count || 0}`);
       
       // Check for error in response
-      if (data.error || data.errors) {
-        const errorMsg = data.error?.message || data.errors?.[0]?.message || JSON.stringify(data.error || data.errors);
+      if (data.status === "error" || data.error || data.errors) {
+        const errorMsg = data.msg || data.error?.message || data.errors?.[0]?.message || JSON.stringify(data.error || data.errors);
         console.error(`❌ API returned error for @${username}: ${errorMsg}`);
         return null;
       }
       
+      // TwitterAPI.io returns user data nested in data.data
+      const userData = data.data || data;
+      
+      console.log(`   User ID: ${userData.id || 'NOT FOUND'}`);
+      console.log(`   Username: ${userData.userName || userData.username || 'NOT FOUND'}`);
+      console.log(`   Followers: ${userData.followers || 0}`);
+      
       // Map to our TwitterUser interface
       const user: TwitterUser = {
-        id: data.id || data.userId || "",
-        username: data.userName || data.username || data.screenName || "",
-        name: data.name || data.displayName || "",
-        description: data.description || data.bio || "",
-        followers_count: data.followersCount || data.followers_count || 0,
-        following_count: data.followingCount || data.following_count || 0,
-        verified: data.verified || data.isVerified || data.isBlueVerified || false,
-        profile_image_url: data.profileImageUrl || data.profile_image_url,
-        tweet_count: data.tweetCount || data.tweet_count,
+        id: userData.id || "",
+        username: userData.userName || userData.username || userData.screenName || "",
+        name: userData.name || "",
+        description: userData.description || "",
+        followers_count: userData.followers || 0,
+        following_count: userData.following || 0,
+        verified: userData.isVerified || userData.isBlueVerified || false,
+        profile_image_url: userData.profilePicture || userData.profile_image_url,
+        tweet_count: userData.statusesCount || 0,
       };
       
       if (!user.id || !user.username) {
