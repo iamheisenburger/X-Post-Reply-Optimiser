@@ -86,12 +86,13 @@ export default function ActivityPage() {
 
   const handleDeleteReply = async (replyId: string) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await deleteReply({ id: replyId as any });
       toast({
         title: "Reply deleted",
         description: "The reply has been removed from your activity.",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete reply. Please try again.",

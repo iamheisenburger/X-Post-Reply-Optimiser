@@ -245,41 +245,58 @@ function buildReasoning(strategy: ReplyValueType, score: number, context: Strate
 export function getStrategyInstructions(strategy: ReplyStrategy): string {
   const instructions: Record<ReplyValueType, string> = {
     pure_curiosity: `
-REPLY 1 (PURE CURIOSITY):
-Ask a genuinely interesting question about their insight. No personal story needed.
-Focus on understanding THEIR perspective deeper.
-Example: "What made you realize [X] vs the conventional [Y]?"`,
+PURE CURIOSITY - Ask a genuinely interesting question about their insight
+- Focus on understanding THEIR perspective deeper
+- No personal story needed
+- Can be a single question OR a brief observation + question
+Example 1: "What made you realize [X] vs the conventional [Y]?"
+Example 2: "The [specific part] hits different. How did you discover this?"`,
 
     devils_advocate: `
-REPLY 2 (DEVIL'S ADVOCATE):
-Challenge their assumption intellectually. Stay respectful but probe edge cases.
-Example: "But doesn't [their claim] break down when [specific scenario]?"`,
+DEVIL'S ADVOCATE - Challenge their assumption with intellectual pushback
+- Use "but", "actually", "though", "counterpoint" to signal disagreement
+- NO QUESTION MARKS - make a statement that challenges them
+- Stay respectful but probe edge cases
+Example 1: "But this breaks down when [specific scenario]. The [their claim] doesn't account for [edge case]."
+Example 2: "Actually disagree here - [specific part] ignores [counter-evidence]."`,
 
     expand_idea: `
-REPLY 3 (EXPAND THEIR IDEA):
-Build on what they said. Add to THEIR narrative, not yours.
-Example: "This connects to [related concept] - have you considered [extension]?"`,
+EXPAND THEIR IDEA - Build on what they said with your own addition
+- Add to THEIR narrative, not yours
+- Can be pure expansion OR expansion + clarifying question
+- Use "This also", "Building on this", "Plus" to signal you're adding
+Example 1: "This also explains why [related pattern]. The [their concept] connects to [bigger framework]."
+Example 2: "Plus the [related aspect] amplifies this. Have you seen it work with [adjacent case]?"`,
 
     provide_evidence: `
-PROVIDE EVIDENCE:
-Share relevant data, research, or pattern you've observed (without personal story).
-Example: "Interesting - I've seen [data/pattern] that [supports/challenges] this"`,
+PROVIDE EVIDENCE - Share data, research, or specific pattern (NO question)
+- Support OR challenge their claim with concrete evidence
+- Use numbers, percentages, or specific observations
+- No personal story unless it includes hard data
+Example 1: "I've tracked this across 40+ accounts - replies with [feature] get 3.2x more author responses."
+Example 2: "The data actually shows opposite: [stat] in [study]. Though your point about [X] still holds."`,
 
     personal_crossover: `
-PERSONAL CROSSOVER:
-Connect your authentic experience ONLY if it naturally fits.
-Your experience: ${strategy.reasoning}
-Be specific about your stage (0 users, 3 followers, etc.)`,
+PERSONAL CROSSOVER - Connect your authentic experience with specificity
+- Your experience: ${strategy.reasoning}
+- Be CONCRETE: "0 users", "3 Twitter followers", "Day 4 of building"
+- Can be statement OR statement + question
+Example 1: "Going through this now building [specific project]. The [their insight] is exactly what I hit at [specific stage]."
+Example 2: "Hit this 3 weeks in with 0 users. Shifted from [old approach] to [new approach] based on [their principle]."`,
 
     synthesize: `
-SYNTHESIZE:
-Connect their idea to a broader concept, framework, or related thinker.
-Example: "This mirrors [concept] - the connection is [explanation]"`,
+SYNTHESIZE - Connect their idea to broader concept, framework, or thinker
+- Can be pure connection OR connection + question
+- Reference frameworks, mental models, or related creators (if authentic)
+Example 1: "This mirrors Taleb's antifragility concept - systems that [their point] get stronger from [chaos]."
+Example 2: "The [concept] vibes with Kahneman's work on [topic]. How intentional was that connection for you?"`,
 
     practical_application: `
-PRACTICAL APPLICATION:
-Ask how their principle applies to a concrete, specific scenario.
-Example: "How would you apply this to [specific realistic situation]?"`,
+PRACTICAL APPLICATION - Ask how their principle applies to specific scenario
+- Focus on CONCRETE, realistic situations
+- Ask about edge cases or implementation details
+Example 1: "How would you apply this to [specific realistic situation with details]?"
+Example 2: "At what point does [their principle] transition from [stage A] to [stage B]?"`,
   };
 
   return `
@@ -294,7 +311,15 @@ ${instructions[strategy.fallback]}
 
 REASONING: ${strategy.reasoning}
 
-CRITICAL: Use the strategy that adds MOST value to the conversation.
-Don't force personal story if pure curiosity or devil's advocate is better.
+🚨 CRITICAL FOR VARIETY:
+- Pure Curiosity = question
+- Devil's Advocate = pushback statement (NO question mark)
+- Expand Idea = additive statement (question optional)
+- Provide Evidence = statement with data/pattern (NO question)
+- Personal Crossover = personal statement (question optional)
+- Synthesize = connection statement (question optional)
+- Practical Application = question about scenario
+
+Generate 3 DIFFERENT types of replies. Don't default to questions for everything.
 `.trim();
 }
