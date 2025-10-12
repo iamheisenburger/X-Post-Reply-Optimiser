@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Quality: ${result.qualityReport.passed ? 'PASSED' : 'ISSUES'}`);
     console.log(`📊 Attempts: ${result.totalAttempts}`);
     console.log(`📊 Best score: ${result.qualityReport.bestScore}/100`);
-    if (useClaude && result.specificityReport) {
+    if (useClaude && 'specificityReport' in result && result.specificityReport) {
       console.log(`📊 Specificity: ${result.specificityReport.passed ? 'PASSED' : result.specificityReport.score + '/100'}`);
     }
 
