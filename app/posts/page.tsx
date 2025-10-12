@@ -53,7 +53,12 @@ export default function PostsPage() {
       setEvents(todayInput.events.length > 0 ? todayInput.events : [""]);
       setInsights(todayInput.insights.length > 0 ? todayInput.insights : [""]);
       setStruggles(todayInput.struggles.length > 0 ? todayInput.struggles : [""]);
-      setMetrics(todayInput.metrics);
+      setMetrics({
+        followers: todayInput.metrics.followers,
+        subwiseUsers: todayInput.metrics.subwiseUsers,
+        subwiseMRR: todayInput.metrics.subwiseMRR || 0,
+        trainingMinutes: todayInput.metrics.trainingMinutes || 0,
+      });
     }
   });
 
