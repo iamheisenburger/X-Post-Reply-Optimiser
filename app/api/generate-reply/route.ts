@@ -169,42 +169,27 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Transform for frontend
-    const classifyMode = (text: string, f: { hasQuestion: boolean; hasPushback: boolean; hasSpecificData: boolean; }) => {
-      if (f.hasPushback) return "contrarian";
-      if (f.hasQuestion) return "question";
-      if (/\b(I agree|good point|so true|exactly)\b/i.test(text)) return "agreement";
-      return "add_value";
-    };
-
+    // Use the scores and strategies calculated by Claude generator - don't recalculate!
     const transformedReplies = result.replies.map((reply, idx) => {
       const p = reply.prediction;
-      
-      // Show probability/likelihood scores (0-100) for each signal - these are interpretable
-      // CRITICAL: Guard all calculations to prevent NaN/undefined breaking frontend .toFixed()
-      const authorReplyChance = Math.round((p.authorReplyProb || 0) * 100); // Direct probability (0-100%)
-      const conversationLikelihood = Math.min(100, Math.round(((p.repliesExpected || 0) / 10) * 100)); // Normalized expected replies
-      const profileClickChance = Math.min(100, Math.round(((p.profileClicksExpected || 0) / 10) * 100)); // Normalized expected clicks
+
+      // Use direct values from prediction for breakdown display
+      const authorReplyChance = Math.round((p.authorReplyProb || 0) * 100);
+      const conversationLikelihood = Math.min(100, Math.round(((p.repliesExpected || 0) / 10) * 100));
+      const profileClickChance = Math.min(100, Math.round(((p.profileClicksExpected || 0) / 10) * 100));
       const recencyBoost = minutesSincePosted <= 5 ? 100 : Math.max(0, Math.round((1 - (minutesSincePosted || 0) / 60) * 100));
-      
-      // Overall score: weighted combination emphasizing author reply (most valuable per X algorithm)
-      const overallScore = Math.max(1, Math.min(100, Math.round(
-        authorReplyChance * 0.50 +       // Author response is KING (75x in X algorithm)
-        conversationLikelihood * 0.30 +  // Conversation starter (13.5x)
-        profileClickChance * 0.15 +      // Profile visit (5x, leads to follows)
-        recencyBoost * 0.05              // Recency bonus (2.5x within 5min)
-      )));
 
       return {
         text: reply.text,
-        score: Number(overallScore) || 0,
+        score: reply.score, // USE THE SCORE FROM CLAUDE GENERATOR - already properly calculated
         breakdown: {
-          engagement: Number(authorReplyChance) || 0,        // Likelihood author responds (0-100%)
-          recency: Number(recencyBoost) || 0,                // Recency advantage (0-100)
-          mediaPresence: 0,                                  // Reserved for future media detection
-          conversationDepth: Number(conversationLikelihood) || 0, // Likelihood of sparking replies (0-100)
-          authorReputation: Number(profileClickChance) || 0, // Likelihood of profile click (0-100)
+          engagement: Number(authorReplyChance) || 0,
+          recency: Number(recencyBoost) || 0,
+          mediaPresence: 0,
+          conversationDepth: Number(conversationLikelihood) || 0,
+          authorReputation: Number(profileClickChance) || 0,
         },
-        mode: classifyMode(reply.text, reply.features),
+        mode: reply.strategy, // USE THE ACTUAL STRATEGY - don't guess!
         iteration: idx + 1,
         reasoning: [reply.reasoning],
         features: {

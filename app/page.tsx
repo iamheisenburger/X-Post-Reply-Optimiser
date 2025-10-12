@@ -131,12 +131,19 @@ export default function AIReplyPage() {
 
   const getModeColor = (mode: string) => {
     switch (mode) {
-      case "pure_saas": return "bg-blue-500";
-      case "pure_mma": return "bg-red-500";
-      case "mindset_crossover": return "bg-purple-500";
-      case "technical": return "bg-green-500";
+      case "pure_curiosity": return "bg-blue-500";
+      case "devils_advocate": return "bg-red-500";
+      case "expand_idea": return "bg-purple-500";
+      case "provide_evidence": return "bg-green-500";
+      case "personal_crossover": return "bg-orange-500";
+      case "synthesize": return "bg-cyan-500";
+      case "practical_application": return "bg-yellow-500";
       default: return "bg-gray-500";
     }
+  };
+
+  const formatStrategyName = (strategy: string) => {
+    return strategy.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const getScoreColor = (score: number) => {
@@ -273,8 +280,8 @@ export default function AIReplyPage() {
                     </span>
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge className={getModeColor(reply.mode)} variant="outline">
-                      {reply.mode.replace("_", " ")}
+                    <Badge className={getModeColor(reply.mode)}>
+                      {formatStrategyName(reply.mode)}
                     </Badge>
                   </div>
                 </div>

@@ -401,29 +401,23 @@ function parseReplies(response: string): string[] {
 function calculateCompositeScore(
   prediction: ReturnType<typeof predictEngagement>
 ): number {
-  const authorWeight = 0.5;
-  const conversationWeight = 0.3;
-  const profileClickWeight = 0.15;
-  const likeWeight = 0.05;
+  // The X algorithm already calculates a properly weighted totalScore
+  // It uses 75x for author reply, 13.5x for conversation, 5x for profile clicks, 1x for likes
+  // We just need to normalize it to 0-100 scale
 
-  const authorScore = prediction.authorReplyProb * 100;
-  const conversationScore = Math.min(
-    100,
-    (prediction.repliesExpected / 10) * 100
-  );
-  const profileClickScore = Math.min(
-    100,
-    (prediction.profileClicksExpected / 10) * 100
-  );
-  const likeScore = Math.min(100, (prediction.likesExpected / 20) * 100);
+  // totalScore typically ranges from ~20 (weak) to ~200+ (excellent)
+  // Normalize to 0-100 with this calibration:
+  // - 50 = weak (needs improvement)
+  // - 70 = good (acceptable)
+  // - 85+ = excellent (strong engagement potential)
 
-  const composite =
-    authorScore * authorWeight +
-    conversationScore * conversationWeight +
-    profileClickScore * profileClickWeight +
-    likeScore * likeWeight;
+  const rawScore = prediction.totalScore;
 
-  return Math.round(Math.max(1, Math.min(100, composite)));
+  // Normalize: map 0-200 range to 0-100 with slightly generous curve
+  // This ensures replies with good features score 70+
+  const normalized = Math.min(100, Math.max(0, (rawScore / 150) * 100));
+
+  return Math.round(normalized);
 }
 
 function buildTweetSummary(content: TweetContent): string {
