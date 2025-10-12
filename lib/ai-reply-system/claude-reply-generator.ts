@@ -26,6 +26,7 @@ import {
 } from "./quality-gate";
 import { validateAuthenticSpecificity, type SpecificityReport } from "./specificity-validator-v2";
 import { getAuthenticContext } from "./personal-knowledge-base";
+import { generateCrossoverPositioning } from "./niche-crossover-system";
 
 export interface ReplyGenerationContext {
   tweetText: string;
@@ -330,6 +331,12 @@ function buildIntelligentPrompt(
   const creatorSummary = buildCreatorSummary(creator);
   const authenticContext = getAuthenticContext();
 
+  // Generate niche crossover positioning
+  const crossover = generateCrossoverPositioning(
+    creator.primaryNiche,
+    tweetContent.mainClaim
+  );
+
   let prompt = `Generate 3 X replies for this tweet:
 
 TWEET ANALYSIS:
@@ -340,10 +347,20 @@ ${creatorSummary}
 
 ${authenticContext}
 
+${crossover.positioning}
+
 REQUIREMENTS:
 1. Reply 1 (QUESTION): Ask genuine question from your beginner perspective about THEIR experience
+   - Use the crossover angle: ${crossover.bestAngle.connectionPoint}
+   - Example direction: ${crossover.bestAngle.authenticQuestion}
+
 2. Reply 2 (CONTRARIAN): Thoughtful challenge or alternative view, staying 100% authentic
-3. Reply 3 (ADD-VALUE): Connect to YOUR real journey (building SubWise, MMA training, studying X algorithm)
+   - Don't pretend to know their niche - question from YOUR perspective
+
+3. Reply 3 (ADD-VALUE): Connect YOUR authentic experience to THEIR insight
+   - Bridge through: ${crossover.bestAngle.connectionPoint}
+   - Reference: ${crossover.bestAngle.yourExperience.replace(/_/g, ' ')}
+
 - Tone: ${creator.audience.engagementPatterns.preferredTone || "conversational"}
 - Match their sophistication: ${creator.audience.demographics.sophisticationLevel || "intermediate"}
 - Start each with @${creator.username}
@@ -354,7 +371,8 @@ REQUIREMENTS:
 • NO fake expertise ("I've found", "In my experience")
 • YES ask genuine questions from beginner stage
 • YES mention what you're actually building/learning
-• YES be curious about their journey`;
+• YES be curious about their journey
+• YES find the CROSSOVER between your experience and their niche`;
 
   // Add specificity/authenticity feedback if needed
   if (specificityFeedback) {
