@@ -314,72 +314,24 @@ export default function AIReplyPage() {
                     </div>
                   </div>
 
-                  {/* Feature Detection & Strength */}
-                  <div>
-                    <h4 className="font-semibold mb-2 text-sm">Detected Features (X Algorithm Targets):</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        {reply.features.hasQuestion ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span>Question to author</span>
-                        <span className="text-xs text-muted-foreground">(targets 75x author response)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        {reply.features.hasPushback ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span>Contrarian/Pushback angle</span>
-                        <span className="text-xs text-muted-foreground">(targets 75x + 13.5x)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        {reply.features.hasData ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span>Uses data/examples</span>
-                        <span className="text-xs text-muted-foreground">(credibility + profile clicks)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        <span>Matches creator{'\''}s niche</span>
-                        <span className="text-xs text-muted-foreground">(template system = relevance)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        <span>Matches creator tone</span>
-                        <span className="text-xs text-muted-foreground">(uses profile intelligence)</span>
-                      </div>
-                    </div>
-                    <div className="mt-3 p-2 bg-muted rounded text-xs">
-                      <span className="font-semibold">Relative Strength: </span>
-                      <span className={reply.score >= 60 ? "text-green-500" : reply.score >= 40 ? "text-yellow-500" : "text-red-500"}>
-                        {reply.score >= 60 ? "STRONG" : reply.score >= 40 ? "MODERATE" : "WEAK"}
-                      </span>
-                      <span className="text-muted-foreground ml-2">
-                        ({reply.score}/100 composite score)
-                      </span>
-                    </div>
+                  {/* Engagement Indicators - Clean & Simple */}
+                  <div className="flex flex-wrap gap-2">
+                    {reply.features.hasQuestion && (
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        ✓ Question (75x author weight)
+                      </Badge>
+                    )}
+                    {reply.features.hasPushback && (
+                      <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">
+                        ✓ Contrarian (13.5x conversation)
+                      </Badge>
+                    )}
+                    {reply.features.hasData && (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+                        ✓ Data/Examples
+                      </Badge>
+                    )}
                   </div>
-
-                  {/* Reasoning */}
-                  {reply.reasoning.length > 0 && (
-                    <details className="text-sm">
-                      <summary className="cursor-pointer font-semibold text-muted-foreground hover:text-foreground">
-                        View Optimization Tips ({reply.reasoning.length})
-                      </summary>
-                      <ul className="mt-2 space-y-1 list-disc list-inside text-muted-foreground">
-                        {reply.reasoning.map((tip, i) => (
-                          <li key={i}>{tip}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
                 </div>
               </CardContent>
             </Card>
