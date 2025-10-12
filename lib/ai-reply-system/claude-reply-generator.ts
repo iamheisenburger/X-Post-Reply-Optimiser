@@ -69,18 +69,29 @@ export interface GenerationResult {
 
 const MAX_ATTEMPTS = 3;
 
-// System prompt is now minimal - let the dynamic strategy selector drive Claude
+// System prompt emphasizes variety and format requirements
 const CLAUDE_SYSTEM_PROMPT = `You are an X (Twitter) reply expert who crafts high-engagement replies optimized for the platform's algorithm.
 
-Your goal is to generate replies that maximize author response probability (75x algorithm weight).
+X ALGORITHM WEIGHTS (from reverse-engineered code):
+• Author reply: 75x (MOST IMPORTANT)
+• Conversation replies: 13.5x
+• Profile clicks: 5x
+• Likes: 1x (baseline)
 
-You will be given:
-1. A reply strategy to use (curiosity, devil's advocate, personal crossover, etc.)
-2. Niche-specific questions you can ask
-3. Creator profile and preferences
-4. Your authentic context (only if personal crossover is selected)
+ENGAGEMENT TRIGGERS:
+• hasQuestion: +0.25 author reply boost, +5 conversation replies
+• hasPushback: +0.15 author reply boost, +3 conversation replies
+• hasSpecificData: +0.10 author reply boost, +2 conversation replies, +8 likes, +5 profile clicks
 
-Follow the strategy instructions exactly. Don't force personal stories unless the strategy explicitly calls for it.`;
+🚨 CRITICAL: Questions are NOT the only way to get engagement!
+Pushback statements (with "but", "actually", "though") and data-driven statements (with numbers/patterns) are EQUALLY valuable.
+
+You will be given 3 different reply strategies. Generate 3 DIFFERENT types of replies:
+- If strategy says "NO question mark" → generate a STATEMENT (period at end)
+- If strategy says "question optional" → prefer statement unless question adds value
+- If strategy says "ask" → generate a question
+
+Follow the strategy format requirements exactly. Variety prevents X spam detection.`;
 
 /**
  * Generate 3 high-quality replies with Claude + Specificity Validation
@@ -336,9 +347,6 @@ ${authenticContext}
 
 ${getStrategyInstructions(strategy)}
 
-NICHE-SPECIFIC QUESTIONS YOU CAN ASK (no personal story needed):
-${nicheQuestions.map((q, i) => `${i + 1}. ${q.question}`).join('\n')}
-
 ${strategy.primary === 'personal_crossover' || strategy.secondary === 'personal_crossover' ? crossover.positioning : ''}
 
 REPLY REQUIREMENTS:
@@ -347,12 +355,17 @@ REPLY REQUIREMENTS:
 - Start each with @${creator.username}
 - Keep under 280 characters each
 
-🚨 CRITICAL RULES:
-• Don't force personal story into every reply - use it ONLY if strategy selects it
-• Pure curiosity and devil's advocate are often MORE valuable than personal story
-• Ask questions about THEIR niche even if you're not an expert
-• Be intellectually curious, not self-promotional
-• Authentic questions > forced personal connections
+🚨 FORMAT ENFORCEMENT (X spam detection watches for patterns):
+REPLY 1 using ${strategy.primary.toUpperCase().replace(/_/g, ' ')}:
+${strategy.primary === 'pure_curiosity' || strategy.primary === 'practical_application' ? '→ MUST end with question mark (?)' : strategy.primary === 'devils_advocate' || strategy.primary === 'provide_evidence' ? '→ MUST end with period (.) - NO question mark' : '→ Can be statement OR question'}
+
+REPLY 2 using ${strategy.secondary.toUpperCase().replace(/_/g, ' ')}:
+${strategy.secondary === 'pure_curiosity' || strategy.secondary === 'practical_application' ? '→ MUST end with question mark (?)' : strategy.secondary === 'devils_advocate' || strategy.secondary === 'provide_evidence' ? '→ MUST end with period (.) - NO question mark' : '→ Can be statement OR question'}
+
+REPLY 3 using ${strategy.fallback.toUpperCase().replace(/_/g, ' ')}:
+${strategy.fallback === 'pure_curiosity' || strategy.fallback === 'practical_application' ? '→ MUST end with question mark (?)' : strategy.fallback === 'devils_advocate' || strategy.fallback === 'provide_evidence' ? '→ MUST end with period (.) - NO question mark' : '→ Can be statement OR question'}
+
+If strategy says "NO question", you MUST generate a statement. Use pushback words ("but", "actually", "though") or data (numbers, percentages) to trigger algorithm.
 
 OUTPUT FORMAT (MUST FOLLOW EXACTLY):
 
@@ -365,7 +378,7 @@ REPLY 2:
 REPLY 3:
 [Your third reply text here - just the tweet, no headers or labels]
 
-Generate 3 distinct replies now. Use PRIMARY strategy for Reply 1, SECONDARY for Reply 2, FALLBACK for Reply 3.`;
+Generate 3 distinct replies now following FORMAT requirements above.`;
 
   // Add specificity/authenticity feedback if needed
   if (specificityFeedback) {
