@@ -143,10 +143,11 @@ export async function generateOptimizedRepliesWithClaude(
 
     try {
       // Build intelligent prompt
+      const improvementInstructions = specificityReport?.improvementInstructions;
       const prompt = buildIntelligentPrompt(
         tweetContent,
         context.creatorProfile,
-        specificityReport ? specificityReport.improvementInstructions : undefined,
+        improvementInstructions,
         qualityReport?.improvements
       );
 
