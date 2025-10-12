@@ -25,8 +25,10 @@ import {
   type ReplyConstraints,
 } from "./quality-gate";
 import { validateAuthenticSpecificity, type SpecificityReport } from "./specificity-validator-v2";
-import { getAuthenticContext } from "./personal-knowledge-base";
+import { getAuthenticContext, REAL_EXPERIENCES } from "./personal-knowledge-base";
 import { generateCrossoverPositioning } from "./niche-crossover-system";
+import { selectReplyStrategies, getStrategyInstructions } from "./reply-strategy-selector";
+import { selectRelevantQuestions } from "./niche-knowledge-base";
 
 export interface ReplyGenerationContext {
   tweetText: string;
@@ -331,7 +333,22 @@ function buildIntelligentPrompt(
   const creatorSummary = buildCreatorSummary(creator);
   const authenticContext = getAuthenticContext();
 
-  // Generate niche crossover positioning
+  // SELECT BEST REPLY STRATEGY (don't force personal story every time)
+  const strategy = selectReplyStrategies({
+    tweetContent,
+    creatorNiche: creator.primaryNiche,
+    yourExperiences: REAL_EXPERIENCES.map(e => e.topic),
+    minutesSincePosted: 10, // Default - will be passed from context later
+  });
+
+  // Get relevant questions for this niche (no personal story needed)
+  const nicheQuestions = selectRelevantQuestions(
+    creator.primaryNiche,
+    tweetContent.mainClaim,
+    3
+  );
+
+  // Generate crossover positioning (only used if strategy selects it)
   const crossover = generateCrossoverPositioning(
     creator.primaryNiche,
     tweetContent.mainClaim
@@ -347,32 +364,31 @@ ${creatorSummary}
 
 ${authenticContext}
 
-${crossover.positioning}
+${getStrategyInstructions(strategy)}
 
-REQUIREMENTS:
-1. Reply 1 (QUESTION): Ask genuine question from your beginner perspective about THEIR experience
-   - Use the crossover angle: ${crossover.bestAngle.connectionPoint}
-   - Example direction: ${crossover.bestAngle.authenticQuestion}
+NICHE-SPECIFIC QUESTIONS YOU CAN ASK (no personal story needed):
+${nicheQuestions.map((q, i) => `${i + 1}. ${q.question}`).join('\n')}
 
-2. Reply 2 (CONTRARIAN): Thoughtful challenge or alternative view, staying 100% authentic
-   - Don't pretend to know their niche - question from YOUR perspective
+${strategy.primary === 'personal_crossover' || strategy.secondary === 'personal_crossover' ? crossover.positioning : ''}
 
-3. Reply 3 (ADD-VALUE): Connect YOUR authentic experience to THEIR insight
-   - Bridge through: ${crossover.bestAngle.connectionPoint}
-   - Reference: ${crossover.bestAngle.yourExperience.replace(/_/g, ' ')}
+REPLY STRUCTURE:
+- Generate 3 distinct replies using the strategies above
+- Use PRIMARY strategy for Reply 1
+- Use SECONDARY strategy for Reply 2
+- Use FALLBACK strategy for Reply 3
+- Each reply should add value differently
+- Don't force personal story if curiosity/devil's advocate is better
 
 - Tone: ${creator.audience.engagementPatterns.preferredTone || "conversational"}
 - Match their sophistication: ${creator.audience.demographics.sophisticationLevel || "intermediate"}
 - Start each with @${creator.username}
 
-🚨 CRITICAL AUTHENTICITY RULES:
-• NO fake metrics (you're at 0 users, $0 MRR)
-• NO fake stories (you haven't scaled anything)
-• NO fake expertise ("I've found", "In my experience")
-• YES ask genuine questions from beginner stage
-• YES mention what you're actually building/learning
-• YES be curious about their journey
-• YES find the CROSSOVER between your experience and their niche`;
+🚨 CRITICAL RULES:
+• Don't force personal story into every reply - use it ONLY if strategy selects it
+• Pure curiosity and devil's advocate are often MORE valuable than personal story
+• Ask questions about THEIR niche even if you're not an expert
+• Be intellectually curious, not self-promotional
+• Authentic questions > forced personal connections`;
 
   // Add specificity/authenticity feedback if needed
   if (specificityFeedback) {
