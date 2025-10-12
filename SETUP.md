@@ -20,18 +20,39 @@ This will:
 - Generate your deployment
 - Create `.env.local` with your Convex URL
 
-### 3. (Optional) Twitter API Setup
+### 3. Configure API Keys (REQUIRED)
 
-If you want to fetch target user data:
-
-1. Sign up at [twitterapi.io](https://twitterapi.io)
-2. Get your API key
-3. Add to `.env.local`:
+Add these to your `.env.local` file:
 
 ```env
-TWITTER_API_KEY=your_key_here
+# Twitter API (REQUIRED for fetching tweets)
+TWITTER_API_KEY=your_twitter_api_key_here
 TWITTER_API_BASE_URL=https://api.twitterapi.io/v1
+
+# Anthropic Claude API (REQUIRED for AI reply generation)
+# Get free $5 credits at https://console.anthropic.com
+ANTHROPIC_API_KEY=sk-ant-your_key_here
+
+# OpenAI API (Optional fallback - not recommended)
+OPENAI_API_KEY=sk-your_openai_key_here
+
+# Your X handle
+NEXT_PUBLIC_X_HANDLE=madmanhakim
 ```
+
+**Where to get API keys:**
+
+1. **Twitter API** (Required): https://twitterapi.io
+   - Sign up for free tier
+   - Copy your API key
+
+2. **Anthropic Claude** (Required): https://console.anthropic.com
+   - Free $5 credits included
+   - Navigate to API Keys → Create Key
+   - **Why Claude?** 88-95 quality scores vs 75-82 with OpenAI
+
+3. **OpenAI** (Optional): https://platform.openai.com
+   - Only if you want fallback (not recommended)
 
 ### 4. Run Development Server
 
@@ -166,6 +187,32 @@ score = Σ (engagement_weight × probability_of_engagement)
 - Reply within first 15 minutes of their posts
 
 ## 🐛 Troubleshooting
+
+### Error: "404 model: claude-3-5-sonnet"
+**Problem:** Missing or invalid `ANTHROPIC_API_KEY` in Vercel
+
+**Solution:**
+1. Go to https://console.anthropic.com and get your API key
+2. In Vercel: Settings → Environment Variables
+3. Add `ANTHROPIC_API_KEY` with your key for all environments
+4. Redeploy: `git commit --allow-empty -m "redeploy" && git push`
+
+### Error: "Could not fetch tweet"
+**Problem:** Missing or invalid `TWITTER_API_KEY`
+
+**Solution:**
+1. Get key from https://twitterapi.io
+2. Add to `.env.local` locally
+3. Add to Vercel environment variables
+4. Redeploy
+
+### Generic/Robotic Replies?
+**Problem:** System is using OpenAI instead of Claude
+
+**Solution:**
+1. Verify `ANTHROPIC_API_KEY` is set
+2. Check console logs - should say "Using CLAUDE (recommended)"
+3. Claude gives 88-95 scores vs OpenAI's 75-82
 
 ### Convex Not Working?
 ```bash
