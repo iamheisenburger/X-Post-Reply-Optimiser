@@ -37,7 +37,7 @@ export async function generateWithClaude(
   });
 
   const response = await anthropic.messages.create({
-    model: options.model || "claude-3-5-sonnet-20241022",
+    model: options.model || "claude-3-5-sonnet-20250219",
     max_tokens: options.maxTokens || 800,
     temperature: options.temperature ?? 0.7,
     system: systemPrompt,
