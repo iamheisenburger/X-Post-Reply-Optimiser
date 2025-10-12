@@ -173,6 +173,9 @@ export async function POST(request: NextRequest) {
     const transformedReplies = result.replies.map((reply, idx) => {
       const p = reply.prediction;
 
+      // DEBUG: Log reply score
+      console.log(`📊 Reply ${idx + 1} score from generator:`, reply.score, typeof reply.score);
+
       // Use direct values from prediction for breakdown display
       const authorReplyChance = Math.round((p.authorReplyProb || 0) * 100);
       const conversationLikelihood = Math.min(100, Math.round(((p.repliesExpected || 0) / 10) * 100));
@@ -181,7 +184,7 @@ export async function POST(request: NextRequest) {
 
       return {
         text: reply.text,
-        score: reply.score, // USE THE SCORE FROM CLAUDE GENERATOR - already properly calculated
+        score: reply.score || 0, // USE THE SCORE FROM CLAUDE GENERATOR - fallback to 0 if undefined
         breakdown: {
           engagement: Number(authorReplyChance) || 0,
           recency: Number(recencyBoost) || 0,
