@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { twitterApi } from "@/lib/twitter-api";
 import { buildCreatorIntelligence, extractTweetId } from "@/lib/ai-reply-system/creator-intelligence";
 import { generateOptimizedReplies } from "@/lib/ai-reply-system/reply-generator";
+import { generateOptimizedRepliesWithClaude } from "@/lib/ai-reply-system/claude-reply-generator";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
@@ -131,19 +132,35 @@ export async function POST(request: NextRequest) {
 
     console.log(`⏱️  Tweet posted ${minutesSincePosted} minutes ago ${minutesSincePosted <= 5 ? '(RECENCY BOOST!)' : ''}`);
 
-      // 5. Generate algorithm-optimized replies with feedback loop
-      const result = await generateOptimizedReplies({
-        tweetText: tweet.text,
-        tweetAuthor: tweet.author.username,
-        creatorProfile: creatorIntelligence,
-        minutesSincePosted,
-        yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",
-      });
+    // 5. Generate algorithm-optimized replies with Claude + Specificity Validation
+    // Use Claude if API key is available, otherwise fall back to OpenAI
+    const useClaude = !!process.env.ANTHROPIC_API_KEY;
 
-      console.log(`✨ Generated ${result.replies.length} algorithm-optimized replies`);
-      console.log(`📊 Quality: ${result.qualityReport.passed ? 'PASSED' : 'ISSUES'}`);
-      console.log(`📊 Attempts: ${result.totalAttempts}`);
-      console.log(`📊 Best score: ${result.qualityReport.bestScore}/100`);
+    console.log(`🤖 Using ${useClaude ? 'CLAUDE (recommended)' : 'OpenAI (fallback)'} for generation`);
+
+    const result = useClaude
+      ? await generateOptimizedRepliesWithClaude({
+          tweetText: tweet.text,
+          tweetAuthor: tweet.author.username,
+          creatorProfile: creatorIntelligence,
+          minutesSincePosted,
+          yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",
+        })
+      : await generateOptimizedReplies({
+          tweetText: tweet.text,
+          tweetAuthor: tweet.author.username,
+          creatorProfile: creatorIntelligence,
+          minutesSincePosted,
+          yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",
+        });
+
+    console.log(`✨ Generated ${result.replies.length} algorithm-optimized replies`);
+    console.log(`📊 Quality: ${result.qualityReport.passed ? 'PASSED' : 'ISSUES'}`);
+    console.log(`📊 Attempts: ${result.totalAttempts}`);
+    console.log(`📊 Best score: ${result.qualityReport.bestScore}/100`);
+    if (useClaude && result.specificityReport) {
+      console.log(`📊 Specificity: ${result.specificityReport.passed ? 'PASSED' : result.specificityReport.score + '/100'}`);
+    }
 
     // 6. Transform for frontend
     const classifyMode = (text: string, f: { hasQuestion: boolean; hasPushback: boolean; hasSpecificData: boolean; }) => {
