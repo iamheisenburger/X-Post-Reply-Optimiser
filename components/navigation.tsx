@@ -9,6 +9,7 @@ export function Navigation() {
 
   const links = [
     { href: "/", label: "🤖 AI Reply" },
+    { href: "/posts", label: "📝 Posts" },
     { href: "/activity", label: "📊 Activity" },
     { href: "/calendar", label: "📅 Calendar" },
     { href: "/profiles", label: "👤 Profiles" },
