@@ -131,7 +131,7 @@ export async function generateOptimizedRepliesWithClaude(
   let attemptNumber = 0;
   let replies: GeneratedReply[] = [];
   let qualityReport: QualityReport | null = null;
-  let specificityReport: SpecificityReport | null = null;
+  let specificityReport: SpecificityReport | null = null as SpecificityReport | null;
   let lastClaudeResponse = '';
 
   while (attemptNumber < MAX_ATTEMPTS) {
