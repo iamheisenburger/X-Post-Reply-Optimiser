@@ -21,7 +21,7 @@ export interface ReplyGenerationContext {
 export interface GeneratedReply {
   text: string;
   score: number;
-  strategy: 'question' | 'contrarian' | 'add_value' | 'crossover';
+  strategy: 'pure_curiosity' | 'devils_advocate' | 'expand_idea' | 'provide_evidence' | 'personal_crossover' | 'synthesize' | 'practical_application';
   features: {
     hasQuestion: boolean;
     hasPushback: boolean;
@@ -125,14 +125,14 @@ export async function generateOptimizedReplies(context: ReplyGenerationContext):
         
         console.log(`   Reply ${idx + 1}: ${score}/100`);
         
-        // Infer strategy based on reply features
-        let strategy: 'question' | 'contrarian' | 'add_value' | 'crossover' = 'add_value';
+        // Infer strategy based on reply features (map to new types)
+        let strategy: 'pure_curiosity' | 'devils_advocate' | 'expand_idea' | 'provide_evidence' | 'personal_crossover' | 'synthesize' | 'practical_application' = 'expand_idea';
         if (features.hasQuestion) {
-          strategy = 'question';
+          strategy = 'pure_curiosity';
         } else if (features.hasPushback) {
-          strategy = 'contrarian';
+          strategy = 'devils_advocate';
         } else if (features.hasSpecificData) {
-          strategy = 'add_value';
+          strategy = 'provide_evidence';
         }
         
         return {
