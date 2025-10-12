@@ -115,6 +115,48 @@ export const REAL_EXPERIENCES: PersonalExperience[] = [
     experience: "Learning to build in public through 30-day challenge",
     context: "First time documenting journey publicly",
     verified: true
+  },
+  {
+    topic: "technical_learning",
+    experience: "Learning Next.js, Convex, and AI API integration through building",
+    context: "Self-taught developer building real projects",
+    verified: true
+  },
+  {
+    topic: "api_integration",
+    experience: "Integrated Claude AI API and Twitter API into reply optimizer",
+    context: "First time working with LLM APIs in production",
+    verified: true
+  },
+  {
+    topic: "problem_solving",
+    experience: "Debugging deployment issues, API authentication, and model compatibility",
+    context: "Real-world development challenges while building in public",
+    verified: true
+  },
+  {
+    topic: "strategic_thinking",
+    experience: "Analyzing X's algorithm to reverse-engineer engagement patterns",
+    context: "Data-driven approach to social media growth",
+    verified: true
+  },
+  {
+    topic: "time_management",
+    experience: "Balancing building two projects (SubWise + Reply Optimizer) simultaneously",
+    context: "Learning to prioritize and ship fast",
+    verified: true
+  },
+  {
+    topic: "indie_hacking",
+    experience: "Solo founder building tools to solve own problems (subscription tracking, reply optimization)",
+    context: "Bootstrapped, no funding, learning as I go",
+    verified: true
+  },
+  {
+    topic: "community_engagement",
+    experience: "Replying to founders and builders to learn from their journey",
+    context: "Building network from ground zero",
+    verified: true
   }
 ];
 
@@ -287,11 +329,14 @@ YOUR AUTHENTIC CONTEXT (ARSHAD):
 
 WHAT YOU CAN AUTHENTICALLY TALK ABOUT:
 ✅ Starting from zero (3 followers)
-✅ Building first SaaS (SubWise)
-✅ Studying X algorithm (you actually did this!)
-✅ MMA training for discipline
-✅ Learning to build in public
-✅ Beginner developer journey
+✅ Building first SaaS (SubWise at 0 users)
+✅ Studying X algorithm (actually analyzed the open-source code)
+✅ MMA training for discipline (practitioner level)
+✅ Learning to build in public (30-day challenge)
+✅ Next.js/Convex/AI development (building real projects)
+✅ API integration challenges (Claude + Twitter APIs)
+✅ Solo indie hacking (bootstrapped, no funding)
+✅ Strategic/analytical thinking (data-driven approach)
 
 WHAT YOU CANNOT CLAIM:
 ❌ Any MRR numbers (you're at $0)

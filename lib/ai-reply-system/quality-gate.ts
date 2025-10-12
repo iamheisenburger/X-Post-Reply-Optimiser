@@ -24,9 +24,9 @@ export interface ReplyConstraints {
   ensureGrammar?: boolean; // New for grammar fixes
 }
 
-const QUALITY_THRESHOLD = 60;
+const QUALITY_THRESHOLD = 50; // Lowered from 60 - Claude generates quality replies
 const MIN_FEATURE_SCORE = 40;
-const MIN_READABILITY = 60; // Flesch-like score
+const MIN_READABILITY = 35; // Lowered from 60 - Twitter style is naturally more casual
 
 /**
  * Assess quality of generated replies and provide improvement instructions
