@@ -121,5 +121,51 @@ export default defineSchema({
     lastUpdated: v.number(),
     tweetAnalysisCount: v.number(),
   }).index("by_username", ["username"]),
+
+  // Personal Context (dynamic, updateable information about YOU)
+  personalContext: defineTable({
+    key: v.string(), // unique identifier, e.g., "main_context"
+    // Current metrics (updated daily/weekly)
+    currentFollowers: v.number(),
+    currentSubWiseUsers: v.number(),
+    currentSubWiseMRR: v.number(),
+    currentReplyOptimizerUsers: v.number(),
+    // Goals
+    followerGoal: v.number(),
+    followerGoalDeadline: v.string(), // e.g., "30 days from start"
+    subWiseUserGoal: v.number(),
+    // Stage/Status
+    stage: v.string(), // "starting_out", "early_growth", "gaining_traction", "established"
+    journeyStartDate: v.string(), // YYYY-MM-DD
+    daysIntoJourney: v.number(),
+    // Projects
+    projects: v.array(v.object({
+      name: v.string(),
+      description: v.string(),
+      stage: v.string(), // "building", "launched", "growing", "paused"
+      users: v.number(),
+      mrr: v.number(),
+    })),
+    // Experiences (what you can authentically talk about)
+    experiences: v.array(v.object({
+      topic: v.string(),
+      experience: v.string(),
+      context: v.string(),
+      verified: v.boolean(),
+    })),
+    // Background/Interests
+    interests: v.array(v.string()), // ["mma", "saas", "tech", "philosophy", etc.]
+    skillLevel: v.object({
+      mma: v.string(), // "beginner", "practitioner", "experienced", "expert"
+      saas: v.string(),
+      coding: v.string(),
+      marketing: v.string(),
+    }),
+    // What you CANNOT claim (to prevent fake expertise)
+    avoidClaims: v.array(v.string()),
+    // Metadata
+    lastUpdated: v.number(),
+    updatedBy: v.optional(v.string()), // "user" or "system"
+  }).index("by_key", ["key"]),
 });
 

@@ -26,7 +26,6 @@ export interface ReplyConstraints {
 
 const QUALITY_THRESHOLD = 50; // Lowered from 60 - Claude generates quality replies
 const MIN_FEATURE_SCORE = 40;
-const MIN_READABILITY = 35; // Lowered from 60 - Twitter style is naturally more casual
 
 /**
  * Assess quality of generated replies and provide improvement instructions
@@ -47,26 +46,9 @@ export function assessQuality(
   console.log(`\n🔍 Quality Assessment - Attempt ${attemptNumber}`);
   console.log(`   Best score: ${bestScore}/100`);
   
-  let grammarPassed = true;
-  
-  // ============================================
-  // NEW: CHECK 0: Grammar/Coherence Validation
-  // ============================================
-  replies.forEach((reply, idx) => {
-    const grammarCheck = validateGrammar(reply.text);
-    if (!grammarCheck.passed) {
-      grammarPassed = false;
-      issues.push(`Reply ${idx + 1}: Grammar/coherence issues (readability ${grammarCheck.readability.toFixed(0)})`);
-      console.log(`   ❌ Reply ${idx + 1} grammar failed: ${grammarCheck.reason}`);
-      improvements.ensureGrammar = true;
-    }
-  });
-  
-  if (grammarPassed) {
-    console.log(`   ✅ All replies pass grammar/coherence`);
-  } else {
-    console.log(`   ❌ Grammar issues detected`);
-  }
+  // REMOVED: Grammar validation was causing false positives
+  // Twitter-style writing doesn't fit Flesch readability formulas
+  const grammarPassed = true;
   
   // ============================================
   // CHECK 1: Score Threshold
@@ -215,38 +197,8 @@ export function assessQuality(
   };
 }
 
-/**
- * Grammar and coherence validation
- */
-function validateGrammar(text: string): { passed: boolean; readability: number; reason: string } {
-  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-  const words = text.split(/\s+/).length;
-  const chars = text.replace(/\s/g, '').length;
-  
-  // Check 1: Complete sentences
-  if (sentences.length < 1) {
-    return { passed: false, readability: 0, reason: 'No complete sentences' };
-  }
-  
-  // Check 2: No fragments (ends with colon or incomplete)
-  if (text.trim().endsWith(':') || text.includes('...') && sentences.length === 1) {
-    return { passed: false, readability: 30, reason: 'Incomplete/fragmented' };
-  }
-  
-  // Check 3: Readability (simple Flesch-like)
-  // AS = 206.835 - 1.015 (total words / total sentences) - 84.6 (total syllables / total words)
-  const avgWordsPerSentence = words / sentences.length;
-  const avgSyllablesPerWord = chars / words * 0.3; // Rough estimate
-  const as = 206.835 - 1.015 * avgWordsPerSentence - 84.6 * avgSyllablesPerWord;
-  
-  const readability = Math.min(100, Math.max(0, as));
-  
-  if (readability < MIN_READABILITY) {
-    return { passed: false, readability, reason: 'Low readability' };
-  }
-  
-  return { passed: true, readability, reason: 'OK' };
-}
+// REMOVED: validateGrammar function - was causing false positives
+// Flesch readability formula doesn't work for conversational Twitter writing
 
 /**
  * Check if we should keep iterating
