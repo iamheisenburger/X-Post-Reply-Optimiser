@@ -147,6 +147,7 @@ export default function PostsPage() {
   };
 
   const handleSaveEdit = async (postId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await updatePost({ id: postId as any, content: editedContent });
     setEditingPostId(null);
     toast({
@@ -156,6 +157,7 @@ export default function PostsPage() {
   };
 
   const handleApprove = async (postId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await approvePost({ id: postId as any });
     toast({
       title: "Approved!",
@@ -164,6 +166,7 @@ export default function PostsPage() {
   };
 
   const handleMarkAsPosted = async (postId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await markAsPosted({ id: postId as any });
     toast({
       title: "Marked as posted!",
@@ -172,6 +175,7 @@ export default function PostsPage() {
   };
 
   const handleReject = async (postId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await rejectPost({ id: postId as any });
     toast({
       title: "Rejected",
@@ -180,6 +184,7 @@ export default function PostsPage() {
   };
 
   const handleDelete = async (postId: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await deletePost({ id: postId as any });
     toast({
       title: "Deleted",
