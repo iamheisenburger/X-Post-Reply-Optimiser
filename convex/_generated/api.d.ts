@@ -15,7 +15,9 @@ import type {
 } from "convex/server";
 import type * as analytics from "../analytics.js";
 import type * as creators from "../creators.js";
+import type * as personalContext from "../personalContext.js";
 import type * as posts from "../posts.js";
+import type * as sentReplies from "../sentReplies.js";
 import type * as targets from "../targets.js";
 import type * as templates from "../templates.js";
 
@@ -30,7 +32,9 @@ import type * as templates from "../templates.js";
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   creators: typeof creators;
+  personalContext: typeof personalContext;
   posts: typeof posts;
+  sentReplies: typeof sentReplies;
   targets: typeof targets;
   templates: typeof templates;
 }>;
