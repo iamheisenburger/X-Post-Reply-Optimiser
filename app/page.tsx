@@ -6,7 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Copy, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, Copy, CheckCircle2, AlertCircle, Sparkles, Send } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface ScoredReply {
   text: string;
@@ -57,7 +60,12 @@ export default function AIReplyPage() {
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [sentReplies, setSentReplies] = useState<Set<number>>(new Set());
   const [progressSteps, setProgressSteps] = useState<Array<{step: string; status: 'pending' | 'active' | 'complete'}>>([]);
+  const [tweetContent, setTweetContent] = useState<string>("");
+
+  const markAsSent = useMutation(api.sentReplies.markAsSent);
+  const { toast } = useToast();
 
   const handleGenerate = async () => {
     if (!tweetUrl.trim()) {
@@ -112,7 +120,9 @@ export default function AIReplyPage() {
 
       const data = await response.json();
       setResult(data);
-      
+      setTweetContent(data.tweetContent || ""); // Store tweet content for later
+      setSentReplies(new Set()); // Reset sent replies
+
       // Mark all complete
       setProgressSteps(prev => prev.map(s => ({ ...s, status: 'complete' })));
     } catch (err) {
@@ -127,6 +137,38 @@ export default function AIReplyPage() {
     await navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const handleMarkAsSent = async (reply: ScoredReply, index: number) => {
+    if (!result) return;
+
+    try {
+      await markAsSent({
+        content: reply.text,
+        strategy: reply.mode,
+        algorithmScore: reply.score || 0,
+        scoreBreakdown: reply.breakdown,
+        tweetUrl: tweetUrl,
+        tweetAuthor: result.creatorProfile.username,
+        tweetContent: tweetContent,
+        targetUsername: result.creatorProfile.username,
+        targetTweetId: tweetUrl.split('/status/')[1]?.split('?')[0],
+      });
+
+      setSentReplies(prev => new Set(prev).add(index));
+
+      toast({
+        title: "Reply tracked!",
+        description: "Added to today's activity. View it on the Activity page.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to track reply. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Failed to mark as sent:", error);
+    }
   };
 
   const getModeColor = (mode: string) => {
@@ -293,7 +335,7 @@ export default function AIReplyPage() {
                     <div className="bg-muted p-4 rounded-lg font-mono text-sm whitespace-pre-wrap">
                       {reply.text}
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2 flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -311,6 +353,27 @@ export default function AIReplyPage() {
                           </>
                         )}
                       </Button>
+                      {sentReplies.has(index) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          className="bg-green-500/10 text-green-500 border-green-500/20"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          Sent
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleMarkAsSent(reply, index)}
+                          className="bg-purple-500 hover:bg-purple-600"
+                        >
+                          <Send className="h-4 w-4 mr-1" />
+                          Mark as Sent
+                        </Button>
+                      )}
                     </div>
                   </div>
 

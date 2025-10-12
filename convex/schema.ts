@@ -40,6 +40,12 @@ export default defineSchema({
       v.literal("posted")
     ),
     postedAt: v.optional(v.number()), // timestamp when actually posted
+    // NEW FIELDS for reply tracking
+    strategy: v.optional(v.string()), // pure_curiosity, devils_advocate, etc.
+    tweetUrl: v.optional(v.string()), // original tweet URL
+    tweetAuthor: v.optional(v.string()), // @username
+    tweetContent: v.optional(v.string()), // original tweet text
+    generatedAt: v.optional(v.number()), // timestamp when generated
     performance: v.optional(
       v.object({
         views: v.number(),
@@ -55,7 +61,8 @@ export default defineSchema({
   })
     .index("by_status", ["status"])
     .index("by_target", ["targetUsername"])
-    .index("by_created", ["createdAt"]),
+    .index("by_created", ["createdAt"])
+    .index("by_posted_date", ["postedAt"]),
 
   // Content Templates (proven patterns that work)
   templates: defineTable({
@@ -77,6 +84,21 @@ export default defineSchema({
     totalPosts: v.number(),
     totalReplies: v.number(),
     totalEngagement: v.number(), // sum of likes, retweets, replies
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]),
+
+  // Daily Reply Stats (fast aggregation for activity tracking)
+  dailyStats: defineTable({
+    date: v.string(), // YYYY-MM-DD
+    repliesSent: v.number(),
+    repliesGenerated: v.number(),
+    avgScore: v.number(),
+    topStrategy: v.optional(v.string()), // most used strategy that day
+    creators: v.array(v.object({
+      username: v.string(),
+      count: v.number(),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_date", ["date"]),

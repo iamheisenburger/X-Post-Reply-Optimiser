@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       replies: transformedReplies,
       selectedMode: "algorithm_optimized",
+      tweetContent: tweet.text, // Add tweet content for tracking
       creatorProfile: {
         username: creatorIntelligence.username,
         displayName: creatorIntelligence.displayName,

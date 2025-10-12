@@ -9,6 +9,8 @@ export function Navigation() {
 
   const links = [
     { href: "/", label: "🤖 AI Reply" },
+    { href: "/activity", label: "📊 Activity" },
+    { href: "/calendar", label: "📅 Calendar" },
     { href: "/profiles", label: "👤 Profiles" },
     { href: "/targets", label: "🎯 VIP Targets" },
   ];
