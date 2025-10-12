@@ -161,6 +161,7 @@ export async function POST(request: NextRequest) {
 
     // Log specificity only for Claude (has specificityReport property)
     if (useClaude && 'specificityReport' in result) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const specReport = (result as any).specificityReport;
       if (specReport) {
         console.log(`📊 Specificity: ${specReport.passed ? 'PASSED' : specReport.score + '/100'}`);
