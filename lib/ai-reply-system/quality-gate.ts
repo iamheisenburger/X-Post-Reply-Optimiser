@@ -75,41 +75,22 @@ export function assessQuality(
   }
   
   // ============================================
-  // CHECK 2: Feature Detection
+  // CHECK 2: Feature Detection (INFORMATIONAL ONLY)
   // ============================================
+  // NOTE: We no longer enforce specific strategies (question/contrarian/etc)
+  // The Reply Strategy Selector determines the best approach dynamically
   const hasQuestion = replies.some(r => r.features.hasQuestion);
   const hasPushback = replies.some(r => r.features.hasPushback);
   const hasData = replies.some(r => r.features.hasSpecificData);
-  
-  if (!hasQuestion) {
-    issues.push('Missing question reply (75x author response weight)');
-    console.log(`   ❌ No question reply found`);
-    
-    // Generate specific question based on creator profile
-    if (creator.audience.engagementPatterns.respondsTo.includes('thoughtful questions')) {
-      const topic = creator.optimalReplyStrategy.emphasizeTopics[0];
-      improvements.mustIncludeQuestion = `Ask about ${topic} related to their specific point`;
-    } else if (tweetContent.keyPhrases.length > 0) {
-      improvements.mustIncludeQuestion = `Ask how they developed their approach to "${tweetContent.keyPhrases[0]}"`;
-    } else {
-      improvements.mustIncludeQuestion = 'Ask about their process or methodology';
-    }
-  } else {
-    console.log(`   ✅ Has question reply`);
-  }
-  
-  if (!hasPushback) {
-    issues.push('Missing contrarian angle (memorable + defensible)');
-    console.log(`   ❌ No contrarian reply found`);
-    improvements.mustHaveFeature = improvements.mustHaveFeature || [];
-    improvements.mustHaveFeature.push('pushback');
-  } else {
-    console.log(`   ✅ Has contrarian reply`);
-  }
-  
+
+  console.log(`   📊 Features detected:`);
+  console.log(`      Question: ${hasQuestion ? '✅' : '❌'}`);
+  console.log(`      Pushback: ${hasPushback ? '✅' : '❌'}`);
+  console.log(`      Data: ${hasData ? '✅' : '❌'}`);
+
+  // Only flag if tweet has numbers but NO replies reference them
   if (!hasData && tweetContent.numbers.length > 0) {
-    issues.push(`Tweet mentions data (${tweetContent.numbers.join(', ')}) but replies don't reference it`);
-    console.log(`   ⚠️  Tweet has numbers but replies don't reference them`);
+    console.log(`   ℹ️  Tweet mentions ${tweetContent.numbers.join(', ')} - consider referencing`);
   }
   
   // ============================================
@@ -164,15 +145,12 @@ export function assessQuality(
   }
   
   // ============================================
-  // CHECK 6: Diversity
+  // CHECK 6: Diversity (INFORMATIONAL ONLY)
   // ============================================
+  // NOTE: Strategy selector determines how many approaches are needed
+  // We no longer enforce "must have 3 distinct strategies"
   const strategies = new Set(replies.map(r => r.strategy));
-  if (strategies.size < 3) {
-    issues.push('Replies too similar - need distinct strategies');
-    console.log(`   ❌ Only ${strategies.size} distinct strategies (need 3)`);
-  } else {
-    console.log(`   ✅ 3 distinct strategies`);
-  }
+  console.log(`   📊 Strategy diversity: ${strategies.size} distinct approaches`);
   
   // ============================================
   // PASS/FAIL DECISION (now includes grammar)

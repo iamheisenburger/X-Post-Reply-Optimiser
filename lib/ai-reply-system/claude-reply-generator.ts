@@ -41,7 +41,7 @@ export interface ReplyGenerationContext {
 export interface GeneratedReply {
   text: string;
   score: number;
-  strategy: "question" | "contrarian" | "add_value" | "crossover";
+  strategy: "pure_curiosity" | "devils_advocate" | "expand_idea" | "provide_evidence" | "personal_crossover" | "synthesize" | "practical_application";
   features: {
     hasQuestion: boolean;
     hasPushback: boolean;
@@ -69,53 +69,18 @@ export interface GenerationResult {
 
 const MAX_ATTEMPTS = 3;
 
+// System prompt is now minimal - let the dynamic strategy selector drive Claude
 const CLAUDE_SYSTEM_PROMPT = `You are an X (Twitter) reply expert who crafts high-engagement replies optimized for the platform's algorithm.
 
-🚨 CRITICAL: AUTHENTICITY OVER EVERYTHING 🚨
+Your goal is to generate replies that maximize author response probability (75x algorithm weight).
 
-You are replying as ARSHAD (@madmanhakim):
-- Current: 3 X followers → goal 250 in 30 days
-- Building: SubWise (subscription tracker) - 0 users, $0 MRR, early development
-- Also: X Reply Optimizer using X's open-source algorithm
-- Background: MMA training (practitioner level), aspiring SaaS founder
-- Stage: BEGINNER building in public for the first time
+You will be given:
+1. A reply strategy to use (curiosity, devil's advocate, personal crossover, etc.)
+2. Niche-specific questions you can ask
+3. Creator profile and preferences
+4. Your authentic context (only if personal crossover is selected)
 
-WHAT YOU CAN AUTHENTICALLY SAY:
-✅ "I'm at 0 users building SubWise - what was your experience going 0 → 100?"
-✅ "I'm on day X of my 30-day challenge (3 → 250 followers) - how did you get early traction?"
-✅ "I train MMA for discipline - does that mental toughness translate to building?"
-✅ "I studied X's algorithm (75x author reply weight) for my tool - how do you approach engagement?"
-✅ "I'm just starting to build in public - what content worked at your stage?"
-
-WHAT YOU CANNOT SAY (INSTANT FAIL):
-❌ "At 5K MRR..." / "When we hit..." (you're at $0)
-❌ "When we scaled to 1000 users..." (you have 0 users)
-❌ "After years of..." (you're just starting)
-❌ "I've found that..." (implies expertise you don't have)
-❌ "In my experience..." (no experience yet!)
-
-STRATEGY:
-- They share success → Ask genuine question from beginner perspective
-- They share insight → Ask how it applies to your stage (0 users, first SaaS)
-- They share struggle → Relate with your beginner struggle if relevant
-- ALWAYS be curious, NEVER fake expertise
-
-X ALGORITHM:
-- Target: 75x author response weight (ask about THEIR specific experience)
-- Keep under 280 characters
-- Start with @username
-
-3 DISTINCT strategies:
-
-FORMAT (EXACT):
-REPLY 1 (QUESTION):
-[Authentic question from your actual beginner stage]
-
-REPLY 2 (CONTRARIAN):
-[Thoughtful challenge staying 100% authentic to your experience]
-
-REPLY 3 (ADD-VALUE):
-[Connect to your REAL journey: building SubWise, MMA, studying X algorithm]`;
+Follow the strategy instructions exactly. Don't force personal stories unless the strategy explicitly calls for it.`;
 
 /**
  * Generate 3 high-quality replies with Claude + Specificity Validation
@@ -130,6 +95,19 @@ export async function generateOptimizedRepliesWithClaude(
 
   // Extract tweet content
   const tweetContent = analyzeTweetContent(context.tweetText);
+
+  // Select strategies ONCE at the start (don't recalculate every iteration)
+  const selectedStrategy = selectReplyStrategies({
+    tweetContent,
+    creatorNiche: context.creatorProfile.primaryNiche,
+    yourExperiences: REAL_EXPERIENCES.map(e => e.topic),
+    minutesSincePosted: context.minutesSincePosted,
+  });
+
+  console.log(`\n📊 SELECTED STRATEGIES:`);
+  console.log(`   Primary: ${selectedStrategy.primary} (score: ${selectedStrategy.scores[selectedStrategy.primary]})`);
+  console.log(`   Secondary: ${selectedStrategy.secondary} (score: ${selectedStrategy.scores[selectedStrategy.secondary]})`);
+  console.log(`   Fallback: ${selectedStrategy.fallback} (score: ${selectedStrategy.scores[selectedStrategy.fallback]})`);
 
   let attemptNumber = 0;
   let replies: GeneratedReply[] = [];
@@ -146,12 +124,13 @@ export async function generateOptimizedRepliesWithClaude(
 
     try {
       // Build intelligent prompt
-      const improvementInstructions = specificityReport !== null 
-        ? specificityReport.improvementInstructions 
+      const improvementInstructions = specificityReport !== null
+        ? specificityReport.improvementInstructions
         : undefined;
       const prompt = buildIntelligentPrompt(
         tweetContent,
         context.creatorProfile,
+        selectedStrategy,
         improvementInstructions,
         qualityReport?.improvements
       );
@@ -235,20 +214,18 @@ export async function generateOptimizedRepliesWithClaude(
 
         console.log(`   Reply ${idx + 1}: ${score}/100`);
 
-        // Infer strategy based on reply features
-        let strategy: "question" | "contrarian" | "add_value" | "crossover" = "add_value";
-        if (features.hasQuestion) {
-          strategy = "question";
-        } else if (features.hasPushback) {
-          strategy = "contrarian";
-        } else if (features.hasSpecificData) {
-          strategy = "add_value";
-        }
+        // Assign strategy based on position (primary -> reply 1, secondary -> reply 2, fallback -> reply 3)
+        const strategyMap = [
+          selectedStrategy.primary,
+          selectedStrategy.secondary,
+          selectedStrategy.fallback
+        ];
+        const replyStrategy = strategyMap[idx] || selectedStrategy.primary;
 
         return {
           text,
           score,
-          strategy,
+          strategy: replyStrategy,
           features: {
             hasQuestion: features.hasQuestion,
             hasPushback: features.hasPushback,
@@ -263,7 +240,7 @@ export async function generateOptimizedRepliesWithClaude(
             likesExpected: prediction.likesExpected,
             profileClicksExpected: prediction.profileClicksExpected,
           },
-          reasoning: `Claude attempt ${attemptNumber}. Score: ${score}/100`,
+          reasoning: `Using ${replyStrategy} strategy. Score: ${score}/100`,
         };
       });
 
@@ -326,20 +303,13 @@ export async function generateOptimizedRepliesWithClaude(
 function buildIntelligentPrompt(
   tweetContent: TweetContent,
   creator: CreatorIntelligence,
+  strategy: ReturnType<typeof selectReplyStrategies>,
   specificityFeedback?: string,
   constraints?: ReplyConstraints
 ): string {
   const tweetSummary = buildTweetSummary(tweetContent);
   const creatorSummary = buildCreatorSummary(creator);
   const authenticContext = getAuthenticContext();
-
-  // SELECT BEST REPLY STRATEGY (don't force personal story every time)
-  const strategy = selectReplyStrategies({
-    tweetContent,
-    creatorNiche: creator.primaryNiche,
-    yourExperiences: REAL_EXPERIENCES.map(e => e.topic),
-    minutesSincePosted: 10, // Default - will be passed from context later
-  });
 
   // Get relevant questions for this niche (no personal story needed)
   const nicheQuestions = selectRelevantQuestions(
