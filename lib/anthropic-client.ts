@@ -37,7 +37,7 @@ export async function generateWithClaude(
   });
 
   const response = await anthropic.messages.create({
-    model: options.model || "claude-3-5-sonnet-20240620",
+    model: options.model || "claude-sonnet-4-5",
     max_tokens: options.maxTokens || 800,
     temperature: options.temperature ?? 0.7,
     system: systemPrompt,
@@ -74,9 +74,9 @@ export async function generateReplyWithClaude(
     });
   }
 
-  // Claude Sonnet 3.5 is consistently good - no need for model switching
-  // It's comparable in price to GPT-4o-mini but better at following instructions
-  const model = "claude-3-5-sonnet-20240620";
+  // Claude Sonnet 4.5 is the latest - better at following instructions
+  // Newer model with improved capabilities
+  const model = "claude-sonnet-4-5";
   const temperature = iteration <= 2 ? 0.7 : 0.9;
 
   console.log(`   🤖 Using ${model} for iteration ${iteration} (temp: ${temperature})`);
