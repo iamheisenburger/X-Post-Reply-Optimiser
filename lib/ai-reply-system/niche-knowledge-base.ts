@@ -7,7 +7,7 @@
 
 export interface NicheQuestion {
   question: string;
-  type: "curiosity" | "devils_advocate" | "practical" | "edge_case" | "synthesis";
+  type: "curiosity" | "devils_advocate" | "practical" | "edge_case" | "synthesis" | "comparative";
   tags: string[];
 }
 
