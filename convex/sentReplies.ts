@@ -195,3 +195,84 @@ export const getTodayStats = query({
     };
   },
 });
+
+/**
+ * Delete a sent reply and update daily stats
+ */
+export const deleteReply = mutation({
+  args: {
+    id: v.id("posts"),
+  },
+  handler: async (ctx, args) => {
+    // Get the reply first to extract info for stats update
+    const reply = await ctx.db.get(args.id);
+
+    if (!reply || !reply.postedAt) {
+      throw new Error("Reply not found or not posted");
+    }
+
+    const replyDate = new Date(reply.postedAt).toISOString().split('T')[0];
+
+    // Delete the reply
+    await ctx.db.delete(args.id);
+
+    // Update daily stats
+    const stats = await ctx.db
+      .query("dailyStats")
+      .withIndex("by_date", (q) => q.eq("date", replyDate))
+      .first();
+
+    if (stats) {
+      // Get all remaining replies for this date to recalculate stats
+      const startOfDay = new Date(replyDate + 'T00:00:00').getTime();
+      const endOfDay = new Date(replyDate + 'T23:59:59').getTime();
+
+      const remainingReplies = await ctx.db
+        .query("posts")
+        .withIndex("by_posted_date")
+        .filter((q) =>
+          q.and(
+            q.gte(q.field("postedAt"), startOfDay),
+            q.lte(q.field("postedAt"), endOfDay),
+            q.eq(q.field("status"), "posted")
+          )
+        )
+        .collect();
+
+      if (remainingReplies.length === 0) {
+        // No more replies for this date, delete the stats
+        await ctx.db.delete(stats._id);
+      } else {
+        // Recalculate stats
+        const newAvgScore = Math.round(
+          remainingReplies.reduce((sum, r) => sum + r.algorithmScore, 0) / remainingReplies.length
+        );
+
+        // Recalculate creators
+        const creatorCounts = new Map<string, number>();
+        remainingReplies.forEach(r => {
+          if (r.targetUsername) {
+            creatorCounts.set(
+              r.targetUsername,
+              (creatorCounts.get(r.targetUsername) || 0) + 1
+            );
+          }
+        });
+
+        const newCreators = Array.from(creatorCounts.entries()).map(([username, count]) => ({
+          username,
+          count,
+        }));
+
+        await ctx.db.patch(stats._id, {
+          repliesSent: remainingReplies.length,
+          avgScore: newAvgScore,
+          creators: newCreators,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
+    return { success: true };
+  },
+});

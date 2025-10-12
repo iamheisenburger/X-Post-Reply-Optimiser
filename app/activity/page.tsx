@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, TrendingUp, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ActivityPage() {
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -17,6 +18,8 @@ export default function ActivityPage() {
   const sentReplies = useQuery(api.sentReplies.getSentRepliesByDate, {
     date: selectedDate,
   });
+  const deleteReply = useMutation(api.sentReplies.deleteReply);
+  const { toast } = useToast();
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -78,6 +81,22 @@ export default function ActivityPage() {
       case "synthesize": return "bg-cyan-500";
       case "practical_application": return "bg-yellow-500";
       default: return "bg-gray-500";
+    }
+  };
+
+  const handleDeleteReply = async (replyId: string) => {
+    try {
+      await deleteReply({ id: replyId as any });
+      toast({
+        title: "Reply deleted",
+        description: "The reply has been removed from your activity.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete reply. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -219,11 +238,21 @@ export default function ActivityPage() {
                             Sent at {formatTime(reply.postedAt)}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-purple-500">
-                            {reply.algorithmScore}/100
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-purple-500">
+                              {reply.algorithmScore}/100
+                            </div>
+                            <p className="text-xs text-muted-foreground">Score</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">Score</p>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDeleteReply(reply._id)}
+                            className="hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
 
