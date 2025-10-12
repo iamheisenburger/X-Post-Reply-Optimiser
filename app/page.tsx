@@ -75,9 +75,8 @@ export default function AIReplyPage() {
       { step: "Fetching tweet data from X", status: 'pending' as const },
       { step: "Checking for cached creator profile", status: 'pending' as const },
       { step: "Analyzing creator's niche and tone", status: 'pending' as const },
-      { step: "Generating Reply #1: Question Strategy", status: 'pending' as const },
-      { step: "Generating Reply #2: Contrarian Strategy", status: 'pending' as const },
-      { step: "Generating Reply #3: Add-Value Strategy", status: 'pending' as const },
+      { step: "Selecting optimal reply strategies", status: 'pending' as const },
+      { step: "Generating 3 dynamic replies", status: 'pending' as const },
       { step: "Analyzing reply features & scoring", status: 'pending' as const },
     ];
     setProgressSteps(steps);
@@ -246,84 +245,18 @@ export default function AIReplyPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Strategy Mix</p>
                 <Badge className="bg-purple-500">
-                  Question + Contrarian + Value
+                  Dynamic Selection
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Reply Mode</p>
-                <p className="font-semibold">One-shot (no iterations)</p>
+                <p className="text-sm text-muted-foreground">Generation Method</p>
+                <p className="font-semibold">Claude (Intelligent)</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Quality Report */}
-      {result?.qualityReport && (
-        <Card className={`mb-6 ${result.qualityReport.passed ? 'border-green-500/50' : 'border-yellow-500/50'}`}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                {result.qualityReport.passed ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-yellow-500" />
-                )}
-                Quality Report
-              </CardTitle>
-              <Badge variant="outline" className={result.qualityReport.passed ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}>
-                {result.qualityReport.passed ? 'PASSED' : 'ISSUES DETECTED'}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Attempts</p>
-                  <p className="font-semibold">{result.totalIterations}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Best Score</p>
-                  <p className="font-semibold text-lg">{result.qualityReport.bestScore}/100</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Grammar/Coherence</p>
-                  {result.qualityReport.grammarPassed ? (
-                    <p className="font-semibold text-green-500">✓ Passed</p>
-                  ) : (
-                    <p className="font-semibold text-red-500">✗ Issues</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Issues Found</p>
-                  <p className="font-semibold">{result.qualityReport.issues.length}</p>
-                </div>
-              </div>
-              
-              {result.qualityReport.issues.length > 0 && (
-                <div className="mt-4 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded">
-                  <p className="text-sm font-semibold mb-2">Remaining Quality Issues:</p>
-                  <ul className="text-sm space-y-1">
-                    {result.qualityReport.issues.map((issue, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-yellow-500">•</span>
-                        <span className="text-muted-foreground">{issue}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {result.totalIterations > 1 && (
-                <div className="text-xs text-muted-foreground">
-                  System iterated {result.totalIterations}x to improve quality based on X algorithm targets
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Generated Replies */}
       {result && result.replies.length > 0 && (

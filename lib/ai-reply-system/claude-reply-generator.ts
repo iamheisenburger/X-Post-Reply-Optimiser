@@ -341,24 +341,31 @@ ${nicheQuestions.map((q, i) => `${i + 1}. ${q.question}`).join('\n')}
 
 ${strategy.primary === 'personal_crossover' || strategy.secondary === 'personal_crossover' ? crossover.positioning : ''}
 
-REPLY STRUCTURE:
-- Generate 3 distinct replies using the strategies above
-- Use PRIMARY strategy for Reply 1
-- Use SECONDARY strategy for Reply 2
-- Use FALLBACK strategy for Reply 3
-- Each reply should add value differently
-- Don't force personal story if curiosity/devil's advocate is better
-
+REPLY REQUIREMENTS:
 - Tone: ${creator.audience.engagementPatterns.preferredTone || "conversational"}
 - Match their sophistication: ${creator.audience.demographics.sophisticationLevel || "intermediate"}
 - Start each with @${creator.username}
+- Keep under 280 characters each
 
 🚨 CRITICAL RULES:
 • Don't force personal story into every reply - use it ONLY if strategy selects it
 • Pure curiosity and devil's advocate are often MORE valuable than personal story
 • Ask questions about THEIR niche even if you're not an expert
 • Be intellectually curious, not self-promotional
-• Authentic questions > forced personal connections`;
+• Authentic questions > forced personal connections
+
+OUTPUT FORMAT (MUST FOLLOW EXACTLY):
+
+REPLY 1:
+[Your first reply text here - just the tweet, no headers or labels]
+
+REPLY 2:
+[Your second reply text here - just the tweet, no headers or labels]
+
+REPLY 3:
+[Your third reply text here - just the tweet, no headers or labels]
+
+Generate 3 distinct replies now. Use PRIMARY strategy for Reply 1, SECONDARY for Reply 2, FALLBACK for Reply 3.`;
 
   // Add specificity/authenticity feedback if needed
   if (specificityFeedback) {
