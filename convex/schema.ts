@@ -2,24 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // VIP Target Accounts (50 accounts to engage with)
-  targets: defineTable({
-    username: v.string(),
-    displayName: v.string(),
-    userId: v.optional(v.string()),
-    followerCount: v.optional(v.number()),
-    followingCount: v.optional(v.number()),
-    bio: v.optional(v.string()),
-    profileImage: v.optional(v.string()),
-    lastEngaged: v.optional(v.number()), // timestamp
-    engagementRate: v.optional(v.number()), // calculated metric
-    priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
-    tags: v.array(v.string()), // e.g., ["mma", "saas", "tech"]
-    notes: v.optional(v.string()),
-  })
-    .index("by_username", ["username"])
-    .index("by_priority", ["priority"]),
-
   // Your Posts/Replies (tracking what you've created and posted)
   posts: defineTable({
     content: v.string(),
