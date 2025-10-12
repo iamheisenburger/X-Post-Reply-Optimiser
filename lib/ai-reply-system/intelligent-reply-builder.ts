@@ -7,7 +7,7 @@ import type { ReplyConstraints } from './quality-gate';
 
 export interface IntelligentReply {
   text: string;
-  strategy: 'question' | 'contrarian' | 'add_value';
+  strategy: 'pure_curiosity' | 'devils_advocate' | 'expand_idea' | 'provide_evidence' | 'personal_crossover' | 'synthesize' | 'practical_application';
   reasoning: string;
 }
 
@@ -98,7 +98,7 @@ export function buildIntelligentQuestion(
   
   return {
     text: question,
-    strategy: 'question',
+    strategy: 'pure_curiosity',
     reasoning: reasoning.join(' • '),
   };
 }
@@ -167,7 +167,7 @@ export function buildIntelligentContrarian(
   
   return {
     text: contrarian,
-    strategy: 'contrarian',
+    strategy: 'devils_advocate',
     reasoning: reasoning.join(' • '),
   };
 }
@@ -239,7 +239,7 @@ export function buildIntelligentAddValue(
   
   return {
     text: addition,
-    strategy: 'add_value',
+    strategy: 'expand_idea',
     reasoning: reasoning.join(' • '),
   };
 }

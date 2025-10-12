@@ -20,7 +20,7 @@ export interface ReplyTemplate {
 
 export interface BuiltReply {
   text: string;
-  strategy: 'question' | 'contrarian' | 'add_value' | 'crossover';
+  strategy: 'pure_curiosity' | 'devils_advocate' | 'expand_idea' | 'provide_evidence' | 'personal_crossover' | 'synthesize' | 'practical_application';
   score: number;
   features: {
     hasQuestion: boolean;
