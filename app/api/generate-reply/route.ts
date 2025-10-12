@@ -158,8 +158,13 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Quality: ${result.qualityReport.passed ? 'PASSED' : 'ISSUES'}`);
     console.log(`📊 Attempts: ${result.totalAttempts}`);
     console.log(`📊 Best score: ${result.qualityReport.bestScore}/100`);
-    if (useClaude && 'specificityReport' in result && result.specificityReport) {
-      console.log(`📊 Specificity: ${result.specificityReport.passed ? 'PASSED' : result.specificityReport.score + '/100'}`);
+
+    // Log specificity only for Claude (has specificityReport property)
+    if (useClaude && 'specificityReport' in result) {
+      const specReport = (result as any).specificityReport;
+      if (specReport) {
+        console.log(`📊 Specificity: ${specReport.passed ? 'PASSED' : specReport.score + '/100'}`);
+      }
     }
 
     // 6. Transform for frontend
