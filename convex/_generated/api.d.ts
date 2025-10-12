@@ -18,7 +18,6 @@ import type * as creators from "../creators.js";
 import type * as personalContext from "../personalContext.js";
 import type * as posts from "../posts.js";
 import type * as sentReplies from "../sentReplies.js";
-import type * as targets from "../targets.js";
 import type * as templates from "../templates.js";
 
 /**
@@ -35,7 +34,6 @@ declare const fullApi: ApiFromModules<{
   personalContext: typeof personalContext;
   posts: typeof posts;
   sentReplies: typeof sentReplies;
-  targets: typeof targets;
   templates: typeof templates;
 }>;
 export declare const api: FilterApi<
