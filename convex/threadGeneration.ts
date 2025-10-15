@@ -117,12 +117,47 @@ export const saveGeneratedThread = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    const id = await ctx.db.insert("generatedThreads", {
-      ...args,
+    // Build insert object - only include optional fields if they have values
+    const insertData: {
+      date: string;
+      challengeDay: number;
+      tweets: string[];
+      threadType: string;
+      algorithmScore: number;
+      scoreBreakdown: {
+        hookStrength: number;
+        narrativeFlow: number;
+        specificity: number;
+        authenticity: number;
+      };
+      suggestMedia: boolean;
+      status: "generated" | "edited" | "approved" | "posted" | "rejected";
+      createdAt: number;
+      updatedAt: number;
+      mediaType?: string;
+      mediaSuggestions?: string[];
+    } = {
+      date: args.date,
+      challengeDay: args.challengeDay,
+      tweets: args.tweets,
+      threadType: args.threadType,
+      algorithmScore: args.algorithmScore,
+      scoreBreakdown: args.scoreBreakdown,
+      suggestMedia: args.suggestMedia,
       status: "generated",
       createdAt: now,
       updatedAt: now,
-    });
+    };
+
+    // Only add optional fields if they exist
+    if (args.mediaType !== undefined && args.mediaType !== null) {
+      insertData.mediaType = args.mediaType;
+    }
+    if (args.mediaSuggestions !== undefined && args.mediaSuggestions !== null) {
+      insertData.mediaSuggestions = args.mediaSuggestions;
+    }
+
+    const id = await ctx.db.insert("generatedThreads", insertData);
 
     return id;
   },

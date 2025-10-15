@@ -157,7 +157,25 @@ export const saveGeneratedPosts = mutation({
           score: post.algorithmScore
         });
 
-        const id = await ctx.db.insert("generatedPosts", {
+        // Build insert object - only include mediaType if it has a value
+        const insertData: {
+          date: string;
+          content: string;
+          category: string;
+          postType: string;
+          algorithmScore: number;
+          scoreBreakdown: {
+            hookStrength: number;
+            conversationTrigger: number;
+            specificity: number;
+            authenticity: number;
+          };
+          suggestMedia: boolean;
+          status: "generated" | "edited" | "approved" | "posted" | "rejected";
+          createdAt: number;
+          updatedAt: number;
+          mediaType?: string;
+        } = {
           date: post.date,
           content: post.content,
           category: post.category,
@@ -165,11 +183,17 @@ export const saveGeneratedPosts = mutation({
           algorithmScore: post.algorithmScore,
           scoreBreakdown: post.scoreBreakdown,
           suggestMedia: post.suggestMedia,
-          mediaType: post.mediaType,
           status: "generated",
           createdAt: now,
           updatedAt: now,
-        });
+        };
+
+        // Only add mediaType if it exists
+        if (post.mediaType !== undefined && post.mediaType !== null) {
+          insertData.mediaType = post.mediaType;
+        }
+
+        const id = await ctx.db.insert("generatedPosts", insertData);
         ids.push(id);
         console.log('✅ Inserted post with ID:', id);
       } catch (error) {
