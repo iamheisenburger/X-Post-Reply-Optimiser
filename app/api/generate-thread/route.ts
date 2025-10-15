@@ -160,28 +160,23 @@ TODAY'S METRICS (use these exact numbers):
 
 CHALLENGE GOAL: 3 → 250 followers in 30 days
 
-Write a 5-7 tweet thread reflecting on Day ${challengeDay}. Use the actual wins/lessons/struggles above. Be honest, specific, human. No motivational BS - just real reflection on the day.
+Write a 5-8 tweet thread reflecting on Day ${challengeDay}. Use the actual wins/lessons/struggles above. Be honest, specific, human. No motivational BS - just real reflection on the day.
 
-CRITICAL: Each tweet MUST be separated by a blank line (double line break).
+CRITICAL: 
+- Generate between 5-8 tweets (pick what fits the story)
+- Each tweet MUST be separated by a blank line (double line break)
 
-FORMAT:
-Tweet 1
-[content]
-
-Tweet 2
-[content]
-
-Tweet 3
-[content]
+HOOK (First Tweet):
+Don't use "Day X/30: Started with Y followers..."
+Instead, open with something that grabs attention:
+- A specific moment from today
+- A surprising number or observation
+- Something vulnerable or unexpected
 
 Example structure:
-Tweet 1: Hook - "Day ${challengeDay}: [key metric change]"
-Tweet 2: What went well (wins)
-Tweet 3: The actual numbers
-Tweet 4: What I learned
-Tweet 5: What was difficult
-Tweet 6: Tomorrow's plan
-Tweet 7: Question to audience
+Tweet 1: Hook - grab attention (NOT "Day X/30...")
+Tweet 2-6: What happened, numbers, lessons, struggles, plans
+Tweet 7-8: Question to audience (if needed)
 
 Each tweet: 100-200 chars. Use real data. Sound like a real person documenting their journey.
 
