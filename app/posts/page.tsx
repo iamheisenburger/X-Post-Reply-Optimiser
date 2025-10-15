@@ -17,6 +17,7 @@ export default function PostsPage() {
   const [generating, setGenerating] = useState(false);
 
   // Form state
+  const [challengeDay, setChallengeDay] = useState(1);
   const [events, setEvents] = useState<string[]>([""]);
   const [insights, setInsights] = useState<string[]>([""]);
   const [struggles, setStruggles] = useState<string[]>([""]);
@@ -91,14 +92,23 @@ export default function PostsPage() {
     setGenerating(true);
 
     try {
-      // TEMP: Skip Convex saves to isolate Claude API issue
+      // Step 1: Save daily input to Convex
+      await saveDailyInput({
+        date,
+        events: events.filter(e => e.trim()),
+        insights: insights.filter(i => i.trim()),
+        struggles: struggles.filter(s => s.trim()),
+        futurePlans: futurePlans.filter(p => p.trim()),
+        metrics,
+      });
 
-      // Call API to generate posts
+      // Step 2: Call Claude API to generate posts
       const response = await fetch('/api/generate-posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date,
+          challengeDay,
           events: events.filter(e => e.trim()),
           insights: insights.filter(i => i.trim()),
           struggles: struggles.filter(s => s.trim()),
@@ -114,21 +124,44 @@ export default function PostsPage() {
       }
 
       const data = await response.json();
+      console.log('✅ Claude generated posts:', data.posts);
 
-      console.log('Generated posts:', data.posts);
+      // Step 3: Clean posts - CRITICAL: Remove undefined fields for Convex
+      const cleanedPosts = data.posts.map((post: any) => {
+        // Build object with only defined fields
+        const cleaned: any = {
+          date: post.date,
+          content: post.content,
+          category: post.category,
+          postType: post.postType,
+          algorithmScore: post.algorithmScore,
+          scoreBreakdown: post.scoreBreakdown,
+          suggestMedia: post.suggestMedia,
+        };
+        
+        // Only add mediaType if it's not undefined/null
+        if (post.mediaType !== undefined && post.mediaType !== null) {
+          cleaned.mediaType = post.mediaType;
+        }
+        
+        return cleaned;
+      });
 
-      // Save generated posts to Convex so they show in UI
-      await saveGeneratedPosts({ posts: data.posts });
+      console.log('✅ Cleaned posts for Convex:', cleanedPosts);
+
+      // Step 4: Save to Convex
+      await saveGeneratedPosts({ posts: cleanedPosts });
+      console.log('✅ Saved to Convex successfully!');
 
       toast({
         title: "Posts generated!",
         description: `Generated ${data.posts.length} posts successfully!`,
       });
     } catch (error) {
-      console.error('Error generating posts:', error);
+      console.error('❌ Error generating posts:', error);
       toast({
         title: "Error",
-        description: "Failed to generate posts. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate posts. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -233,6 +266,22 @@ export default function PostsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Challenge Day */}
+          <div>
+            <Label htmlFor="challengeDay" className="text-base font-semibold">Challenge Day</Label>
+            <Input
+              id="challengeDay"
+              type="number"
+              min="1"
+              max="30"
+              value={challengeDay}
+              onChange={(e) => setChallengeDay(parseInt(e.target.value) || 1)}
+              className="mt-2 max-w-xs"
+              placeholder="e.g., 1, 5, 15"
+            />
+            <p className="text-sm text-muted-foreground mt-1">What day of the 30-day challenge are you on?</p>
+          </div>
+
           {/* Metrics */}
           <div>
             <Label className="text-base font-semibold mb-3 block">Current Metrics</Label>

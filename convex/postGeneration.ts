@@ -145,16 +145,41 @@ export const saveGeneratedPosts = mutation({
     const now = Date.now();
     const ids = [];
 
+    console.log('💾 Saving posts to Convex, count:', args.posts.length);
+
     for (const post of args.posts) {
-      const id = await ctx.db.insert("generatedPosts", {
-        ...post,
-        status: "generated",
-        createdAt: now,
-        updatedAt: now,
-      });
-      ids.push(id);
+      try {
+        console.log('Inserting post:', {
+          date: post.date,
+          category: post.category,
+          postType: post.postType,
+          contentLength: post.content.length,
+          score: post.algorithmScore
+        });
+
+        const id = await ctx.db.insert("generatedPosts", {
+          date: post.date,
+          content: post.content,
+          category: post.category,
+          postType: post.postType,
+          algorithmScore: post.algorithmScore,
+          scoreBreakdown: post.scoreBreakdown,
+          suggestMedia: post.suggestMedia,
+          mediaType: post.mediaType,
+          status: "generated",
+          createdAt: now,
+          updatedAt: now,
+        });
+        ids.push(id);
+        console.log('✅ Inserted post with ID:', id);
+      } catch (error) {
+        console.error('❌ Failed to insert post:', error);
+        console.error('Post data:', JSON.stringify(post, null, 2));
+        throw error;
+      }
     }
 
+    console.log('✅ All posts saved successfully');
     return ids;
   },
 });
