@@ -185,6 +185,7 @@ export default function ThreadsPage() {
       toast({
         title: "Thread generated!",
         description: `Generated a ${tweets.length}-tweet thread for Day ${challengeDay}`,
+        duration: 3000, // Auto-dismiss after 3 seconds
       });
     } catch (error) {
       console.error('Error generating thread:', error);
@@ -192,6 +193,7 @@ export default function ThreadsPage() {
         title: "Error",
         description: "Failed to generate thread. Please try again.",
         variant: "destructive",
+        duration: 5000, // Error messages stay a bit longer
       });
     } finally {
       setGenerating(false);
@@ -201,21 +203,29 @@ export default function ThreadsPage() {
   const handleCopyThread = async () => {
     if (!generatedThread) return;
 
-    const threadText = generatedThread.tweets.map((tweet, i) => `${i + 1}/${generatedThread.tweets.length}\n${tweet}`).join('\n\n');
+    // Decode any URL-encoded text and create clean thread
+    const threadText = generatedThread.tweets.map((tweet, i) => {
+      const cleanTweet = decodeURIComponent(tweet);
+      return `${i + 1}/${generatedThread.tweets.length}\n${cleanTweet}`;
+    }).join('\n\n');
+    
     await navigator.clipboard.writeText(threadText);
     toast({
       title: "Thread copied!",
       description: "Full thread copied to clipboard",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
   const handleCopyTweet = async (tweet: string, index: number) => {
-    await navigator.clipboard.writeText(tweet);
+    const cleanTweet = decodeURIComponent(tweet);
+    await navigator.clipboard.writeText(cleanTweet);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
     toast({
       title: "Tweet copied!",
       description: "Tweet copied to clipboard",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -236,6 +246,7 @@ export default function ThreadsPage() {
     toast({
       title: "Tweet updated!",
       description: "Thread has been edited",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -246,6 +257,7 @@ export default function ThreadsPage() {
     toast({
       title: "Approved!",
       description: "Thread is ready to be posted",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -256,6 +268,7 @@ export default function ThreadsPage() {
     toast({
       title: "Marked as posted!",
       description: "Thread tracked",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -266,6 +279,7 @@ export default function ThreadsPage() {
     toast({
       title: "Rejected",
       description: "Thread will not be used",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -276,6 +290,7 @@ export default function ThreadsPage() {
     toast({
       title: "Deleted",
       description: "Thread removed",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 

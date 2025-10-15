@@ -199,6 +199,7 @@ export default function PostsPage() {
       toast({
         title: "Posts generated!",
         description: `Generated ${data.posts.length} posts successfully!`,
+        duration: 3000, // Auto-dismiss after 3 seconds
       });
     } catch (error) {
       console.error('❌ Error generating posts:', error);
@@ -206,6 +207,7 @@ export default function PostsPage() {
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to generate posts. Please try again.",
         variant: "destructive",
+        duration: 5000, // Error messages stay a bit longer
       });
     } finally {
       setGenerating(false);
@@ -213,12 +215,14 @@ export default function PostsPage() {
   };
 
   const handleCopy = async (content: string, index: number) => {
-    await navigator.clipboard.writeText(content);
+    const cleanContent = decodeURIComponent(content);
+    await navigator.clipboard.writeText(cleanContent);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
     toast({
       title: "Copied!",
       description: "Post copied to clipboard",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -234,6 +238,7 @@ export default function PostsPage() {
     toast({
       title: "Updated!",
       description: "Post has been edited",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -243,6 +248,7 @@ export default function PostsPage() {
     toast({
       title: "Approved!",
       description: "Post is ready to be posted",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -252,6 +258,7 @@ export default function PostsPage() {
     toast({
       title: "Marked as posted!",
       description: "Post tracked in content bank",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -261,6 +268,7 @@ export default function PostsPage() {
     toast({
       title: "Rejected",
       description: "Post will not be used",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
@@ -270,6 +278,7 @@ export default function PostsPage() {
     toast({
       title: "Deleted",
       description: "Post removed",
+      duration: 3000, // Auto-dismiss after 3 seconds
     });
   };
 
