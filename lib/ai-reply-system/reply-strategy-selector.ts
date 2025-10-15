@@ -269,15 +269,13 @@ Example 1: "This also explains why [related pattern]. The [their concept] connec
 Example 2: "Plus the [related aspect] amplifies this. Have you seen it work with [adjacent case]?"`,
 
     provide_evidence: `
-PROVIDE EVIDENCE - Share ONLY real data you actually have (NO made-up stats!)
+PROVIDE EVIDENCE - Share ONLY real data/observations from YOUR authentic journey
 - 🚨 CRITICAL: DO NOT invent fake studies, metrics, or research
-- ONLY use data from your authentic context:
-  - X algorithm weights (75x author reply, 13.5x conversation) - you studied the actual open-source code
-  - Your current metrics (3 followers, 0 users, 0 MRR)
-- If you don't have data → Switch to PURE CURIOSITY and ask genuine question instead
-- NO phrases like "I've tracked", "I analyzed", "Studies show" unless TRUE
-Example 1: "The X algorithm weighs author replies 75x higher than likes - I studied the open-source code. Does that change your reply strategy?"
-Example 2: "I'm at 0 users building SubWise - seeing this exact pattern in my early stage. What broke you through to first 10?"`,
+- ONLY reference YOUR real experiences from context (metrics, struggles, wins, observations)
+- If you don't have relevant data → Switch to asking a GENUINE QUESTION instead
+- NO phrases like "I've tracked 47 accounts", "I analyzed X logs", "Studies show" - YOU HAVEN'T!
+Example 1: "I'm at [CURRENT_STAGE] building [PROJECT] - hit the same bottleneck. Shifted from [OLD_APPROACH] to [NEW_APPROACH] after [SPECIFIC_OBSERVATION]."
+Example 2: "Day [X] of challenge: [SPECIFIC_METRIC] → [NEW_METRIC]. The [their insight] matches exactly what I'm seeing. What triggered that shift for you?"`,
 
     personal_crossover: `
 PERSONAL CROSSOVER - Connect your authentic experience with specificity
