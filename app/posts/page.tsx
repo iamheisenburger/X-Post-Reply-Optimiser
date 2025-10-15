@@ -117,9 +117,12 @@ export default function PostsPage() {
 
       console.log('Generated posts:', data.posts);
 
+      // Save generated posts to Convex so they show in UI
+      await saveGeneratedPosts({ posts: data.posts });
+
       toast({
         title: "Posts generated!",
-        description: `Generated ${data.posts.length} posts. Check console for output.`,
+        description: `Generated ${data.posts.length} posts successfully!`,
       });
     } catch (error) {
       console.error('Error generating posts:', error);
