@@ -129,21 +129,58 @@ export default function ThreadsPage() {
 
       const data = await response.json();
 
-      // Parse thread content into tweets (split by double line breaks)
-      const tweets = data.thread.content.split('\n\n').filter((t: string) => t.trim());
+      // Parse thread content into tweets (split by double line breaks or single if not found)
+      let tweets = data.thread.content.split('\n\n').filter((t: string) => t.trim());
+      
+      // If only got 1 tweet, try splitting by single line breaks (Claude didn't follow format)
+      if (tweets.length <= 1) {
+        tweets = data.thread.content.split('\n').filter((t: string) => t.trim());
+      }
 
-      // Save generated thread to Convex
-      await saveGeneratedThread({
+      // Build save object, only including fields that have values
+      // Map conversationTrigger to narrativeFlow for Convex schema
+      const saveData: {
+        date: string;
+        challengeDay: number;
+        tweets: string[];
+        threadType: string;
+        algorithmScore: number;
+        scoreBreakdown: {
+          hookStrength: number;
+          narrativeFlow: number;
+          specificity: number;
+          authenticity: number;
+        };
+        suggestMedia: boolean;
+        mediaType?: string;
+        mediaSuggestions?: string[];
+      } = {
         date: data.thread.date,
         challengeDay,
         tweets,
         threadType: "daily_reflection",
         algorithmScore: data.thread.algorithmScore,
-        scoreBreakdown: data.thread.scoreBreakdown,
+        scoreBreakdown: {
+          hookStrength: data.thread.scoreBreakdown.hookStrength,
+          narrativeFlow: data.thread.scoreBreakdown.conversationTrigger, // Map to narrativeFlow
+          specificity: data.thread.scoreBreakdown.specificity,
+          authenticity: data.thread.scoreBreakdown.authenticity,
+        },
         suggestMedia: data.thread.suggestMedia,
-        mediaType: data.thread.mediaType || undefined,
-        mediaSuggestions: data.thread.mediaSuggestions ? [data.thread.mediaSuggestions] : undefined,
-      });
+      };
+
+      // Only add mediaType if it exists
+      if (data.thread.mediaType) {
+        saveData.mediaType = data.thread.mediaType;
+      }
+
+      // Only add mediaSuggestions if it exists
+      if (data.thread.mediaSuggestions) {
+        saveData.mediaSuggestions = [data.thread.mediaSuggestions];
+      }
+
+      // Save generated thread to Convex
+      await saveGeneratedThread(saveData);
 
       toast({
         title: "Thread generated!",
