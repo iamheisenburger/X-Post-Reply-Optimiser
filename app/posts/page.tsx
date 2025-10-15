@@ -20,6 +20,7 @@ export default function PostsPage() {
   const [events, setEvents] = useState<string[]>([""]);
   const [insights, setInsights] = useState<string[]>([""]);
   const [struggles, setStruggles] = useState<string[]>([""]);
+  const [futurePlans, setFuturePlans] = useState<string[]>([""]);
   const [metrics, setMetrics] = useState({
     followers: 3,
     subwiseUsers: 0,
@@ -53,6 +54,7 @@ export default function PostsPage() {
       setEvents(todayInput.events.length > 0 ? todayInput.events : [""]);
       setInsights(todayInput.insights.length > 0 ? todayInput.insights : [""]);
       setStruggles(todayInput.struggles.length > 0 ? todayInput.struggles : [""]);
+      setFuturePlans(todayInput.futurePlans && todayInput.futurePlans.length > 0 ? todayInput.futurePlans : [""]);
       setMetrics({
         followers: todayInput.metrics.followers,
         subwiseUsers: todayInput.metrics.subwiseUsers,
@@ -95,6 +97,7 @@ export default function PostsPage() {
         events: events.filter(e => e.trim()),
         insights: insights.filter(i => i.trim()),
         struggles: struggles.filter(s => s.trim()),
+        futurePlans: futurePlans.filter(p => p.trim()),
         metrics,
       });
 
@@ -107,6 +110,7 @@ export default function PostsPage() {
           events: events.filter(e => e.trim()),
           insights: insights.filter(i => i.trim()),
           struggles: struggles.filter(s => s.trim()),
+          futurePlans: futurePlans.filter(p => p.trim()),
           metrics,
         }),
       });
@@ -355,6 +359,32 @@ export default function PostsPage() {
             ))}
             <Button variant="outline" size="sm" onClick={() => addField(setStruggles)} className="mt-2">
               + Add Struggle
+            </Button>
+          </div>
+
+          {/* Future Plans */}
+          <div>
+            <Label className="text-base font-semibold mb-3 block">Future Plans (What are you building/planning?)</Label>
+            {futurePlans.map((plan, index) => (
+              <div key={index} className="flex gap-2 mb-2">
+                <Input
+                  value={plan}
+                  onChange={(e) => updateField(setFuturePlans, index, e.target.value)}
+                  placeholder="e.g., Building analytics dashboard, Planning to add email notifications"
+                />
+                {futurePlans.length > 1 && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => removeField(setFuturePlans, index)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={() => addField(setFuturePlans)} className="mt-2">
+              + Add Plan
             </Button>
           </div>
 

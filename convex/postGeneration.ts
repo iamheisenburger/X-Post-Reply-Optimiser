@@ -10,6 +10,7 @@ export const saveDailyInput = mutation({
     events: v.array(v.string()),
     insights: v.array(v.string()),
     struggles: v.array(v.string()),
+    futurePlans: v.optional(v.array(v.string())),
     metrics: v.object({
       followers: v.number(),
       subwiseUsers: v.number(),
@@ -32,6 +33,7 @@ export const saveDailyInput = mutation({
         events: args.events,
         insights: args.insights,
         struggles: args.struggles,
+        futurePlans: args.futurePlans,
         metrics: args.metrics,
         updatedAt: now,
       });
@@ -43,6 +45,7 @@ export const saveDailyInput = mutation({
         events: args.events,
         insights: args.insights,
         struggles: args.struggles,
+        futurePlans: args.futurePlans,
         metrics: args.metrics,
         createdAt: now,
         updatedAt: now,

@@ -142,6 +142,8 @@ export default defineSchema({
     stage: v.string(), // "starting_out", "early_growth", "gaining_traction", "established"
     journeyStartDate: v.string(), // YYYY-MM-DD
     daysIntoJourney: v.number(),
+    // 30-Day Challenge Tracking
+    challengeStartDate: v.optional(v.string()), // YYYY-MM-DD - when the challenge started
     // Projects
     projects: v.array(v.object({
       name: v.string(),
@@ -178,6 +180,7 @@ export default defineSchema({
     events: v.array(v.string()), // ["Trained 90 min BJJ", "Got 2 new SubWise signups"]
     insights: v.array(v.string()), // ["Realized async > cron", "Consistency beats intensity"]
     struggles: v.array(v.string()), // ["Hit wall with X feature", "Tired after training"]
+    futurePlans: v.optional(v.array(v.string())), // ["Building analytics dashboard", "Planning to add email notifications"]
     metrics: v.object({
       followers: v.number(),
       subwiseUsers: v.number(),
@@ -260,5 +263,63 @@ export default defineSchema({
   })
     .index("by_category", ["category"])
     .index("by_name", ["name"]),
+
+  // Thread Input (30-day challenge daily reflections)
+  threadInput: defineTable({
+    date: v.string(), // YYYY-MM-DD
+    challengeDay: v.number(), // Day number in the challenge (1-30)
+    wins: v.array(v.string()), // What went well today
+    lessons: v.array(v.string()), // What you learned
+    struggles: v.array(v.string()), // What was hard/failures
+    tomorrowFocus: v.array(v.string()), // What you're working on next
+    futurePlans: v.array(v.string()), // What you're building/planning to add
+    metrics: v.object({
+      followers: v.number(),
+      subwiseUsers: v.number(),
+      subwiseMRR: v.optional(v.number()),
+      trainingMinutes: v.optional(v.number()),
+    }),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_date", ["date"]),
+
+  // Generated Threads (AI-created thread posts for daily challenge)
+  generatedThreads: defineTable({
+    date: v.string(), // YYYY-MM-DD
+    challengeDay: v.number(), // Day number in challenge
+    tweets: v.array(v.string()), // Array of tweet texts in thread order
+    threadType: v.string(), // "progress_update", "lesson_thread", "bts", "prediction_analysis"
+    algorithmScore: v.number(), // 0-100 predicted engagement for thread
+    scoreBreakdown: v.object({
+      hookStrength: v.number(), // First tweet quality
+      narrativeFlow: v.number(), // Thread coherence
+      specificity: v.number(), // Has numbers/data?
+      authenticity: v.number(), // Personal/vulnerable?
+    }),
+    suggestMedia: v.boolean(), // Should add photo/video/chart?
+    mediaType: v.optional(v.string()), // "training_photo", "metrics_chart", "screenshot"
+    mediaSuggestions: v.optional(v.array(v.string())), // Which tweets should have media
+    status: v.union(
+      v.literal("generated"), // AI created
+      v.literal("edited"), // User modified
+      v.literal("approved"), // Ready to post
+      v.literal("posted"), // Actually posted to X
+      v.literal("rejected") // User discarded
+    ),
+    postedAt: v.optional(v.number()),
+    threadUrl: v.optional(v.string()), // First tweet URL
+    performance: v.optional(v.object({
+      totalViews: v.number(),
+      totalLikes: v.number(),
+      totalRetweets: v.number(),
+      totalReplies: v.number(),
+      totalBookmarks: v.number(),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_date", ["date"])
+    .index("by_status", ["status"])
+    .index("by_challenge_day", ["challengeDay"]),
 });
 

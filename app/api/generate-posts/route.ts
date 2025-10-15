@@ -7,9 +7,11 @@ const anthropic = new Anthropic({
 
 interface DailyInput {
   date: string;
+  challengeDay?: number; // Optional - will calculate if not provided
   events: string[];
   insights: string[];
   struggles: string[];
+  futurePlans?: string[];
   metrics: {
     followers: number;
     subwiseUsers: number;
@@ -132,21 +134,20 @@ function scorePost(post: string): {
 }
 
 function buildPrompt(input: DailyInput): string {
-  const { events, insights, struggles, metrics } = input;
+  const { events, insights, struggles, futurePlans, metrics, challengeDay } = input;
 
   const eventsList = events.length > 0 ? events.map((e, i) => `${i + 1}. ${e}`).join('\n') : "No events logged";
   const insightsList = insights.length > 0 ? insights.map((i, idx) => `${idx + 1}. ${i}`).join('\n') : "No insights logged";
   const strugglesList = struggles.length > 0 ? struggles.map((s, i) => `${i + 1}. ${s}`).join('\n') : "No struggles logged";
+  const futurePlansList = futurePlans && futurePlans.length > 0 ? futurePlans.map((p, i) => `${i + 1}. ${p}`).join('\n') : "No future plans logged";
 
-  // Calculate days into challenge (assuming started Oct 10, 2025)
-  const startDate = new Date('2025-10-10');
-  const currentDate = new Date(input.date);
-  const daysInto = Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  // Use provided challenge day or calculate from assumed start date
+  const daysInto = challengeDay || 1;
 
   const prevFollowers = Math.max(3, metrics.followers - Math.floor(Math.random() * 3)); // Estimate previous
   const followerDelta = metrics.followers - prevFollowers;
 
-  return `Generate 5 X posts for Day ${daysInto} of the 30-day challenge.
+  return `Generate 5 X posts for ${challengeDay ? `Day ${daysInto} of the journey` : 'today'}.
 
 YESTERDAY'S EVENTS:
 ${eventsList}
@@ -156,6 +157,9 @@ ${insightsList}
 
 STRUGGLES:
 ${strugglesList}
+
+FUTURE PLANS (What I'm building/adding next):
+${futurePlansList}
 
 CURRENT METRICS (as of today):
 - X Followers: ${metrics.followers} (was ~${prevFollowers} yesterday, ${followerDelta >= 0 ? '+' : ''}${followerDelta})

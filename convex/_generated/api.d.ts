@@ -8,11 +8,6 @@
  * @module
  */
 
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
 import type * as analytics from "../analytics.js";
 import type * as creators from "../creators.js";
 import type * as personalContext from "../personalContext.js";
@@ -20,6 +15,13 @@ import type * as postGeneration from "../postGeneration.js";
 import type * as posts from "../posts.js";
 import type * as sentReplies from "../sentReplies.js";
 import type * as templates from "../templates.js";
+import type * as threadGeneration from "../threadGeneration.js";
+
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -37,12 +39,17 @@ declare const fullApi: ApiFromModules<{
   posts: typeof posts;
   sentReplies: typeof sentReplies;
   templates: typeof templates;
+  threadGeneration: typeof threadGeneration;
 }>;
+declare const fullApiWithMounts: typeof fullApi;
+
 export declare const api: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "public">
 >;
 export declare const internal: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {};
