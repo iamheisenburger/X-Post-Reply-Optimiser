@@ -39,7 +39,7 @@ export default function ThreadsPage() {
   // Queries
   const todayInput = useQuery(api.threadGeneration.getTodayThreadInput);
   const generatedThread = useQuery(api.threadGeneration.getTodayGeneratedThread);
-  const savedChallengeStartDate = useQuery(api.personalContext.getChallengeStartDate);
+  const savedChallengeStartDate = useQuery(api.threadGeneration.getChallengeStartDate);
 
   // Mutations
   const saveThreadInput = useMutation(api.threadGeneration.saveThreadInput);
