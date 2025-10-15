@@ -29,7 +29,14 @@ export const saveDailyInput = mutation({
 
     if (existing) {
       // Update existing - only include futurePlans if it's defined
-      const updateData: Record<string, unknown> = {
+      const updateData: {
+        events: string[];
+        insights: string[];
+        struggles: string[];
+        metrics: typeof args.metrics;
+        updatedAt: number;
+        futurePlans?: string[];
+      } = {
         events: args.events,
         insights: args.insights,
         struggles: args.struggles,
@@ -45,7 +52,16 @@ export const saveDailyInput = mutation({
       return existing._id;
     } else {
       // Create new - only include futurePlans if it's defined
-      const insertData: Record<string, unknown> = {
+      const insertData: {
+        date: string;
+        events: string[];
+        insights: string[];
+        struggles: string[];
+        metrics: typeof args.metrics;
+        createdAt: number;
+        updatedAt: number;
+        futurePlans?: string[];
+      } = {
         date: args.date,
         events: args.events,
         insights: args.insights,
