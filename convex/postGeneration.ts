@@ -28,28 +28,38 @@ export const saveDailyInput = mutation({
       .first();
 
     if (existing) {
-      // Update existing
-      await ctx.db.patch(existing._id, {
+      // Update existing - only include futurePlans if it's defined
+      const updateData: Record<string, unknown> = {
         events: args.events,
         insights: args.insights,
         struggles: args.struggles,
-        futurePlans: args.futurePlans,
         metrics: args.metrics,
         updatedAt: now,
-      });
+      };
+
+      if (args.futurePlans !== undefined) {
+        updateData.futurePlans = args.futurePlans;
+      }
+
+      await ctx.db.patch(existing._id, updateData);
       return existing._id;
     } else {
-      // Create new
-      const id = await ctx.db.insert("dailyInput", {
+      // Create new - only include futurePlans if it's defined
+      const insertData: Record<string, unknown> = {
         date: args.date,
         events: args.events,
         insights: args.insights,
         struggles: args.struggles,
-        futurePlans: args.futurePlans,
         metrics: args.metrics,
         createdAt: now,
         updatedAt: now,
-      });
+      };
+
+      if (args.futurePlans !== undefined) {
+        insertData.futurePlans = args.futurePlans;
+      }
+
+      const id = await ctx.db.insert("dailyInput", insertData);
       return id;
     }
   },

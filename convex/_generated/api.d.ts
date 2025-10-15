@@ -9,6 +9,7 @@
  */
 
 import type * as analytics from "../analytics.js";
+import type * as contextManagement from "../contextManagement.js";
 import type * as creators from "../creators.js";
 import type * as personalContext from "../personalContext.js";
 import type * as postGeneration from "../postGeneration.js";
@@ -33,6 +34,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
+  contextManagement: typeof contextManagement;
   creators: typeof creators;
   personalContext: typeof personalContext;
   postGeneration: typeof postGeneration;
