@@ -127,9 +127,37 @@ export default function PostsPage() {
       console.log('✅ Claude generated posts:', data.posts);
 
       // Step 3: Clean posts - CRITICAL: Remove undefined fields for Convex
-      const cleanedPosts = data.posts.map((post: any) => {
+      const cleanedPosts = data.posts.map((post: {
+        date: string;
+        content: string;
+        category: string;
+        postType: string;
+        algorithmScore: number;
+        scoreBreakdown: {
+          hookStrength: number;
+          conversationTrigger: number;
+          specificity: number;
+          authenticity: number;
+        };
+        suggestMedia: boolean;
+        mediaType?: string;
+      }) => {
         // Build object with only defined fields
-        const cleaned: any = {
+        const cleaned: {
+          date: string;
+          content: string;
+          category: string;
+          postType: string;
+          algorithmScore: number;
+          scoreBreakdown: {
+            hookStrength: number;
+            conversationTrigger: number;
+            specificity: number;
+            authenticity: number;
+          };
+          suggestMedia: boolean;
+          mediaType?: string;
+        } = {
           date: post.date,
           content: post.content,
           category: post.category,
