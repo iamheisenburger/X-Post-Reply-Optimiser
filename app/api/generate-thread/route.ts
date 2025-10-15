@@ -160,25 +160,27 @@ TODAY'S METRICS (use these exact numbers):
 
 CHALLENGE GOAL: 3 → 250 followers in 30 days
 
-Write a 5-8 tweet thread reflecting on Day ${challengeDay}. Use the actual wins/lessons/struggles above. Be honest, specific, human. No motivational BS - just real reflection on the day.
+Write a 5-8 tweet thread reflecting on Day ${challengeDay}. Use the actual wins/lessons/struggles above. Be honest, specific, human.
 
-CRITICAL: 
-- Generate between 5-8 tweets (pick what fits the story)
-- Each tweet MUST be separated by a blank line (double line break)
+CRITICAL RULES:
+1. Generate 5-8 tweets TOTAL (not 16, not 20 - just 5-8 substantial tweets)
+2. Each tweet should be 100-200 characters of content (NOT one-liners)
+3. Each tweet MUST be separated by a blank line (double line break)
 
 HOOK (First Tweet):
-Don't use "Day X/30: Started with Y followers..."
-Instead, open with something that grabs attention:
-- A specific moment from today
-- A surprising number or observation
-- Something vulnerable or unexpected
+Professional format: "Day ${challengeDay}/30 Challenge" or "Day ${challengeDay}/30" followed by the main point.
+Make it compelling but professional.
 
 Example structure:
-Tweet 1: Hook - grab attention (NOT "Day X/30...")
-Tweet 2-6: What happened, numbers, lessons, struggles, plans
-Tweet 7-8: Question to audience (if needed)
+Tweet 1: "Day ${challengeDay}/30 Challenge: [compelling observation/metric/moment]"
+Tweet 2: What happened today (context)
+Tweet 3: The actual numbers
+Tweet 4: Key lesson learned
+Tweet 5: What was difficult
+Tweet 6: Tomorrow's plan
+Tweet 7-8: Question to audience (optional)
 
-Each tweet: 100-200 chars. Use real data. Sound like a real person documenting their journey.
+IMPORTANT: Each tweet should be a full thought (100-200 chars), NOT single sentences. Multiple sentences per tweet is fine and encouraged.
 
 MEDIA SUGGESTION (if it makes sense):
 After the thread, add on a new line: MEDIA: [yes/no - if yes, suggest what image]
