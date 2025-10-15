@@ -48,6 +48,7 @@ export default function PostsPage() {
   const markAsPosted = useMutation(api.postGeneration.markPostAsPosted);
   const rejectPost = useMutation(api.postGeneration.rejectPost);
   const deletePost = useMutation(api.postGeneration.deleteGeneratedPost);
+  const addToPostsContext = useMutation(api.contextManagement.addToPostsContext);
 
   // Load existing input if available
   useState(() => {
@@ -116,6 +117,19 @@ export default function PostsPage() {
       }
       
       await saveDailyInput(dailyInputData);
+
+      // Step 1.5: Update posts context for dynamic AI learning
+      await addToPostsContext({
+        date,
+        events: events.filter(e => e.trim()),
+        insights: insights.filter(i => i.trim()),
+        struggles: struggles.filter(s => s.trim()),
+        futurePlans: filteredFuturePlans,
+        metrics: {
+          followers: metrics.followers,
+          subwiseUsers: metrics.subwiseUsers,
+        },
+      });
 
       // Step 2: Call Claude API to generate posts
       const response = await fetch('/api/generate-posts', {

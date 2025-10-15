@@ -48,6 +48,7 @@ export default function ThreadsPage() {
   const markAsPosted = useMutation(api.threadGeneration.markThreadAsPosted);
   const rejectThread = useMutation(api.threadGeneration.rejectThread);
   const deleteThread = useMutation(api.threadGeneration.deleteGeneratedThread);
+  const addToThreadsContext = useMutation(api.contextManagement.addToThreadsContext);
 
   // Load existing input if available
   useEffect(() => {
@@ -105,6 +106,21 @@ export default function ThreadsPage() {
         tomorrowFocus: [],
         futurePlans: futurePlans.filter(p => p.trim()),
         metrics,
+      });
+
+      // Update threads context for dynamic AI learning
+      await addToThreadsContext({
+        date,
+        challengeDay,
+        wins: events.filter(e => e.trim()),
+        lessons: insights.filter(i => i.trim()),
+        struggles: struggles.filter(s => s.trim()),
+        tomorrowFocus: [],
+        futurePlans: futurePlans.filter(p => p.trim()),
+        metrics: {
+          followers: metrics.followers,
+          subwiseUsers: metrics.subwiseUsers,
+        },
       });
 
       // Call API to generate thread
