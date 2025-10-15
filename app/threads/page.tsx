@@ -178,22 +178,25 @@ export default function ThreadsPage() {
 
       const data = await response.json();
 
+      // Parse thread content into tweets (split by double line breaks)
+      const tweets = data.thread.content.split('\n\n').filter((t: string) => t.trim());
+
       // Save generated thread to Convex
       await saveGeneratedThread({
         date: data.thread.date,
-        challengeDay: data.thread.challengeDay,
-        tweets: data.thread.tweets,
-        threadType: data.thread.threadType,
+        challengeDay,
+        tweets,
+        threadType: "daily_reflection",
         algorithmScore: data.thread.algorithmScore,
         scoreBreakdown: data.thread.scoreBreakdown,
         suggestMedia: data.thread.suggestMedia,
-        mediaType: data.thread.mediaType,
-        mediaSuggestions: data.thread.mediaSuggestions,
+        mediaType: data.thread.mediaType || undefined,
+        mediaSuggestions: data.thread.mediaSuggestions ? [data.thread.mediaSuggestions] : undefined,
       });
 
       toast({
         title: "Thread generated!",
-        description: `Generated a ${data.thread.tweets.length}-tweet thread for Day ${challengeDay}`,
+        description: `Generated a ${tweets.length}-tweet thread for Day ${challengeDay}`,
       });
     } catch (error) {
       console.error('Error generating thread:', error);

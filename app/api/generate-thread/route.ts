@@ -23,126 +23,95 @@ interface ThreadInput {
 
 interface GeneratedThread {
   date: string;
-  challengeDay: number;
-  tweets: string[];
-  threadType: string;
+  content: string;
   algorithmScore: number;
   scoreBreakdown: {
     hookStrength: number;
-    narrativeFlow: number;
+    conversationTrigger: number;
     specificity: number;
     authenticity: number;
   };
   suggestMedia: boolean;
   mediaType?: string;
-  mediaSuggestions?: string[];
+  mediaSuggestions?: string;
 }
 
-const SYSTEM_PROMPT = `You are an X (Twitter) thread expert who creates compelling, authentic threads for a 30-day growth challenge.
+const SYSTEM_PROMPT = `You're documenting a 30-day growth challenge with complete transparency. This is your END OF DAY reflection thread.
 
-X ALGORITHM FOR THREADS:
-• First tweet (hook) is CRITICAL - determines if thread succeeds
-• Threads with images/charts: 2x boost
-• Threads with questions throughout: +conversation depth (+13.5x weight)
-• Threads with data/numbers: +credibility signals
-• Personal/vulnerable threads: Higher save rate (people bookmark for later)
-• Story arc: Hook → Struggle → Insight → Action = Maximum retention
+THREAD PURPOSE:
+- Reflect on what happened TODAY
+- Share real metrics and progress
+- Be vulnerable about struggles
+- Document what you learned
+- No fluff, no motivational BS - just raw honesty
 
-THREAD TYPES FOR 30-DAY CHALLENGE:
-1. Progress Update - "Day X: Here's what happened..."
-   - Start with metrics (followers gained, users added)
-   - Include predicted vs actual chart
-   - Share one surprising learning
+WHO YOU ARE:
+- Aspiring pro MMA fighter (currently injured, studying technique)
+- Building SubWise (subscription tracker) from 0 to 100 users
+- Growing 3 → 250 X followers in 30 days
+- Documenting everything: wins, failures, metrics, struggles
 
-2. Lesson Thread - "X days ago I believed Y. Here's what changed..."
-   - Contrarian take or myth busted
-   - Evidence from your experience
-   - Actionable takeaway
+THREAD STRUCTURE (5-7 tweets):
+1. HOOK - Day X update with key metric change
+2. WHAT HAPPENED - Today's events (specific details)
+3. THE NUMBERS - Followers, SubWise users, training time
+4. WHAT I LEARNED - Key insight or lesson
+5. WHAT WAS HARD - Struggle or challenge faced
+6. TOMORROW'S PLAN - What you're going to do next
+7. CALL TO ACTION - Question or invitation to follow journey
 
-3. Behind-the-Scenes - "Building in public is humbling..."
-   - Show vulnerability (failures, setbacks)
-   - Share the messy reality
-   - End with what you're trying next
+STYLE:
+• Direct, conversational, human
+• Use real data - don't make up numbers
+• First person ("I", "my")
+• Short tweets (100-200 chars each)
+• Vulnerable when it's real
+• NO generic advice
+• NO motivational quotes
+• This is YOUR story, not a how-to guide
 
-4. Prediction Analysis - "Tracking my predictions in real-time..."
-   - Show predicted vs actual charts
-   - Analyze what's working/not working
-   - Invite people to follow the journey
+Make it feel like someone documenting their real journey, not a content creator performing.`;
 
-CRITICAL THREAD RULES:
-• Hook MUST grab attention (use numbers, contrarian take, or cliffhanger)
-• Each tweet should be 2-3 sentences max (readability)
-• Include specific data points (builds credibility)
-• Show vulnerability (people connect with authentic struggle)
-• End with invitation to follow the journey or ask questions
-• Suggest where to add visuals (training photo, metrics chart, screenshot)
-
-AUTHENTICITY GUARDRAILS:
-• NEVER fake expertise you don't have
-• ONLY use real numbers from the metrics provided
-• Transparency is your edge: "I'm documenting this publicly"
-• Admit when you're wrong or uncertain
-• Your unique angle: MMA fighter building SaaS products
-
-Your user context:
-- Aspiring pro MMA fighter (practitioner level, not expert)
-- Building SubWise (subscription tracker) to 100 users
-- Currently: 3 → 250 followers in 30 days challenge
-- Documenting everything publicly with predicted vs actual tracking
-- Combining MMA discipline with SaaS building`;
-
-function scoreThread(tweets: string[]): {
+function scoreThread(content: string): {
   algorithmScore: number;
   scoreBreakdown: {
     hookStrength: number;
-    narrativeFlow: number;
+    conversationTrigger: number;
     specificity: number;
     authenticity: number;
   };
 } {
-  const fullThread = tweets.join(' ');
-  const hook = tweets[0];
+  const tweets = content.split('\n\n');
+  const firstTweet = tweets[0] || content.substring(0, 200);
 
-  // Hook strength (first tweet is critical)
-  let hookStrength = 40;
-  if (/\d+/.test(hook)) hookStrength += 20; // Numbers in hook
-  if (/[!?]/.test(hook)) hookStrength += 10; // Punctuation
-  if (/(Day|Week) \d+/.test(hook)) hookStrength += 15; // Progress indicator
-  if (/(Everyone|Most people|They say|I used to think)/.test(hook)) hookStrength += 15; // Contrarian/story signal
+  let hookStrength = 50;
+  if (/Day \d+/.test(firstTweet)) hookStrength += 20;
+  if (/\d+/.test(firstTweet)) hookStrength += 15;
+  if (/[!?]/.test(firstTweet)) hookStrength += 15;
   hookStrength = Math.min(100, hookStrength);
 
-  // Narrative flow (thread coherence)
-  let narrativeFlow = 50;
-  if (tweets.length >= 3) narrativeFlow += 10; // Good length
-  if (tweets.length <= 7) narrativeFlow += 10; // Not too long
-  // Check for question engagement
-  const hasQuestions = tweets.some(t => /\?/.test(t));
-  if (hasQuestions) narrativeFlow += 20;
-  // Check for conclusion/CTA
-  const lastTweet = tweets[tweets.length - 1].toLowerCase();
-  if (/follow|drop|reply|let me know|what do you think/.test(lastTweet)) narrativeFlow += 10;
-  narrativeFlow = Math.min(100, narrativeFlow);
+  let conversationTrigger = 40;
+  if (/\?/.test(content)) conversationTrigger += 25;
+  if (/\b(you|your|anyone)\b/i.test(content)) conversationTrigger += 20;
+  if (/\b(follow|watch|join|track)\b/i.test(content)) conversationTrigger += 15;
+  conversationTrigger = Math.min(100, conversationTrigger);
 
-  // Specificity (numbers/data throughout thread)
   let specificity = 30;
-  const numberMatches = fullThread.match(/\d+/g);
-  if (numberMatches) specificity += Math.min(40, numberMatches.length * 5);
-  if (/\d+[%x]|\$\d+|\d+\s*(users|people|times|days|min|hours|followers)/.test(fullThread)) specificity += 20;
-  if (/\b(I|my|when I|in my)\b/i.test(fullThread)) specificity += 10; // Personal
+  const numberMatches = content.match(/\d+/g);
+  if (numberMatches) specificity += Math.min(50, numberMatches.length * 8);
+  if (/\d+\s*(followers|users|min|hours|days)/.test(content)) specificity += 20;
   specificity = Math.min(100, specificity);
 
-  // Authenticity (vulnerability + personal story)
-  let authenticity = 40;
-  if (/\b(I|my|me)\b/i.test(fullThread)) authenticity += 15; // First person
-  if (/\b(failed|struggle|hard|difficult|challenge|mistake|wrong)\b/i.test(fullThread)) authenticity += 25; // Vulnerability
-  if (/\b(realized|learned|discovered|found|changed)\b/i.test(fullThread)) authenticity += 20; // Growth/insight
+  let authenticity = 50;
+  if (/\b(I|my|me)\b/i.test(content)) authenticity += 15;
+  if (/\b(failed|struggle|hard|difficult|challenge|tired)\b/i.test(content)) authenticity += 20;
+  if (/\b(learned|realized|discovered)\b/i.test(content)) authenticity += 15;
   authenticity = Math.min(100, authenticity);
 
-  // Overall score (weighted for threads)
   const algorithmScore = Math.round(
-    hookStrength * 0.35 + // Hook is even more important for threads
-    narrativeFlow * 0.25 +
-    specificity * 0.20 +
+    hookStrength * 0.35 +
+    conversationTrigger * 0.20 +
+    specificity * 0.25 +
     authenticity * 0.20
   );
 
@@ -150,7 +119,7 @@ function scoreThread(tweets: string[]): {
     algorithmScore,
     scoreBreakdown: {
       hookStrength: Math.round(hookStrength),
-      narrativeFlow: Math.round(narrativeFlow),
+      conversationTrigger: Math.round(conversationTrigger),
       specificity: Math.round(specificity),
       authenticity: Math.round(authenticity),
     },
@@ -158,143 +127,84 @@ function scoreThread(tweets: string[]): {
 }
 
 function buildPrompt(input: ThreadInput): string {
-  const { challengeDay, wins, lessons, struggles, tomorrowFocus, futurePlans, metrics } = input;
+  const { wins, lessons, struggles, tomorrowFocus, futurePlans, metrics, challengeDay } = input;
 
-  const winsList = wins.length > 0 ? wins.map((w, i) => `${i + 1}. ${w}`).join('\n') : "No wins logged";
-  const lessonsList = lessons.length > 0 ? lessons.map((l, i) => `${i + 1}. ${l}`).join('\n') : "No lessons logged";
+  const winsList = wins.length > 0 ? wins.map((w, i) => `${i + 1}. ${w}`).join('\n') : "Nothing yet";
+  const lessonsList = lessons.length > 0 ? lessons.map((l, i) => `${i + 1}. ${l}`).join('\n') : "No lessons yet";
   const strugglesList = struggles.length > 0 ? struggles.map((s, i) => `${i + 1}. ${s}`).join('\n') : "No struggles logged";
-  const tomorrowList = tomorrowFocus.length > 0 ? tomorrowFocus.map((t, i) => `${i + 1}. ${t}`).join('\n') : "No focus set";
-  const futureList = futurePlans.length > 0 ? futurePlans.map((p, i) => `${i + 1}. ${p}`).join('\n') : "No plans set";
+  const tomorrowList = tomorrowFocus.length > 0 ? tomorrowFocus.map((t, i) => `${i + 1}. ${t}`).join('\n') : "Not planned yet";
+  const futureList = futurePlans.length > 0 ? futurePlans.map((p, i) => `${i + 1}. ${p}`).join('\n') : "No future plans";
 
-  const startFollowers = 3;
-  const goalFollowers = 250;
-  const followerProgress = metrics.followers - startFollowers;
-  const progressPercent = Math.round((followerProgress / (goalFollowers - startFollowers)) * 100);
-
-  return `Generate a thread for Day ${challengeDay} of my 30-day growth challenge (0 → 250 followers).
+  return `Generate a thread for Day ${challengeDay} of the 30-day challenge.
 
 TODAY'S WINS:
 ${winsList}
 
-LESSONS LEARNED:
+WHAT I LEARNED:
 ${lessonsList}
 
-STRUGGLES/FAILURES:
+WHAT WAS HARD:
 ${strugglesList}
 
 TOMORROW'S FOCUS:
 ${tomorrowList}
 
-FUTURE PLANS (What I'm building):
+FUTURE PLANS:
 ${futureList}
 
-CURRENT METRICS (Day ${challengeDay}):
-- X Followers: ${metrics.followers} (started at ${startFollowers}, goal: ${goalFollowers})
-- Progress: ${progressPercent}% of the way there
+TODAY'S METRICS (use these exact numbers):
+- X Followers: ${metrics.followers}
 - SubWise Users: ${metrics.subwiseUsers}
 - SubWise MRR: $${metrics.subwiseMRR || 0}
 - Training: ${metrics.trainingMinutes || 0} min
 
-THREAD REQUIREMENTS:
-- Create a 4-6 tweet thread that tells today's story
-- Start with a STRONG hook (use Day ${challengeDay}, specific numbers, or contrarian take)
-- Include the real metrics above (don't make up numbers)
-- Show vulnerability about struggles/failures
-- Share ONE key insight or learning
-- End with what's next or invitation to follow the journey
-- Suggest where to add media (training photo, metrics chart, or screenshot)
-- Keep each tweet under 280 characters
-- Be authentic - this is a real-time experiment
+CHALLENGE GOAL: 3 → 250 followers in 30 days
 
-CHOOSE ONE THREAD TYPE:
-1. Progress Update - If wins/metrics are interesting
-2. Lesson Thread - If you learned something contrarian
-3. Behind-the-Scenes - If struggles/failures tell a good story
-4. Prediction Analysis - If Day ${challengeDay} is a milestone (multiple of 5)
+Write a 5-7 tweet thread reflecting on Day ${challengeDay}. Use the actual wins/lessons/struggles above. Be honest, specific, human. No motivational BS - just real reflection on the day.
 
-OUTPUT FORMAT (MUST FOLLOW EXACTLY):
+FORMAT:
+Write the full thread as one block. Separate tweets with double line breaks.
 
-THREAD TYPE: [progress_update/lesson_thread/bts/prediction_analysis]
+Example structure:
+Tweet 1: Hook - "Day ${challengeDay}: [key metric change]"
+Tweet 2: What went well (wins)
+Tweet 3: The actual numbers
+Tweet 4: What I learned
+Tweet 5: What was difficult
+Tweet 6: Tomorrow's plan
+Tweet 7: Question to audience
 
-TWEET 1:
-[First tweet - the hook]
+Each tweet: 100-200 chars. Use real data. Sound like a real person documenting their journey.
 
-TWEET 2:
-[Second tweet - context/setup]
+MEDIA SUGGESTION (if it makes sense):
+After the thread, add: MEDIA: [yes/no - if yes, suggest what image]
 
-TWEET 3:
-[Third tweet - insight/learning]
-
-TWEET 4:
-[Fourth tweet - what's next/CTA]
-
-TWEET 5 (optional):
-[Fifth tweet if needed]
-
-TWEET 6 (optional):
-[Sixth tweet if needed]
-
-MEDIA SUGGESTIONS:
-[List which tweets should have media and what type: "Tweet 1 - metrics_chart", "Tweet 3 - training_photo", etc.]
-
-Generate the thread now. Be authentic, specific, and compelling.`;
+Keep it authentic.`;
 }
 
-function parseThread(response: string, input: ThreadInput): GeneratedThread {
-  // Extract thread type
-  const typeMatch = response.match(/THREAD TYPE:\s*(\w+)/i);
-  const threadType = typeMatch ? typeMatch[1].toLowerCase() : 'progress_update';
+function parseThread(response: string, date: string): GeneratedThread | null {
+  // Extract thread content (everything before MEDIA line)
+  const mediaMatch = response.match(/MEDIA:\s*(yes|no)(?:\s*-?\s*([^\n]+))?/i);
+  
+  const content = mediaMatch 
+    ? response.substring(0, mediaMatch.index).trim()
+    : response.trim();
 
-  // Extract tweets
-  const tweets: string[] = [];
-  const tweetPattern = /TWEET \d+(?:\s*\(optional\))?:\s*\n(.+?)(?=\n\nTWEET \d+|\n\nMEDIA SUGGESTIONS:|$)/gs;
-  const tweetMatches = [...response.matchAll(tweetPattern)];
+  if (!content) return null;
 
-  for (const match of tweetMatches) {
-    const tweetText = match[1].trim();
-    if (tweetText && !tweetText.startsWith('[') && tweetText.length > 10) {
-      tweets.push(tweetText);
-    }
-  }
+  const hasMedia = mediaMatch ? mediaMatch[1].toLowerCase() === 'yes' : false;
+  const mediaSuggestions = hasMedia && mediaMatch[2] ? mediaMatch[2].trim() : undefined;
+  const mediaType = hasMedia ? 'metrics_screenshot' : undefined;
 
-  // Extract media suggestions
-  const mediaSuggestions: string[] = [];
-  let suggestMedia = false;
-  let mediaType = undefined;
-
-  const mediaMatch = response.match(/MEDIA SUGGESTIONS:\s*\n(.+?)(?=\n\n|$)/s);
-  if (mediaMatch) {
-    const mediaLines = mediaMatch[1].split('\n').filter(line => line.trim() && !line.startsWith('['));
-    if (mediaLines.length > 0) {
-      suggestMedia = true;
-      mediaSuggestions.push(...mediaLines.map(l => l.trim()));
-
-      // Determine primary media type
-      const mediaText = mediaLines.join(' ').toLowerCase();
-      if (mediaText.includes('chart') || mediaText.includes('graph') || mediaText.includes('metrics')) {
-        mediaType = 'metrics_chart';
-      } else if (mediaText.includes('training') || mediaText.includes('photo')) {
-        mediaType = 'training_photo';
-      } else if (mediaText.includes('screenshot')) {
-        mediaType = 'screenshot';
-      } else {
-        mediaType = 'photo';
-      }
-    }
-  }
-
-  // Score the thread
-  const scoring = scoreThread(tweets);
+  const scoring = scoreThread(content);
 
   return {
-    date: input.date,
-    challengeDay: input.challengeDay,
-    tweets,
-    threadType,
+    date,
+    content,
     ...scoring,
-    suggestMedia,
+    suggestMedia: hasMedia,
     mediaType,
-    mediaSuggestions: mediaSuggestions.length > 0 ? mediaSuggestions : undefined,
+    mediaSuggestions,
   };
 }
 
@@ -303,17 +213,16 @@ export async function POST(request: NextRequest) {
     const input: ThreadInput = await request.json();
 
     console.log('🧵 Generating thread for Day', input.challengeDay);
-    console.log('Wins:', input.wins);
-    console.log('Lessons:', input.lessons);
+    console.log('Events:', input.todayEvents);
+    console.log('Insights:', input.todayInsights);
     console.log('Metrics:', input.metrics);
 
-    // Build prompt
     const prompt = buildPrompt(input);
 
-    // Call Claude
+    // Call Claude Sonnet with temp 0.8 for human output
     const message = await anthropic.messages.create({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 3000,
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 2000,
       temperature: 0.8,
       system: SYSTEM_PROMPT,
       messages: [
@@ -327,13 +236,16 @@ export async function POST(request: NextRequest) {
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
     console.log('\n📝 Claude response:', responseText);
 
-    // Parse thread
-    const thread = parseThread(responseText, input);
+    const thread = parseThread(responseText, input.date);
 
-    console.log(`\n✅ Generated thread with ${thread.tweets.length} tweets`);
-    console.log(`  Type: ${thread.threadType}`);
+    if (!thread) {
+      throw new Error('Failed to parse thread from Claude response');
+    }
+
+    console.log('\n✅ Generated thread');
     console.log(`  Score: ${thread.algorithmScore}/100`);
-    console.log(`  Hook: ${thread.tweets[0].substring(0, 80)}...`);
+    console.log(`  Length: ${thread.content.length} chars`);
+    console.log(`  Tweets: ~${thread.content.split('\n\n').length}`);
 
     return NextResponse.json({
       thread,
