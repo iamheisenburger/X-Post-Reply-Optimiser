@@ -213,28 +213,53 @@ Generate the 5 posts now. Use authentic voice, specific data, and variety.`;
 
 function parsePosts(response: string, date: string): GeneratedPost[] {
   const posts: GeneratedPost[] = [];
-  const postPattern = /POST \d+ - CATEGORY: (\w+), TYPE: (\w+):\s*(.+?)\s*MEDIA: (yes|no)(?:\s*-\s*([^\n]+))?/gs;
 
-  const matches = [...response.matchAll(postPattern)];
+  // More flexible regex - matches POST 1, POST 2, etc.
+  const postPattern = /POST\s+\d+\s*-\s*CATEGORY:\s*(\w+),\s*TYPE:\s*([\w_]+):\s*([\s\S]+?)(?=MEDIA:|$)/gi;
+  const mediaPattern = /MEDIA:\s*(yes|no)(?:\s*-\s*([^\n]+))?/gi;
 
-  for (const match of matches) {
+  const postMatches = [...response.matchAll(postPattern)];
+
+  for (const match of postMatches) {
     const category = match[1].toLowerCase();
     const postType = match[2].toLowerCase();
-    const content = match[3].trim();
-    const hasMedia = match[4].toLowerCase() === 'yes';
-    const mediaType = hasMedia ? (match[5] || 'photo').trim() : undefined;
+    const fullContent = match[3].trim();
 
-    const scoring = scorePost(content);
+    // Extract content and media info
+    let content = fullContent;
+    let hasMedia = false;
+    let mediaType: string | undefined;
 
-    posts.push({
-      date,
-      content,
-      category,
-      postType,
-      ...scoring,
-      suggestMedia: hasMedia,
-      mediaType,
-    });
+    // Check for media info after the content
+    const mediaMatch = /MEDIA:\s*(yes|no)(?:\s*-\s*([^\n]+))?/i.exec(fullContent);
+    if (mediaMatch) {
+      // Remove MEDIA line from content
+      content = fullContent.substring(0, mediaMatch.index).trim();
+      hasMedia = mediaMatch[1].toLowerCase() === 'yes';
+      mediaType = hasMedia && mediaMatch[2] ? mediaMatch[2].trim() : hasMedia ? 'photo' : undefined;
+    } else {
+      // Check if MEDIA is on the next line
+      const textAfter = response.substring(match.index + match[0].length, match.index + match[0].length + 50);
+      const nextMediaMatch = /^\s*MEDIA:\s*(yes|no)(?:\s*-\s*([^\n]+))?/i.exec(textAfter);
+      if (nextMediaMatch) {
+        hasMedia = nextMediaMatch[1].toLowerCase() === 'yes';
+        mediaType = hasMedia && nextMediaMatch[2] ? nextMediaMatch[2].trim() : hasMedia ? 'photo' : undefined;
+      }
+    }
+
+    if (content.length > 10) { // Only add if there's actual content
+      const scoring = scorePost(content);
+
+      posts.push({
+        date,
+        content,
+        category,
+        postType,
+        ...scoring,
+        suggestMedia: hasMedia,
+        mediaType,
+      });
+    }
   }
 
   return posts;
