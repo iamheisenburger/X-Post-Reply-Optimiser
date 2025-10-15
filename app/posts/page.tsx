@@ -91,8 +91,7 @@ export default function PostsPage() {
     setGenerating(true);
 
     try {
-      // Skip Convex save for now - directly call API
-      // TODO: Fix saveDailyInput mutation later
+      // TEMP: Skip Convex saves to isolate Claude API issue
 
       // Call API to generate posts
       const response = await fetch('/api/generate-posts', {
@@ -109,17 +108,18 @@ export default function PostsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate posts');
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.details || 'Failed to generate posts');
       }
 
       const data = await response.json();
 
-      // Save generated posts to Convex
-      await saveGeneratedPosts({ posts: data.posts });
+      console.log('Generated posts:', data.posts);
 
       toast({
         title: "Posts generated!",
-        description: `Generated ${data.posts.length} posts for today.`,
+        description: `Generated ${data.posts.length} posts. Check console for output.`,
       });
     } catch (error) {
       console.error('Error generating posts:', error);

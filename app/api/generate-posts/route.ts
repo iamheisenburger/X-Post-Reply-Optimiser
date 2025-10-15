@@ -266,15 +266,27 @@ function parsePosts(response: string, date: string): GeneratedPost[] {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check API key first
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('❌ ANTHROPIC_API_KEY is not set!');
+      return NextResponse.json(
+        { error: 'API key not configured', details: 'ANTHROPIC_API_KEY environment variable is missing' },
+        { status: 500 }
+      );
+    }
+
     const input: DailyInput = await request.json();
 
     console.log('🚀 Generating posts for:', input.date);
     console.log('Events:', input.events);
     console.log('Insights:', input.insights);
     console.log('Metrics:', input.metrics);
+    console.log('✅ API Key present:', process.env.ANTHROPIC_API_KEY.substring(0, 10) + '...');
 
     // Build prompt
     const prompt = buildPrompt(input);
+
+    console.log('📤 Calling Claude API...');
 
     // Call Claude
     const message = await anthropic.messages.create({
@@ -289,6 +301,8 @@ export async function POST(request: NextRequest) {
         },
       ],
     });
+
+    console.log('✅ Claude responded successfully');
 
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
     console.log('\n📝 Claude response:', responseText);

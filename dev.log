@@ -20,3 +20,23 @@ Creating turbopack project {
   testMode: true
 }
  ✓ Ready in 1791ms
+ ○ Compiling /api/generate-posts ...
+ ✓ Compiled /api/generate-posts in 1533ms
+🚀 Generating posts for: 2025-10-15
+Events: [ 'test event' ]
+Insights: [ 'test insight' ]
+Metrics: { followers: 7, subwiseUsers: 0, subwiseMRR: 0, trainingMinutes: 0 }
+Error generating posts: Error: Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted
+    at Anthropic.validateHeaders (src/client.ts:365:11)
+    at Anthropic.buildHeaders (src/client.ts:884:10)
+    at async Anthropic.buildRequest (src/client.ts:832:24)
+    at async Anthropic.makeRequest (src/client.ts:528:35)
+    at async POST (app\api\generate-posts\route.ts:280:21)
+  278 |
+  279 |     // Call Claude
+> 280 |     const message = await anthropic.messages.create({
+      |                     ^
+  281 |       model: "claude-3-5-haiku-20241022",
+  282 |       max_tokens: 2000,
+  283 |       temperature: 0.8,
+ POST /api/generate-posts 500 in 2159ms

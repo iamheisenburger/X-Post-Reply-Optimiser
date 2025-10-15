@@ -44,8 +44,11 @@ export const saveDailyInput = mutation({
         updatedAt: now,
       };
 
-      if (args.futurePlans !== undefined) {
+      if (args.futurePlans !== undefined && args.futurePlans.length > 0) {
         updateData.futurePlans = args.futurePlans;
+      } else if (args.futurePlans !== undefined && args.futurePlans.length === 0) {
+        // Explicitly set empty array
+        updateData.futurePlans = [];
       }
 
       await ctx.db.patch(existing._id, updateData);
@@ -71,8 +74,11 @@ export const saveDailyInput = mutation({
         updatedAt: now,
       };
 
-      if (args.futurePlans !== undefined) {
+      if (args.futurePlans !== undefined && args.futurePlans.length > 0) {
         insertData.futurePlans = args.futurePlans;
+      } else if (args.futurePlans !== undefined && args.futurePlans.length === 0) {
+        // Explicitly set empty array
+        insertData.futurePlans = [];
       }
 
       const id = await ctx.db.insert("dailyInput", insertData);
