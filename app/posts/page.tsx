@@ -273,18 +273,25 @@ export default function PostsPage() {
     });
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "mma": return "bg-red-500";
-      case "subwise": return "bg-blue-500";
-      case "xgrowth": return "bg-purple-500";
-      case "philosophy": return "bg-cyan-500";
-      default: return "bg-gray-500";
+  const getTimingLabel = (timing: string) => {
+    switch (timing) {
+      case "morning": return "🌅 Morning";
+      case "midday": return "☀️ Midday";
+      case "afternoon": return "🌤️ Afternoon";
+      case "late_afternoon": case "lateafternoon": return "🌆 Late Afternoon";
+      case "evening": return "🌙 Evening";
+      default: return timing.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
   };
 
-  const getTypeLabel = (postType: string) => {
-    return postType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const getTopicColor = (topic: string) => {
+    switch (topic) {
+      case "mma": return "bg-red-500/10 text-red-500 border-red-500/20";
+      case "subwise": return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      case "challenge": return "bg-purple-500/10 text-purple-500 border-purple-500/20";
+      case "lesson": return "bg-cyan-500/10 text-cyan-500 border-cyan-500/20";
+      default: return "bg-gray-500/10 text-gray-500 border-gray-500/20";
+    }
   };
 
   return (
@@ -509,11 +516,14 @@ export default function PostsPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center gap-2">
-                        <Badge className={getCategoryColor(post.category)}>
-                          {post.category.toUpperCase()}
+                        <Badge className="bg-purple-500 text-white text-base px-3 py-1">
+                          Post {index + 1}
                         </Badge>
-                        <Badge variant="outline">
-                          {getTypeLabel(post.postType)}
+                        <Badge variant="outline" className="text-sm">
+                          {getTimingLabel(post.postType)}
+                        </Badge>
+                        <Badge variant="outline" className={getTopicColor(post.category)}>
+                          {post.category}
                         </Badge>
                         {post.status === "posted" && (
                           <Badge className="bg-green-500">Posted</Badge>

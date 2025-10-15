@@ -52,12 +52,12 @@ WHO YOU ARE:
 - Documenting EVERYTHING: wins, failures, metrics, struggles
 - No BS, no filters - raw data and real lessons
 
-POST MIX (5 posts):
-1. SubWise progress - actual metrics, what you learned
-2. MMA/training - discipline, technique, injuries, mindset
-3. Philosophy - lessons from training → business
-4. Growth challenge - predicted vs actual, transparency
-5. Wild card - whatever feels authentic today
+POST ORDER (5 posts throughout the day):
+1. MORNING - Start strong (progress update, what you're working on today)
+2. MIDDAY - SubWise progress (metrics, wins, what you shipped)
+3. AFTERNOON - MMA/training (discipline, technique, mindset)
+4. LATE AFTERNOON - Lesson learned (insight from building/training)
+5. EVENING - Engagement post (question, reflection, vulnerability)
 
 STYLE:
 • Short and punchy (under 280 chars)
@@ -157,29 +157,31 @@ CURRENT METRICS (real numbers, don't change these):
 
 GOAL: 3 → 250 followers in 30 days
 
-Generate 5 posts. Mix SubWise, MMA, philosophy, growth challenge. Keep it real, use actual data, sound human.
+Generate 5 posts in posting order (morning → evening). Use actual data, sound human, mix topics naturally.
 
-OUTPUT FORMAT:
+OUTPUT FORMAT (MUST BE EXACTLY 5 POSTS):
 
-POST 1 - CATEGORY: [mma/subwise/xgrowth/philosophy], TYPE: [progress/contrarian/lesson/thread_starter/bts]:
+POST 1 - TIMING: morning, TOPIC: [subwise/mma/challenge/lesson]:
 [The actual tweet text]
 MEDIA: [yes/no - if yes, say what like "training_photo" or "metrics_screenshot"]
 
-POST 2 - CATEGORY: [category], TYPE: [type]:
+POST 2 - TIMING: midday, TOPIC: [subwise/mma/challenge/lesson]:
 [Tweet text]
 MEDIA: [yes/no]
 
-POST 3 - CATEGORY: [category], TYPE: [type]:
+POST 3 - TIMING: afternoon, TOPIC: [subwise/mma/challenge/lesson]:
 [Tweet text]
 MEDIA: [yes/no]
 
-POST 4 - CATEGORY: [category], TYPE: [type]:
+POST 4 - TIMING: late_afternoon, TOPIC: [subwise/mma/challenge/lesson]:
 [Tweet text]
 MEDIA: [yes/no]
 
-POST 5 - CATEGORY: [category], TYPE: [type]:
+POST 5 - TIMING: evening, TOPIC: [subwise/mma/challenge/lesson]:
 [Tweet text]
 MEDIA: [yes/no]
+
+IMPORTANT: Generate ALL 5 posts. Don't skip any.
 
 Keep it real:
 - Use TODAY'S actual metrics (don't invent numbers)
@@ -194,14 +196,14 @@ Keep it real:
 function parsePosts(response: string, date: string): GeneratedPost[] {
   const posts: GeneratedPost[] = [];
   
-  // More flexible regex to handle variations
-  const postPattern = /POST \d+ - CATEGORY:\s*([^,]+),\s*TYPE:\s*([^:]+):\s*(.+?)\s*MEDIA:\s*(yes|no)(?:\s*-?\s*([^\n]+))?/gis;
+  // Parse with TIMING and TOPIC
+  const postPattern = /POST \d+ - TIMING:\s*([^,]+),\s*TOPIC:\s*([^:]+):\s*(.+?)\s*MEDIA:\s*(yes|no)(?:\s*-?\s*([^\n]+))?/gis;
 
   const matches = [...response.matchAll(postPattern)];
 
   for (const match of matches) {
-    const category = match[1].trim().toLowerCase().replace(/\s+/g, '');
-    const postType = match[2].trim().toLowerCase().replace(/\s+/g, '');
+    const timing = match[1].trim().toLowerCase().replace(/\s+/g, '');
+    const topic = match[2].trim().toLowerCase().replace(/\s+/g, '');
     const content = match[3].trim();
     const hasMedia = match[4].toLowerCase() === 'yes';
     const mediaType = hasMedia && match[5] ? match[5].trim() : undefined;
@@ -211,8 +213,8 @@ function parsePosts(response: string, date: string): GeneratedPost[] {
     posts.push({
       date,
       content,
-      category,
-      postType,
+      category: topic, // Store topic as category for compatibility
+      postType: timing, // Store timing as postType
       ...scoring,
       suggestMedia: hasMedia,
       mediaType,

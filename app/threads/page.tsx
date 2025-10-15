@@ -16,11 +16,10 @@ export default function ThreadsPage() {
   const [date] = useState(() => new Date().toISOString().split('T')[0]);
   const [generating, setGenerating] = useState(false);
 
-  // Form state
-  const [wins, setWins] = useState<string[]>([""]);
-  const [lessons, setLessons] = useState<string[]>([""]);
+  // Form state - same as posts page
+  const [events, setEvents] = useState<string[]>([""]);
+  const [insights, setInsights] = useState<string[]>([""]);
   const [struggles, setStruggles] = useState<string[]>([""]);
-  const [tomorrowFocus, setTomorrowFocus] = useState<string[]>([""]);
   const [futurePlans, setFuturePlans] = useState<string[]>([""]);
   const [metrics, setMetrics] = useState({
     followers: 3,
@@ -29,7 +28,6 @@ export default function ThreadsPage() {
     trainingMinutes: 0,
   });
   const [challengeDay, setChallengeDay] = useState(1);
-  const [challengeStartDate, setChallengeStartDate] = useState<string>("");
 
   // UI state
   const [editingTweetIndex, setEditingTweetIndex] = useState<number | null>(null);
@@ -41,7 +39,7 @@ export default function ThreadsPage() {
   // Queries
   const todayInput = useQuery(api.threadGeneration.getTodayThreadInput);
   const generatedThread = useQuery(api.threadGeneration.getTodayGeneratedThread);
-  const savedChallengeStartDate = useQuery(api.threadGeneration.getChallengeStartDate);
+  const savedChallengeStartDate = useQuery(api.personalContext.getChallengeStartDate);
 
   // Mutations
   const saveThreadInput = useMutation(api.threadGeneration.saveThreadInput);
@@ -51,12 +49,10 @@ export default function ThreadsPage() {
   const markAsPosted = useMutation(api.threadGeneration.markThreadAsPosted);
   const rejectThread = useMutation(api.threadGeneration.rejectThread);
   const deleteThread = useMutation(api.threadGeneration.deleteGeneratedThread);
-  const setChallengeStart = useMutation(api.threadGeneration.setChallengeStartDate);
 
-  // Calculate challenge day from start date
+  // Calculate challenge day from start date (shared with posts page)
   useEffect(() => {
     if (savedChallengeStartDate) {
-      setChallengeStartDate(savedChallengeStartDate);
       const start = new Date(savedChallengeStartDate);
       const today = new Date(date);
       const daysDiff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -67,10 +63,9 @@ export default function ThreadsPage() {
   // Load existing input if available
   useEffect(() => {
     if (todayInput) {
-      setWins(todayInput.wins.length > 0 ? todayInput.wins : [""]);
-      setLessons(todayInput.lessons.length > 0 ? todayInput.lessons : [""]);
+      setEvents(todayInput.wins.length > 0 ? todayInput.wins : [""]);
+      setInsights(todayInput.lessons.length > 0 ? todayInput.lessons : [""]);
       setStruggles(todayInput.struggles.length > 0 ? todayInput.struggles : [""]);
-      setTomorrowFocus(todayInput.tomorrowFocus.length > 0 ? todayInput.tomorrowFocus : [""]);
       setFuturePlans(todayInput.futurePlans.length > 0 ? todayInput.futurePlans : [""]);
       setMetrics({
         followers: todayInput.metrics.followers,
@@ -81,32 +76,6 @@ export default function ThreadsPage() {
       setChallengeDay(todayInput.challengeDay);
     }
   }, [todayInput]);
-
-  const handleSetChallengeStartDate = async () => {
-    if (!challengeStartDate) {
-      toast({
-        title: "Error",
-        description: "Please enter a start date",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await setChallengeStart({ startDate: challengeStartDate });
-      toast({
-        title: "Challenge start date set!",
-        description: `Your challenge started on ${challengeStartDate}`,
-      });
-    } catch (error) {
-      console.error('Error setting start date:', error);
-      toast({
-        title: "Error",
-        description: "Failed to set start date",
-        variant: "destructive",
-      });
-    }
-  };
 
   const addField = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
     setter(prev => [...prev, ""]);
@@ -132,26 +101,17 @@ export default function ThreadsPage() {
   };
 
   const handleGenerateThread = async () => {
-    if (!savedChallengeStartDate) {
-      toast({
-        title: "Set challenge start date first",
-        description: "Please set your challenge start date before generating threads",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setGenerating(true);
 
     try {
-      // Save thread input
+      // Save thread input (using wins/lessons naming for Convex compatibility)
       await saveThreadInput({
         date,
         challengeDay,
-        wins: wins.filter(w => w.trim()),
-        lessons: lessons.filter(l => l.trim()),
+        wins: events.filter(e => e.trim()),
+        lessons: insights.filter(i => i.trim()),
         struggles: struggles.filter(s => s.trim()),
-        tomorrowFocus: tomorrowFocus.filter(t => t.trim()),
+        tomorrowFocus: [],
         futurePlans: futurePlans.filter(p => p.trim()),
         metrics,
       });
@@ -163,10 +123,10 @@ export default function ThreadsPage() {
         body: JSON.stringify({
           date,
           challengeDay,
-          wins: wins.filter(w => w.trim()),
-          lessons: lessons.filter(l => l.trim()),
+          wins: events.filter(e => e.trim()),
+          lessons: insights.filter(i => i.trim()),
           struggles: struggles.filter(s => s.trim()),
-          tomorrowFocus: tomorrowFocus.filter(t => t.trim()),
+          tomorrowFocus: [],
           futurePlans: futurePlans.filter(p => p.trim()),
           metrics,
         }),
@@ -318,37 +278,8 @@ export default function ThreadsPage() {
         </p>
       </div>
 
-      {/* Challenge Setup */}
-      {!savedChallengeStartDate && (
-        <Card className="mb-8 border-purple-500">
-          <CardHeader>
-            <CardTitle>Set Challenge Start Date</CardTitle>
-            <CardDescription>
-              When did you start your 30-day challenge? This will help track your progress.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={challengeStartDate}
-                  onChange={(e) => setChallengeStartDate(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <Button onClick={handleSetChallengeStartDate} className="bg-purple-500 hover:bg-purple-600">
-                Set Start Date
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Daily Input Form */}
-      {savedChallengeStartDate && (
+      {savedChallengeStartDate ? (
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Day {challengeDay} - {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</CardTitle>
@@ -404,55 +335,55 @@ export default function ThreadsPage() {
               </div>
             </div>
 
-            {/* Wins */}
+            {/* Events */}
             <div>
-              <Label className="text-base font-semibold mb-3 block">Today&apos;s Wins (What went well?)</Label>
-              {wins.map((win, index) => (
+              <Label className="text-base font-semibold mb-3 block">Events (What happened?)</Label>
+              {events.map((event, index) => (
                 <div key={index} className="flex gap-2 mb-2">
                   <Input
-                    value={win}
-                    onChange={(e) => updateField(setWins, index, e.target.value)}
-                    placeholder="e.g., Got 5 new followers, Finished analytics dashboard"
+                    value={event}
+                    onChange={(e) => updateField(setEvents, index, e.target.value)}
+                    placeholder="e.g., Trained 90 min BJJ, Got 2 new SubWise signups"
                   />
-                  {wins.length > 1 && (
+                  {events.length > 1 && (
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => removeField(setWins, index)}
+                      onClick={() => removeField(setEvents, index)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={() => addField(setWins)} className="mt-2">
-                + Add Win
+              <Button variant="outline" size="sm" onClick={() => addField(setEvents)} className="mt-2">
+                + Add Event
               </Button>
             </div>
 
-            {/* Lessons */}
+            {/* Insights */}
             <div>
-              <Label className="text-base font-semibold mb-3 block">Lessons Learned (What did you discover?)</Label>
-              {lessons.map((lesson, index) => (
+              <Label className="text-base font-semibold mb-3 block">Insights (What did you learn?)</Label>
+              {insights.map((insight, index) => (
                 <div key={index} className="flex gap-2 mb-2">
                   <Input
-                    value={lesson}
-                    onChange={(e) => updateField(setLessons, index, e.target.value)}
-                    placeholder="e.g., Consistency beats intensity, Early replies drive engagement"
+                    value={insight}
+                    onChange={(e) => updateField(setInsights, index, e.target.value)}
+                    placeholder="e.g., Realized async processing > cron jobs, Consistency beats intensity"
                   />
-                  {lessons.length > 1 && (
+                  {insights.length > 1 && (
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => removeField(setLessons, index)}
+                      onClick={() => removeField(setInsights, index)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={() => addField(setLessons)} className="mt-2">
-                + Add Lesson
+              <Button variant="outline" size="sm" onClick={() => addField(setInsights)} className="mt-2">
+                + Add Insight
               </Button>
             </div>
 
@@ -479,32 +410,6 @@ export default function ThreadsPage() {
               ))}
               <Button variant="outline" size="sm" onClick={() => addField(setStruggles)} className="mt-2">
                 + Add Struggle
-              </Button>
-            </div>
-
-            {/* Tomorrow's Focus */}
-            <div>
-              <Label className="text-base font-semibold mb-3 block">Tomorrow&apos;s Focus (What are you working on next?)</Label>
-              {tomorrowFocus.map((focus, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <Input
-                    value={focus}
-                    onChange={(e) => updateField(setTomorrowFocus, index, e.target.value)}
-                    placeholder="e.g., Ship user dashboard, Train 90 min BJJ"
-                  />
-                  {tomorrowFocus.length > 1 && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeField(setTomorrowFocus, index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={() => addField(setTomorrowFocus)} className="mt-2">
-                + Add Focus
               </Button>
             </div>
 
@@ -553,6 +458,15 @@ export default function ThreadsPage() {
               )}
             </Button>
           </CardContent>
+        </Card>
+      ) : (
+        <Card className="mb-8 border-yellow-500">
+          <CardHeader>
+            <CardTitle>Set Challenge Start Date First</CardTitle>
+            <CardDescription>
+              Go to the Posts page and set your challenge start date before generating threads.
+            </CardDescription>
+          </CardHeader>
         </Card>
       )}
 
