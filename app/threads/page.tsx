@@ -27,7 +27,7 @@ export default function ThreadsPage() {
     subwiseMRR: 0,
     trainingMinutes: 0,
   });
-  const [challengeDay, setChallengeDay] = useState(1);
+  const [challengeDay, setChallengeDay] = useState<number>(1);
 
   // UI state
   const [editingTweetIndex, setEditingTweetIndex] = useState<number | null>(null);
@@ -39,7 +39,6 @@ export default function ThreadsPage() {
   // Queries
   const todayInput = useQuery(api.threadGeneration.getTodayThreadInput);
   const generatedThread = useQuery(api.threadGeneration.getTodayGeneratedThread);
-  const savedChallengeStartDate = useQuery(api.threadGeneration.getChallengeStartDate);
 
   // Mutations
   const saveThreadInput = useMutation(api.threadGeneration.saveThreadInput);
@@ -49,16 +48,6 @@ export default function ThreadsPage() {
   const markAsPosted = useMutation(api.threadGeneration.markThreadAsPosted);
   const rejectThread = useMutation(api.threadGeneration.rejectThread);
   const deleteThread = useMutation(api.threadGeneration.deleteGeneratedThread);
-
-  // Calculate challenge day from start date (shared with posts page)
-  useEffect(() => {
-    if (savedChallengeStartDate) {
-      const start = new Date(savedChallengeStartDate);
-      const today = new Date(date);
-      const daysDiff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      setChallengeDay(Math.max(1, daysDiff));
-    }
-  }, [savedChallengeStartDate, date]);
 
   // Load existing input if available
   useEffect(() => {
@@ -73,7 +62,9 @@ export default function ThreadsPage() {
         subwiseMRR: todayInput.metrics.subwiseMRR || 0,
         trainingMinutes: todayInput.metrics.trainingMinutes || 0,
       });
-      setChallengeDay(todayInput.challengeDay);
+      if (todayInput.challengeDay) {
+        setChallengeDay(todayInput.challengeDay);
+      }
     }
   }, [todayInput]);
 
@@ -281,15 +272,28 @@ export default function ThreadsPage() {
       {/* Daily Input Form */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Day {challengeDay} - {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</CardTitle>
+          <CardTitle>{new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</CardTitle>
           <CardDescription>
             Tell me about your day. I&apos;ll generate a compelling thread for your challenge.
           </CardDescription>
         </CardHeader>
           <CardContent className="space-y-6">
+            {/* Challenge Day */}
+            <div>
+              <Label htmlFor="challengeDay" className="text-base font-semibold mb-3 block">Challenge Day</Label>
+              <Input
+                id="challengeDay"
+                type="number"
+                value={challengeDay}
+                onChange={(e) => setChallengeDay(parseInt(e.target.value) || 1)}
+                className="max-w-[200px]"
+                placeholder="What day of the challenge are you on?"
+              />
+            </div>
+
             {/* Metrics */}
             <div>
-              <Label className="text-base font-semibold mb-3 block">Current Metrics (Day {challengeDay})</Label>
+              <Label className="text-base font-semibold mb-3 block">Current Metrics</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="followers" className="text-sm">X Followers</Label>

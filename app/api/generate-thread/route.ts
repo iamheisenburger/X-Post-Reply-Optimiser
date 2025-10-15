@@ -162,8 +162,17 @@ CHALLENGE GOAL: 3 → 250 followers in 30 days
 
 Write a 5-7 tweet thread reflecting on Day ${challengeDay}. Use the actual wins/lessons/struggles above. Be honest, specific, human. No motivational BS - just real reflection on the day.
 
+CRITICAL: Each tweet MUST be separated by a blank line (double line break).
+
 FORMAT:
-Write the full thread as one block. Separate tweets with double line breaks.
+Tweet 1
+[content]
+
+Tweet 2
+[content]
+
+Tweet 3
+[content]
 
 Example structure:
 Tweet 1: Hook - "Day ${challengeDay}: [key metric change]"
@@ -177,9 +186,9 @@ Tweet 7: Question to audience
 Each tweet: 100-200 chars. Use real data. Sound like a real person documenting their journey.
 
 MEDIA SUGGESTION (if it makes sense):
-After the thread, add: MEDIA: [yes/no - if yes, suggest what image]
+After the thread, add on a new line: MEDIA: [yes/no - if yes, suggest what image]
 
-Keep it authentic.`;
+Keep it authentic. Remember: blank line between each tweet!`;
 }
 
 function parseThread(response: string, date: string): GeneratedThread | null {

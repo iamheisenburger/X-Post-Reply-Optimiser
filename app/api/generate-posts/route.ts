@@ -200,25 +200,37 @@ Keep it real:
 function parsePosts(response: string, date: string): GeneratedPost[] {
   const posts: GeneratedPost[] = [];
   
-  // Parse with TIMING and TOPIC
-  const postPattern = /POST \d+ - TIMING:\s*([^,]+),\s*TOPIC:\s*([^:]+):\s*(.+?)\s*MEDIA:\s*(yes|no)(?:\s*-?\s*([^\n]+))?/gis;
-
-  const matches = [...response.matchAll(postPattern)];
-
-  for (const match of matches) {
-    const timing = match[1].trim().toLowerCase().replace(/\s+/g, '');
-    const topic = match[2].trim().toLowerCase().replace(/\s+/g, '');
-    const content = match[3].trim();
-    const hasMedia = match[4].toLowerCase() === 'yes';
-    const mediaType = hasMedia && match[5] ? match[5].trim() : undefined;
+  // Split by POST markers first
+  const postBlocks = response.split(/POST \d+ - TIMING:/i);
+  
+  for (let i = 1; i < postBlocks.length; i++) { // Skip first empty block
+    const block = postBlocks[i];
+    
+    // Extract timing, topic, content, media
+    const timingMatch = block.match(/^\s*([^,]+),\s*TOPIC:/i);
+    const topicMatch = block.match(/TOPIC:\s*([^:]+):/i);
+    const mediaMatch = block.match(/MEDIA:\s*(yes|no)(?:\s*-?\s*([^\n]+))?/i);
+    
+    if (!timingMatch || !topicMatch || !mediaMatch) continue;
+    
+    const timing = timingMatch[1].trim().toLowerCase().replace(/\s+/g, '');
+    const topic = topicMatch[1].trim().toLowerCase().replace(/\s+/g, '');
+    
+    // Extract content between topic line and MEDIA line
+    const contentStart = block.indexOf(':', block.indexOf('TOPIC:')) + 1;
+    const contentEnd = block.indexOf('MEDIA:');
+    const content = block.substring(contentStart, contentEnd).trim();
+    
+    const hasMedia = mediaMatch[1].toLowerCase() === 'yes';
+    const mediaType = hasMedia && mediaMatch[2] ? mediaMatch[2].trim() : undefined;
 
     const scoring = scorePost(content);
 
     posts.push({
       date,
       content,
-      category: topic, // Store topic as category for compatibility
-      postType: timing, // Store timing as postType
+      category: topic,
+      postType: timing,
       ...scoring,
       suggestMedia: hasMedia,
       mediaType,
