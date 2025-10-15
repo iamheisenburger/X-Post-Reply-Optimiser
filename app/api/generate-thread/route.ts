@@ -193,7 +193,7 @@ function parseThread(response: string, date: string): GeneratedThread | null {
   if (!content) return null;
 
   const hasMedia = mediaMatch ? mediaMatch[1].toLowerCase() === 'yes' : false;
-  const mediaSuggestions = hasMedia && mediaMatch[2] ? mediaMatch[2].trim() : undefined;
+  const mediaSuggestions = hasMedia && mediaMatch && mediaMatch[2] ? mediaMatch[2].trim() : undefined;
   const mediaType = hasMedia ? 'metrics_screenshot' : undefined;
 
   const scoring = scoreThread(content);
@@ -213,15 +213,15 @@ export async function POST(request: NextRequest) {
     const input: ThreadInput = await request.json();
 
     console.log('🧵 Generating thread for Day', input.challengeDay);
-    console.log('Events:', input.todayEvents);
-    console.log('Insights:', input.todayInsights);
+    console.log('Wins:', input.wins);
+    console.log('Lessons:', input.lessons);
     console.log('Metrics:', input.metrics);
 
     const prompt = buildPrompt(input);
 
-    // Call Claude Sonnet with temp 0.8 for human output
+    // Call Claude Sonnet 4.5 (latest) with temp 0.8 for human output
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 2000,
       temperature: 0.8,
       system: SYSTEM_PROMPT,

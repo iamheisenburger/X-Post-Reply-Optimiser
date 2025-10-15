@@ -233,9 +233,9 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildPrompt(input);
 
-    // Call Claude Sonnet with higher temperature for more human output
+    // Call Claude Sonnet 4.5 (latest) with higher temperature for more human output
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 2000,
       temperature: 0.8,
       system: SYSTEM_PROMPT,
