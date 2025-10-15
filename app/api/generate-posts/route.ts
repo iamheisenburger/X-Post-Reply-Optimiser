@@ -273,6 +273,20 @@ export async function POST(request: NextRequest) {
     const posts = parsePosts(responseText, input.date);
 
     console.log(`\n✅ Generated ${posts.length} posts`);
+
+    if (posts.length === 0) {
+      console.error('❌ No posts were parsed from response!');
+      console.error('Response text:', responseText);
+      return NextResponse.json(
+        {
+          error: 'Failed to parse posts from AI response',
+          details: 'AI returned text but posts could not be extracted. Check format.',
+          rawResponse: responseText.substring(0, 500)
+        },
+        { status: 500 }
+      );
+    }
+
     posts.forEach((post, i) => {
       console.log(`\nPost ${i + 1}:`);
       console.log(`  Category: ${post.category}`);
