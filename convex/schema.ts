@@ -321,5 +321,70 @@ export default defineSchema({
     .index("by_date", ["date"])
     .index("by_status", ["status"])
     .index("by_challenge_day", ["challengeDay"]),
+
+  // Posts Context (Accumulated context for general post generation)
+  postsContext: defineTable({
+    key: v.string(), // "main" - single record
+    // Base context from Twitter profile
+    baseProfile: v.object({
+      bio: v.string(),
+      currentGoals: v.array(v.string()),
+      interests: v.array(v.string()),
+      projects: v.array(v.string()),
+    }),
+    // Recent accumulated inputs (last 7 days worth of data)
+    recentInputs: v.array(v.object({
+      date: v.string(),
+      events: v.array(v.string()),
+      insights: v.array(v.string()),
+      struggles: v.array(v.string()),
+      futurePlans: v.array(v.string()),
+      metrics: v.object({
+        followers: v.number(),
+        subwiseUsers: v.number(),
+      }),
+    })),
+    // Summary of older context (days 8-30, condensed)
+    historicalSummary: v.optional(v.string()),
+    lastUpdated: v.number(),
+  }).index("by_key", ["key"]),
+
+  // Threads Context (Accumulated context for 30-day challenge threads)
+  threadsContext: defineTable({
+    key: v.string(), // "main" - single record
+    // Challenge overview
+    challengeInfo: v.object({
+      startDate: v.string(),
+      goal: v.string(), // "3 → 250 followers in 30 days"
+      currentDay: v.number(),
+    }),
+    // Recent daily reflections (last 7 days)
+    recentReflections: v.array(v.object({
+      date: v.string(),
+      challengeDay: v.number(),
+      wins: v.array(v.string()),
+      lessons: v.array(v.string()),
+      struggles: v.array(v.string()),
+      tomorrowFocus: v.array(v.string()),
+      futurePlans: v.array(v.string()),
+      metrics: v.object({
+        followers: v.number(),
+        subwiseUsers: v.number(),
+      }),
+    })),
+    // Key milestones and learnings (condensed from older days)
+    keyMilestones: v.array(v.object({
+      day: v.number(),
+      description: v.string(),
+      impact: v.string(),
+    })),
+    // Pattern insights (what's working/not working)
+    patterns: v.optional(v.object({
+      whatWorks: v.array(v.string()),
+      whatDoesnt: v.array(v.string()),
+      surprises: v.array(v.string()),
+    })),
+    lastUpdated: v.number(),
+  }).index("by_key", ["key"]),
 });
 

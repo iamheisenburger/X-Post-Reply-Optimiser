@@ -92,12 +92,13 @@ export default function PostsPage() {
 
     try {
       // Save daily input
+      const filteredFuturePlans = futurePlans.filter(p => p.trim());
       await saveDailyInput({
         date,
         events: events.filter(e => e.trim()),
         insights: insights.filter(i => i.trim()),
         struggles: struggles.filter(s => s.trim()),
-        futurePlans: futurePlans.filter(p => p.trim()),
+        futurePlans: filteredFuturePlans.length > 0 ? filteredFuturePlans : undefined,
         metrics,
       });
 
