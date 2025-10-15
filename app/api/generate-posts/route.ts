@@ -301,12 +301,16 @@ export async function POST(request: NextRequest) {
 
     if (posts.length === 0) {
       console.error('❌ No posts were parsed from response!');
-      console.error('Response text:', responseText);
+      console.error('Full response text:', responseText);
+      console.error('Response length:', responseText.length);
+      console.error('First 500 chars:', responseText.substring(0, 500));
+
       return NextResponse.json(
         {
           error: 'Failed to parse posts from AI response',
-          details: 'AI returned text but posts could not be extracted. Check format.',
-          rawResponse: responseText.substring(0, 500)
+          details: `AI returned ${responseText.length} chars but posts could not be extracted. Check if output format matches expected template.`,
+          rawResponse: responseText.substring(0, 1000), // Show more of the response
+          expectedFormat: 'POST 1 - CATEGORY: mma, TYPE: progress:\\n[content]\\nMEDIA: yes/no'
         },
         { status: 500 }
       );
