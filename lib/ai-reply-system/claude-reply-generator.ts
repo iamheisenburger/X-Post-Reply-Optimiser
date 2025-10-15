@@ -355,6 +355,13 @@ REPLY REQUIREMENTS:
 - Start each with @${creator.username}
 - Keep under 280 characters each
 
+🚨 CRITICAL AUTHENTICITY RULES:
+- DO NOT invent fake statistics, studies, or research ("Analyzed 47 logs", "2.1x faster", etc.)
+- DO NOT claim experiences you don't have ("When I hit 10K MRR", "After 2 years", etc.)
+- ONLY use real data: X algorithm weights (75x, 13.5x), current metrics (3 followers, 0 users)
+- If strategy needs data you don't have → ASK A GENUINE QUESTION INSTEAD
+- BE CURIOUS, NOT FAKE EXPERT
+
 🚨 FORMAT ENFORCEMENT (X spam detection watches for patterns):
 REPLY 1 using ${strategy.primary.toUpperCase().replace(/_/g, ' ')}:
 ${strategy.primary === 'pure_curiosity' || strategy.primary === 'practical_application' ? '→ MUST end with question mark (?)' : strategy.primary === 'devils_advocate' || strategy.primary === 'provide_evidence' ? '→ MUST end with period (.) - NO question mark' : '→ Can be statement OR question'}

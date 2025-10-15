@@ -269,12 +269,15 @@ Example 1: "This also explains why [related pattern]. The [their concept] connec
 Example 2: "Plus the [related aspect] amplifies this. Have you seen it work with [adjacent case]?"`,
 
     provide_evidence: `
-PROVIDE EVIDENCE - Share data, research, or specific pattern (NO question)
-- Support OR challenge their claim with concrete evidence
-- Use numbers, percentages, or specific observations
-- No personal story unless it includes hard data
-Example 1: "I've tracked this across 40+ accounts - replies with [feature] get 3.2x more author responses."
-Example 2: "The data actually shows opposite: [stat] in [study]. Though your point about [X] still holds."`,
+PROVIDE EVIDENCE - Share ONLY real data you actually have (NO made-up stats!)
+- 🚨 CRITICAL: DO NOT invent fake studies, metrics, or research
+- ONLY use data from your authentic context:
+  - X algorithm weights (75x author reply, 13.5x conversation) - you studied the actual open-source code
+  - Your current metrics (3 followers, 0 users, 0 MRR)
+- If you don't have data → Switch to PURE CURIOSITY and ask genuine question instead
+- NO phrases like "I've tracked", "I analyzed", "Studies show" unless TRUE
+Example 1: "The X algorithm weighs author replies 75x higher than likes - I studied the open-source code. Does that change your reply strategy?"
+Example 2: "I'm at 0 users building SubWise - seeing this exact pattern in my early stage. What broke you through to first 10?"`,
 
     personal_crossover: `
 PERSONAL CROSSOVER - Connect your authentic experience with specificity

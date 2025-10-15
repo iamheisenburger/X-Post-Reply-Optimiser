@@ -76,6 +76,30 @@ const FAKE_EXPERTISE_PATTERNS = [
   },
 ];
 
+// Catch FAKE research/studies (NEW - catching "Analyzed 47 logs" type claims)
+const FAKE_RESEARCH_PATTERNS = [
+  {
+    pattern: /\b(analyzed|tracked|studied|researched|tested|examined)\s+\d+/gi,
+    severity: 'critical' as const,
+    fix: 'BE HONEST: You haven\'t done this research! Either ask a genuine question OR reference the ONE study you did: "I studied X\'s open-source algorithm..."'
+  },
+  {
+    pattern: /\b(across|over|from)\s+\d+\+?\s*(accounts|users|companies|builds|projects|cases|logs)/gi,
+    severity: 'critical' as const,
+    fix: 'BE HONEST: You haven\'t tracked multiple accounts/projects! Ask: "Have you seen this pattern in your own data?"'
+  },
+  {
+    pattern: /\b(data shows?|research shows?|studies show|analysis reveals?)\b/gi,
+    severity: 'critical' as const,
+    fix: 'BE HONEST: Don\'t cite fake research! Either ask a question OR reference the ONE thing you studied: X algorithm weights'
+  },
+  {
+    pattern: /\b\d+\.?\d*x\s*(faster|more|better|higher|lower)/gi,
+    severity: 'critical' as const,
+    fix: 'BE HONEST: Don\'t invent multipliers like "2.1x faster"! You don\'t have this data. Ask a genuine question instead.'
+  },
+];
+
 // Catch VAGUE language (these are warnings, not critical)
 const VAGUE_PATTERNS = [
   {
@@ -128,6 +152,26 @@ export function validateAuthenticSpecificity(reply: string, iteration: number = 
             type: 'fake_story',
             text: match,
             explanation: `🚨 FAKE STORY: "${match}" - This never happened to you!`,
+            fix,
+            severity
+          });
+        }
+      });
+    }
+  });
+
+  // CRITICAL: Check for FAKE research/studies
+  FAKE_RESEARCH_PATTERNS.forEach(({ pattern, severity, fix }) => {
+    const matches = reply.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        // Exception: "studied X algorithm" or "studied the open-source" (actually did this!)
+        const isRealStudy = /studied.*x.*algorithm|studied.*open.*source/gi.test(reply);
+        if (!isRealStudy) {
+          issues.push({
+            type: 'fake_metric',
+            text: match,
+            explanation: `🚨 FAKE RESEARCH: "${match}" - You haven't done this analysis!`,
             fix,
             severity
           });
