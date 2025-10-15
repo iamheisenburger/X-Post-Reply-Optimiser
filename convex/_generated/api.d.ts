@@ -11,6 +11,7 @@
 import type * as analytics from "../analytics.js";
 import type * as contextManagement from "../contextManagement.js";
 import type * as creators from "../creators.js";
+import type * as migrations_addFuturePlansField from "../migrations/addFuturePlansField.js";
 import type * as personalContext from "../personalContext.js";
 import type * as postGeneration from "../postGeneration.js";
 import type * as posts from "../posts.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   contextManagement: typeof contextManagement;
   creators: typeof creators;
+  "migrations/addFuturePlansField": typeof migrations_addFuturePlansField;
   personalContext: typeof personalContext;
   postGeneration: typeof postGeneration;
   posts: typeof posts;

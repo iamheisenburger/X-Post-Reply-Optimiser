@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { validatePostBatch, getImprovementInstructions } from "@/lib/post-quality-validator";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
+
+const MAX_ATTEMPTS = 3; // Iterate up to 3 times for quality
 
 interface DailyInput {
   date: string;
@@ -277,69 +280,147 @@ export async function POST(request: NextRequest) {
 
     const input: DailyInput = await request.json();
 
-    console.log('🚀 Generating posts for:', input.date);
-    console.log('Events:', input.events);
-    console.log('Insights:', input.insights);
-    console.log('Metrics:', input.metrics);
-    console.log('✅ API Key present:', process.env.ANTHROPIC_API_KEY.substring(0, 10) + '...');
+    console.log('🚀 Starting POST GENERATION with quality iteration');
+    console.log('   Date:', input.date);
+    console.log('   Challenge Day:', input.challengeDay || 'N/A');
+    console.log('   Events:', input.events.length);
+    console.log('   Insights:', input.insights.length);
+    console.log('   Metrics:', input.metrics);
 
-    // Build prompt
-    const prompt = buildPrompt(input);
+    // Allowed claims (what you can authentically claim)
+    const allowedClaims = [
+      `${input.metrics.followers} followers`,
+      `${input.metrics.subwiseUsers} users`,
+      'Day ' + (input.challengeDay || 1),
+      '0 users', // You're at 0
+      '7 followers', // Current state
+    ];
 
-    console.log('📤 Calling Claude API...');
+    let attemptNumber = 0;
+    let posts: GeneratedPost[] = [];
+    let lastClaudeResponse = '';
+    let qualityPassed = false;
 
-    // Call Claude
-    const message = await anthropic.messages.create({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 2000,
-      temperature: 0.8,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
+    // QUALITY ITERATION LOOP (like reply generator)
+    while (attemptNumber < MAX_ATTEMPTS && !qualityPassed) {
+      attemptNumber++;
+
+      console.log(`\n${"=".repeat(60)}`);
+      console.log(`🔄 ATTEMPT ${attemptNumber}/${MAX_ATTEMPTS}`);
+      console.log(`${"=".repeat(60)}`);
+
+      // Build messages array for Claude
+      const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+      // First attempt: Just the prompt
+      if (attemptNumber === 1) {
+        const prompt = buildPrompt(input);
+        messages.push({ role: "user", content: prompt });
+      } else {
+        // Subsequent attempts: Include previous response + feedback
+        const prompt = buildPrompt(input);
+        messages.push({ role: "user", content: prompt });
+        messages.push({ role: "assistant", content: lastClaudeResponse });
+
+        // Add quality feedback
+        const validationResult = validatePostBatch(
+          posts.map(p => ({ content: p.content, category: p.category })),
+          allowedClaims
+        );
+
+        const feedback = validationResult.reports
+          .map((report, idx) => {
+            if (!report.passed) {
+              return `\n❌ POST ${idx + 1} ISSUES (score: ${report.score}/100):\n${getImprovementInstructions(report)}`;
+            }
+            return '';
+          })
+          .filter(f => f)
+          .join('\n');
+
+        messages.push({
           role: "user",
-          content: prompt,
-        },
-      ],
-    });
+          content: `${feedback}\n\n🔧 REGENERATE all 5 posts with these fixes. Be SPECIFIC, AUTHENTIC, and DATA-DRIVEN!`
+        });
 
-    console.log('✅ Claude responded successfully');
+        console.log('📝 Sending quality feedback to Claude...');
+      }
 
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-    console.log('\n📝 Claude response:', responseText);
+      // Call Claude
+      console.log('📤 Calling Claude API...');
+      const message = await anthropic.messages.create({
+        model: "claude-3-5-haiku-20241022",
+        max_tokens: 2000,
+        temperature: 0.8,
+        system: SYSTEM_PROMPT,
+        messages,
+      });
 
-    // Parse posts
-    const posts = parsePosts(responseText, input.date);
+      console.log('✅ Claude responded');
 
-    console.log(`\n✅ Generated ${posts.length} posts`);
+      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+      lastClaudeResponse = responseText;
+
+      // Parse posts
+      posts = parsePosts(responseText, input.date);
+
+      if (posts.length === 0) {
+        console.error('❌ No posts parsed');
+        continue; // Try again
+      }
+
+      console.log(`   Parsed ${posts.length} posts`);
+
+      // QUALITY VALIDATION
+      const validationResult = validatePostBatch(
+        posts.map(p => ({ content: p.content, category: p.category })),
+        allowedClaims
+      );
+
+      console.log(`   Quality: ${validationResult.allPassed ? '✅ PASSED' : '⚠️ FAILED'}`);
+      console.log(`   Average score: ${validationResult.averageScore}/100`);
+
+      validationResult.reports.forEach((report, idx) => {
+        const status = report.passed ? '✅' : '❌';
+        console.log(`   Post ${idx + 1}: ${status} ${report.score}/100`);
+        if (!report.passed && report.issues.length > 0) {
+          console.log(`      Issues: ${report.issues.join(', ')}`);
+        }
+      });
+
+      qualityPassed = validationResult.allPassed;
+
+      if (qualityPassed) {
+        console.log(`\n✅ QUALITY PASSED on attempt ${attemptNumber}!`);
+        break;
+      } else if (attemptNumber < MAX_ATTEMPTS) {
+        console.log(`\n⚠️  Quality failed, iterating... (${attemptNumber}/${MAX_ATTEMPTS})`);
+      }
+    }
+
+    // Final results
+    console.log(`\n📋 FINAL RESULTS:`);
+    console.log(`   Attempts: ${attemptNumber}`);
+    console.log(`   Quality: ${qualityPassed ? 'PASSED' : 'ACCEPTABLE'}`);
+    console.log(`   Posts: ${posts.length}`);
 
     if (posts.length === 0) {
-      console.error('❌ No posts were parsed from response!');
-      console.error('Full response text:', responseText);
-      console.error('Response length:', responseText.length);
-      console.error('First 500 chars:', responseText.substring(0, 500));
-
       return NextResponse.json(
         {
-          error: 'Failed to parse posts from AI response',
-          details: `AI returned ${responseText.length} chars but posts could not be extracted. Check if output format matches expected template.`,
-          rawResponse: responseText.substring(0, 1000), // Show more of the response
-          expectedFormat: 'POST 1 - CATEGORY: mma, TYPE: progress:\\n[content]\\nMEDIA: yes/no'
+          error: 'Failed to generate posts',
+          details: 'No posts could be parsed after ' + attemptNumber + ' attempts',
         },
         { status: 500 }
       );
     }
 
-    posts.forEach((post, i) => {
-      console.log(`\nPost ${i + 1}:`);
-      console.log(`  Category: ${post.category}`);
-      console.log(`  Type: ${post.postType}`);
-      console.log(`  Score: ${post.algorithmScore}/100`);
-      console.log(`  Content: ${post.content.substring(0, 80)}...`);
-    });
-
     return NextResponse.json({
       posts,
       success: true,
+      qualityReport: {
+        passed: qualityPassed,
+        attempts: attemptNumber,
+      },
     });
 
   } catch (error) {
