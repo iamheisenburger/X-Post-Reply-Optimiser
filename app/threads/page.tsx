@@ -279,14 +279,13 @@ export default function ThreadsPage() {
       </div>
 
       {/* Daily Input Form */}
-      {savedChallengeStartDate ? (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Day {challengeDay} - {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</CardTitle>
-            <CardDescription>
-              Tell me about your day. I&apos;ll generate a compelling thread for your challenge.
-            </CardDescription>
-          </CardHeader>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Day {challengeDay} - {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</CardTitle>
+          <CardDescription>
+            Tell me about your day. I&apos;ll generate a compelling thread for your challenge.
+          </CardDescription>
+        </CardHeader>
           <CardContent className="space-y-6">
             {/* Metrics */}
             <div>
@@ -457,18 +456,8 @@ export default function ThreadsPage() {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-8 border-yellow-500">
-          <CardHeader>
-            <CardTitle>Set Challenge Start Date First</CardTitle>
-            <CardDescription>
-              Go to the Posts page and set your challenge start date before generating threads.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Generated Thread */}
       {generatedThread && (

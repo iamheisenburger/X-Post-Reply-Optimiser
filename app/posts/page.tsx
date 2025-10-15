@@ -509,7 +509,12 @@ export default function PostsPage() {
         <div>
           <h2 className="text-2xl font-bold mb-4">Today&apos;s Posts ({generatedPosts.length})</h2>
           <div className="space-y-4">
-            {generatedPosts.map((post, index) => (
+            {[...generatedPosts]
+              .sort((a, b) => {
+                const order = ['morning', 'midday', 'afternoon', 'late_afternoon', 'lateafternoon', 'evening'];
+                return order.indexOf(a.postType.toLowerCase()) - order.indexOf(b.postType.toLowerCase());
+              })
+              .map((post, index) => (
               <Card key={post._id} className="border-muted">
                 <CardContent className="pt-6">
                   <div className="space-y-4">

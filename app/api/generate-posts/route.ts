@@ -157,9 +157,13 @@ CURRENT METRICS (real numbers, don't change these):
 
 GOAL: 3 → 250 followers in 30 days
 
-Generate 5 posts in posting order (morning → evening). Use actual data, sound human, mix topics naturally.
+YOUR TASK: Generate EXACTLY 5 posts in posting order (morning → evening).
 
-OUTPUT FORMAT (MUST BE EXACTLY 5 POSTS):
+CRITICAL: You MUST generate all 5 posts. Not 3, not 4, but 5. 
+
+Use actual data, sound human, mix topics naturally.
+
+OUTPUT FORMAT:
 
 POST 1 - TIMING: morning, TOPIC: [subwise/mma/challenge/lesson]:
 [The actual tweet text]
@@ -254,11 +258,16 @@ export async function POST(request: NextRequest) {
 
     const posts = parsePosts(responseText, input.date);
 
+    if (posts.length < 5) {
+      console.error(`\n⚠️ WARNING: Only parsed ${posts.length} posts out of 5!`);
+      console.log('Full response:', responseText);
+    }
+
     console.log(`\n✅ Generated ${posts.length} posts`);
     posts.forEach((post, i) => {
       console.log(`\nPost ${i + 1}:`);
-      console.log(`  Category: ${post.category}`);
-      console.log(`  Type: ${post.postType}`);
+      console.log(`  Timing: ${post.postType}`);
+      console.log(`  Topic: ${post.category}`);
       console.log(`  Score: ${post.algorithmScore}/100`);
       console.log(`  Content: ${post.content.substring(0, 80)}...`);
     });
