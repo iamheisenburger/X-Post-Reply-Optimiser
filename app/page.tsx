@@ -135,33 +135,11 @@ export default function AIReplyPage() {
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
-      let cleanText = text;
-      if (/%[0-9A-F]{2}/i.test(text)) {
-        try {
-          cleanText = decodeURIComponent(text);
-        } catch (e) {
-          console.warn('Failed to decode text:', e);
-        }
-      }
-      
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/plain': new Blob([cleanText], { type: 'text/plain' })
-        })
-      ]);
-      
+      await navigator.clipboard.writeText(text);
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch (error) {
       console.error('Copy failed:', error);
-      // Fallback to simple writeText
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopiedIndex(index);
-        setTimeout(() => setCopiedIndex(null), 2000);
-      } catch (e) {
-        console.error('Fallback copy also failed:', e);
-      }
     }
   };
 

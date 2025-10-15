@@ -204,25 +204,11 @@ export default function ThreadsPage() {
     if (!generatedThread) return;
 
     try {
-      // Decode any URL-encoded text and create clean thread
-      const threadText = generatedThread.tweets.map((tweet, i) => {
-        let cleanTweet = tweet;
-        if (/%[0-9A-F]{2}/i.test(tweet)) {
-          try {
-            cleanTweet = decodeURIComponent(tweet);
-          } catch (e) {
-            console.warn('Failed to decode tweet:', e);
-          }
-        }
-        return `${i + 1}/${generatedThread.tweets.length}\n${cleanTweet}`;
-      }).join('\n\n');
+      const threadText = generatedThread.tweets.map((tweet, i) => 
+        `${i + 1}/${generatedThread.tweets.length}\n${tweet}`
+      ).join('\n\n');
       
-      // Use Clipboard API with explicit text/plain MIME type
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/plain': new Blob([threadText], { type: 'text/plain' })
-        })
-      ]);
+      await navigator.clipboard.writeText(threadText);
       
       toast({
         title: "Thread copied!",
@@ -242,21 +228,7 @@ export default function ThreadsPage() {
 
   const handleCopyTweet = async (tweet: string, index: number) => {
     try {
-      let cleanTweet = tweet;
-      if (/%[0-9A-F]{2}/i.test(tweet)) {
-        try {
-          cleanTweet = decodeURIComponent(tweet);
-        } catch (e) {
-          console.warn('Failed to decode tweet:', e);
-        }
-      }
-      
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/plain': new Blob([cleanTweet], { type: 'text/plain' })
-        })
-      ]);
-      
+      await navigator.clipboard.writeText(tweet);
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
       toast({
