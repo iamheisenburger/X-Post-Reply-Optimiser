@@ -134,7 +134,8 @@ export default function AIReplyPage() {
   };
 
   const copyToClipboard = async (text: string, index: number) => {
-    await navigator.clipboard.writeText(text);
+    const cleanText = decodeURIComponent(text);
+    await navigator.clipboard.writeText(cleanText);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
   };
@@ -160,12 +161,14 @@ export default function AIReplyPage() {
       toast({
         title: "Reply tracked!",
         description: "Added to today's activity. View it on the Activity page.",
+        duration: 3000, // Auto-dismiss after 3 seconds
       });
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to track reply. Please try again.",
         variant: "destructive",
+        duration: 5000, // Error messages stay a bit longer
       });
       console.error("Failed to mark as sent:", error);
     }
