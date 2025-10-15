@@ -25,7 +25,12 @@ import {
   type ReplyConstraints,
 } from "./quality-gate";
 import { validateAuthenticSpecificity, type SpecificityReport } from "./specificity-validator-v2";
-import { getAuthenticContext, REAL_EXPERIENCES } from "./personal-knowledge-base";
+import { 
+  getAuthenticContext, 
+  REAL_EXPERIENCES, 
+  buildDynamicReplyContext,
+  type PostsContextData 
+} from "./personal-knowledge-base";
 import { generateCrossoverPositioning } from "./niche-crossover-system";
 import { selectReplyStrategies, getStrategyInstructions } from "./reply-strategy-selector";
 import { selectRelevantQuestions } from "./niche-knowledge-base";
@@ -36,6 +41,7 @@ export interface ReplyGenerationContext {
   creatorProfile: CreatorIntelligence;
   minutesSincePosted: number;
   yourHandle: string;
+  postsContext?: PostsContextData | null; // 🔥 DYNAMIC CONTEXT
 }
 
 export interface GeneratedReply {
@@ -142,6 +148,7 @@ export async function generateOptimizedRepliesWithClaude(
         tweetContent,
         context.creatorProfile,
         selectedStrategy,
+        context.postsContext, // 🔥 DYNAMIC CONTEXT
         improvementInstructions,
         qualityReport?.improvements
       );
@@ -315,12 +322,13 @@ function buildIntelligentPrompt(
   tweetContent: TweetContent,
   creator: CreatorIntelligence,
   strategy: ReturnType<typeof selectReplyStrategies>,
+  postsContext: PostsContextData | null | undefined, // 🔥 DYNAMIC CONTEXT
   specificityFeedback?: string,
   constraints?: ReplyConstraints
 ): string {
   const tweetSummary = buildTweetSummary(tweetContent);
   const creatorSummary = buildCreatorSummary(creator);
-  const authenticContext = getAuthenticContext();
+  const authenticContext = buildDynamicReplyContext(postsContext || null); // 🔥 NOW DYNAMIC
 
   // Get relevant questions for this niche (no personal story needed)
   const nicheQuestions = selectRelevantQuestions(

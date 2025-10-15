@@ -132,6 +132,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`⏱️  Tweet posted ${minutesSincePosted} minutes ago ${minutesSincePosted <= 5 ? '(RECENCY BOOST!)' : ''}`);
 
+    // 4.5. Fetch dynamic personal context from Convex
+    console.log(`📚 Fetching dynamic personal context from Convex...`);
+    const postsContext = await fetchQuery(api.contextManagement.getPostsContext);
+    console.log(`✅ Posts context loaded: ${postsContext ? `${postsContext.recentInputs.length} days of data` : 'empty (using fallback)'}`);
+
     // 5. Generate algorithm-optimized replies with Claude + Specificity Validation
     // Use Claude if API key is available, otherwise fall back to OpenAI
     const useClaude = !!process.env.ANTHROPIC_API_KEY;
@@ -145,6 +150,7 @@ export async function POST(request: NextRequest) {
           creatorProfile: creatorIntelligence,
           minutesSincePosted,
           yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",
+          postsContext, // 🔥 NOW DYNAMIC
         })
       : await generateOptimizedReplies({
           tweetText: tweet.text,

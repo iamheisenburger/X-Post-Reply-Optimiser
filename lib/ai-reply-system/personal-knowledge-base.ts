@@ -316,40 +316,114 @@ export function validateAuthenticity(reply: string): {
 
 /**
  * Get your authentic context for prompt building
+ * NOW DYNAMIC - pulls from accumulated context instead of hardcoded
  */
 export function getAuthenticContext(): string {
+  // NOTE: This is the OLD hardcoded version
+  // It's being kept as fallback but should be replaced by buildDynamicReplyContext() 
+  // in the actual reply generation (see claude-reply-generator.ts)
   return `
-YOUR AUTHENTIC CONTEXT (ARSHAD):
-- Current: 3 X followers, goal 250 in 30 days
-- Building: SubWise (subscription tracker) - 0 users, early stage
-- Also building: X Reply Optimizer based on open-source X algorithm
-- Background: MMA training (practitioner, not expert), aspiring SaaS founder
-- Learning: Building in public for the first time
-- Tech: Next.js, Convex, AI integration
+YOUR AUTHENTIC CONTEXT:
+- Background: MMA training (practitioner), aspiring SaaS founder
+- Projects: SubWise (subscription tracker), X Reply Optimizer
+- Learning: Building in public, Next.js/Convex/AI integration
 
-WHAT YOU CAN AUTHENTICALLY TALK ABOUT:
-✅ Starting from zero (3 followers)
-✅ Building first SaaS (SubWise at 0 users)
-✅ Studying X algorithm (actually analyzed the open-source code)
-✅ MMA training for discipline (practitioner level)
-✅ Learning to build in public (30-day challenge)
-✅ Next.js/Convex/AI development (building real projects)
-✅ API integration challenges (Claude + Twitter APIs)
-✅ Solo indie hacking (bootstrapped, no funding)
-✅ Strategic/analytical thinking (data-driven approach)
+🚨 USING STATIC CONTEXT - Should use buildDynamicReplyContext() instead!
+`.trim();
+}
+
+/**
+ * Build dynamic context from postsContext (for reply generation)
+ * This pulls your REAL recent journey data
+ */
+export interface PostsContextData {
+  baseProfile: {
+    bio: string;
+    currentGoals: string[];
+    interests: string[];
+    projects: string[];
+  };
+  recentInputs: Array<{
+    date: string;
+    events: string[];
+    insights: string[];
+    struggles: string[];
+    futurePlans: string[];
+    metrics: {
+      followers: number;
+      subwiseUsers: number;
+    };
+  }>;
+}
+
+export function buildDynamicReplyContext(postsContext: PostsContextData | null): string {
+  if (!postsContext || postsContext.recentInputs.length === 0) {
+    // Fallback to basic context
+    return `
+YOUR CURRENT STATUS:
+- Building: SubWise (subscription tracker) & X Reply Optimizer
+- Background: MMA practitioner, aspiring SaaS founder, learning to build in public
+- Stage: Early stage indie hacker
+
+WHAT YOU CAN TALK ABOUT:
+✅ Starting from zero
+✅ Building first products
+✅ MMA for discipline
+✅ Learning to build in public
+✅ Tech challenges (Next.js, Convex, AI APIs)
 
 WHAT YOU CANNOT CLAIM:
-❌ Any MRR numbers (you're at $0)
-❌ User counts above 0
+❌ Fake metrics or research
 ❌ Years of experience
-❌ Scaling stories
-❌ Advanced expertise
+❌ Scaling stories you don't have
+`.trim();
+  }
+
+  // Get most recent data
+  const recent = postsContext.recentInputs[postsContext.recentInputs.length - 1];
+  const recentDays = postsContext.recentInputs.slice(-3); // Last 3 days
+
+  // Extract recent learnings
+  const recentInsights = recentDays.flatMap(d => d.insights).slice(-5);
+  const recentStruggles = recentDays.flatMap(d => d.struggles).slice(-3);
+  const recentEvents = recentDays.flatMap(d => d.events).slice(-5);
+
+  return `
+YOUR CURRENT STATUS:
+- ${postsContext.baseProfile.currentGoals.join(", ")}
+- Current metrics: ${recent.metrics.followers} followers, ${recent.metrics.subwiseUsers} SubWise users
+- Projects: ${postsContext.baseProfile.projects.join(", ")}
+- Background: ${postsContext.baseProfile.interests.join(", ")}
+
+RECENT JOURNEY (Last ${recentDays.length} Days):
+${recentEvents.map(e => `• ${e}`).join('\n')}
+
+RECENT LEARNINGS:
+${recentInsights.map(i => `• ${i}`).join('\n')}
+
+CURRENT STRUGGLES:
+${recentStruggles.map(s => `• ${s}`).join('\n')}
+
+WHAT'S NEXT:
+${recent.futurePlans.map(p => `• ${p}`).join('\n')}
+
+WHAT YOU CAN AUTHENTICALLY TALK ABOUT:
+✅ Your current metrics (${recent.metrics.followers} followers, ${recent.metrics.subwiseUsers} users)
+✅ Recent events and learnings (listed above)
+✅ Current struggles you're facing
+✅ What you're building next
+
+WHAT YOU CANNOT CLAIM:
+❌ Metrics above your current numbers
+❌ Fake studies or tracking ("Analyzed 47 accounts", etc.)
+❌ Experiences you don't have
+❌ Made-up multipliers ("2.1x faster", etc.)
 
 STRATEGY:
-- When they share success → Ask genuine question from beginner perspective
-- When they share struggle → Share your beginner struggle if relevant
-- When they share insight → Ask how it applies to your stage
-- NEVER make up metrics, stories, or experiences
-- BE CURIOUS, NOT FAKE EXPERT
+- Reference YOUR recent experiences from above
+- Use YOUR current metrics when relevant
+- Share YOUR recent learnings
+- Ask genuine questions when you don't have relevant data
+- BE AUTHENTIC, NOT FAKE
 `.trim();
 }

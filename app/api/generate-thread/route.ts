@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -36,7 +38,36 @@ interface GeneratedThread {
   mediaSuggestions?: string;
 }
 
-const SYSTEM_PROMPT = `You're documenting a 30-day growth challenge with complete transparency. This is your END OF DAY reflection thread.
+interface ThreadsContextData {
+  challengeInfo: {
+    startDate: string;
+    goal: string;
+    currentDay: number;
+  };
+  recentReflections: Array<{
+    date: string;
+    challengeDay: number;
+    wins: string[];
+    lessons: string[];
+    struggles: string[];
+    tomorrowFocus: string[];
+    futurePlans: string[];
+    metrics: {
+      followers: number;
+      subwiseUsers: number;
+    };
+  }>;
+  keyMilestones: Array<{
+    day: number;
+    description: string;
+    impact: string;
+  }>;
+}
+
+function buildDynamicThreadPrompt(threadsContext: ThreadsContextData | null, currentDay: number, todayMetrics: { followers: number; subwiseUsers: number }): string {
+  if (!threadsContext || threadsContext.recentReflections.length === 0) {
+    // Fallback to basic prompt
+    return `You're documenting your journey with complete transparency. This is your END OF DAY reflection thread.
 
 THREAD PURPOSE:
 - Reflect on what happened TODAY
@@ -45,20 +76,14 @@ THREAD PURPOSE:
 - Document what you learned
 - No fluff, no motivational BS - just raw honesty
 
-WHO YOU ARE:
-- Aspiring pro MMA fighter (currently injured, studying technique)
-- Building SubWise (subscription tracker) from 0 to 100 users
-- Growing 3 → 250 X followers in 30 days
-- Documenting everything: wins, failures, metrics, struggles
-
-THREAD STRUCTURE (5-7 tweets):
-1. HOOK - Day X update with key metric change
+THREAD STRUCTURE (5-8 tweets):
+1. HOOK - Day ${currentDay} update with key observation
 2. WHAT HAPPENED - Today's events (specific details)
-3. THE NUMBERS - Followers, SubWise users, training time
+3. THE NUMBERS - Current metrics
 4. WHAT I LEARNED - Key insight or lesson
 5. WHAT WAS HARD - Struggle or challenge faced
-6. TOMORROW'S PLAN - What you're going to do next
-7. CALL TO ACTION - Question or invitation to follow journey
+6-7. Additional context/learnings
+8. CALL TO ACTION - Question or invitation
 
 STYLE:
 • Direct, conversational, human
@@ -66,11 +91,68 @@ STYLE:
 • First person ("I", "my")
 • Short tweets (100-200 chars each)
 • Vulnerable when it's real
-• NO generic advice
-• NO motivational quotes
-• This is YOUR story, not a how-to guide
+
+Make it feel like someone documenting their real journey.`;
+  }
+
+  // Extract recent journey context
+  const recentDays = threadsContext.recentReflections.slice(-3);
+  const recentLessons = recentDays.flatMap(d => d.lessons).slice(-3);
+  const recentStruggles = recentDays.flatMap(d => d.struggles).slice(-3);
+  const startFollowers = threadsContext.recentReflections[0]?.metrics.followers || todayMetrics.followers;
+
+  return `You're documenting Day ${currentDay} of your challenge. This is your END OF DAY reflection thread.
+
+YOUR CHALLENGE:
+- ${threadsContext.challengeInfo.goal}
+- Started: Day 1 with ${startFollowers} followers
+- Current: Day ${currentDay} with ${todayMetrics.followers} followers (+${todayMetrics.followers - startFollowers})
+- SubWise: ${todayMetrics.subwiseUsers} users
+
+RECENT JOURNEY CONTEXT:
+${recentLessons.length > 0 ? `Recent learnings:\n${recentLessons.map(l => `• ${l}`).join('\n')}` : '• Learning as you go'}
+
+${recentStruggles.length > 0 ? `Recent struggles:\n${recentStruggles.map(s => `• ${s}`).join('\n')}` : '• Facing challenges daily'}
+
+${threadsContext.keyMilestones.length > 0 ? `Key milestones so far:\n${threadsContext.keyMilestones.map(m => `• Day ${m.day}: ${m.description}`).join('\n')}` : ''}
+
+THREAD PURPOSE:
+- Reflect on what happened TODAY (Day ${currentDay})
+- Share REAL metrics and progress
+- Be vulnerable about struggles
+- Document what you learned
+- No fluff, no motivational BS - just raw honesty
+
+THREAD STRUCTURE (5-8 tweets):
+1. HOOK - "Day ${currentDay}/30 Challenge" + compelling observation/metric/moment
+2. WHAT HAPPENED - Today's events (specific details from input)
+3. THE NUMBERS - Current metrics (${todayMetrics.followers} followers, ${todayMetrics.subwiseUsers} users)
+4. WHAT I LEARNED - Key insight or lesson from today
+5. WHAT WAS HARD - Struggle or challenge faced today
+6-7. Additional reflections/context (if needed)
+8. CALL TO ACTION - Question or invitation to follow journey
+
+CRITICAL AUTHENTICITY RULES:
+✅ Use EXACT current metrics (${todayMetrics.followers} followers, ${todayMetrics.subwiseUsers} users)
+✅ Reference recent lessons and struggles listed above for context
+✅ Stay truthful to actual progress: +${todayMetrics.followers - startFollowers} followers over ${currentDay} days
+❌ Don't invent fake metrics or multipliers
+❌ Don't make up experiences not in the input
+❌ Don't claim expertise you don't have
+
+STYLE:
+• Direct, conversational, human
+• Use real data from today's input
+• First person ("I", "my")
+• Each tweet: 100-200 characters (NOT one-liners)
+• Multiple sentences per tweet is encouraged
+• Vulnerable when it's real
+• NO generic advice, NO motivational quotes
+
+Generate between 5-8 tweets TOTAL (not 16, not 20 - just 5-8 substantial tweets).
 
 Make it feel like someone documenting their real journey, not a content creator performing.`;
+}
 
 function scoreThread(content: string): {
   algorithmScore: number;
@@ -223,6 +305,17 @@ export async function POST(request: NextRequest) {
     console.log('Lessons:', input.lessons);
     console.log('Metrics:', input.metrics);
 
+    // Fetch dynamic challenge context from Convex
+    console.log('📚 Fetching dynamic challenge context from Convex...');
+    const threadsContext = await fetchQuery(api.contextManagement.getThreadsContext);
+    console.log(`✅ Threads context loaded: ${threadsContext ? `${threadsContext.recentReflections.length} days, ${threadsContext.keyMilestones.length} milestones` : 'empty (using fallback)'}`);
+
+    // Build dynamic system prompt from context
+    const dynamicSystemPrompt = buildDynamicThreadPrompt(threadsContext, input.challengeDay, {
+      followers: input.metrics.followers,
+      subwiseUsers: input.metrics.subwiseUsers,
+    });
+
     const prompt = buildPrompt(input);
 
     // Call Claude Sonnet 4.5 (latest) with temp 0.8 for human output
@@ -230,7 +323,7 @@ export async function POST(request: NextRequest) {
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 2000,
       temperature: 0.8,
-      system: SYSTEM_PROMPT,
+      system: dynamicSystemPrompt, // 🔥 NOW DYNAMIC
       messages: [
         {
           role: "user",

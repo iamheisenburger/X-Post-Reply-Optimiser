@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -36,7 +38,64 @@ interface GeneratedPost {
   mediaType?: string;
 }
 
-const SYSTEM_PROMPT = `You're a real person documenting a 30-day growth challenge. Not a guru, not an expert - just someone building in public with brutal honesty.
+interface PostsContextData {
+  baseProfile: {
+    bio: string;
+    currentGoals: string[];
+    interests: string[];
+    projects: string[];
+  };
+  recentInputs: Array<{
+    date: string;
+    events: string[];
+    insights: string[];
+    struggles: string[];
+    futurePlans: string[];
+    metrics: {
+      followers: number;
+      subwiseUsers: number;
+    };
+  }>;
+}
+
+function buildDynamicSystemPrompt(postsContext: PostsContextData | null, todayMetrics: { followers: number; subwiseUsers: number }): string {
+  if (!postsContext || postsContext.recentInputs.length === 0) {
+    // Fallback to basic prompt
+    return `You're a real person documenting your journey building in public. Not a guru, not an expert - just someone being brutally honest.
+
+WHAT WORKS ON X:
+• Questions = more replies
+• Real numbers = more credibility  
+• Vulnerability = more connection
+• Photos/screenshots = more engagement
+
+STYLE:
+• Short and punchy (under 280 chars)
+• Use real data from today's inputs
+• First person ("I", "my") - this is YOUR journey
+• Questions when it feels natural
+• NO generic advice, NO fake expertise
+• Transparency is your superpower`;
+  }
+
+  // Extract recent journey for context
+  const recentDays = postsContext.recentInputs.slice(-3);
+  const recentEvents = recentDays.flatMap(d => d.events).slice(-5);
+  const recentInsights = recentDays.flatMap(d => d.insights).slice(-3);
+
+  return `You're a real person documenting your journey. Not a guru, not an expert - just someone building in public with brutal honesty.
+
+YOUR CURRENT JOURNEY:
+- ${postsContext.baseProfile.currentGoals.join(", ")}
+- Current: ${todayMetrics.followers} followers, ${todayMetrics.subwiseUsers} SubWise users
+- Projects: ${postsContext.baseProfile.projects.join(", ")}
+- Background: ${postsContext.baseProfile.interests.join(", ")}
+
+RECENT CONTEXT (What's Been Happening):
+${recentEvents.length > 0 ? recentEvents.map(e => `• ${e}`).join('\n') : '• Just getting started'}
+
+RECENT LEARNINGS:
+${recentInsights.length > 0 ? recentInsights.map(i => `• ${i}`).join('\n') : '• Learning as you go'}
 
 WHAT WORKS ON X:
 • Questions = more replies
@@ -45,19 +104,20 @@ WHAT WORKS ON X:
 • Photos/screenshots = more engagement
 • Controversial takes = more profile clicks (but risky)
 
-WHO YOU ARE:
-- Aspiring pro MMA fighter (currently injured, studying technique)
-- Building SubWise (subscription tracker) from 0 to 100 users
-- Growing 3 → 250 X followers in 30 days
-- Documenting EVERYTHING: wins, failures, metrics, struggles
-- No BS, no filters - raw data and real lessons
-
 POST ORDER (5 posts throughout the day):
 1. MORNING - Start strong (progress update, what you're working on today)
-2. MIDDAY - SubWise progress (metrics, wins, what you shipped)
-3. AFTERNOON - MMA/training (discipline, technique, mindset)
+2. MIDDAY - Project progress (metrics, wins, what you shipped)
+3. AFTERNOON - Training/discipline/mindset
 4. LATE AFTERNOON - Lesson learned (insight from building/training)
 5. EVENING - Engagement post (question, reflection, vulnerability)
+
+CRITICAL AUTHENTICITY RULES:
+✅ Reference YOUR current metrics (${todayMetrics.followers} followers, ${todayMetrics.subwiseUsers} users)
+✅ Use recent events and learnings listed above
+✅ Stay truthful to your actual stage and experience
+❌ Don't invent fake metrics above your current numbers
+❌ Don't make up experiences or multipliers
+❌ Don't claim expertise you don't have
 
 STYLE:
 • Short and punchy (under 280 chars)
@@ -68,6 +128,7 @@ STYLE:
 • Transparency is your superpower
 
 This is a real challenge. Make the posts feel human, not robotic.`;
+}
 
 function scorePost(post: string): {
   algorithmScore: number;
@@ -249,6 +310,17 @@ export async function POST(request: NextRequest) {
     console.log('Insights:', input.insights);
     console.log('Metrics:', input.metrics);
 
+    // Fetch dynamic personal context from Convex
+    console.log('📚 Fetching dynamic personal context from Convex...');
+    const postsContext = await fetchQuery(api.contextManagement.getPostsContext);
+    console.log(`✅ Posts context loaded: ${postsContext ? `${postsContext.recentInputs.length} days of data` : 'empty (using fallback)'}`);
+
+    // Build dynamic system prompt from context
+    const dynamicSystemPrompt = buildDynamicSystemPrompt(postsContext, {
+      followers: input.metrics.followers,
+      subwiseUsers: input.metrics.subwiseUsers,
+    });
+
     const prompt = buildPrompt(input);
 
     // Call Claude Sonnet 4.5 (latest) with higher temperature for more human output
@@ -256,7 +328,7 @@ export async function POST(request: NextRequest) {
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 2000,
       temperature: 0.8,
-      system: SYSTEM_PROMPT,
+      system: dynamicSystemPrompt, // 🔥 NOW DYNAMIC
       messages: [
         {
           role: "user",
