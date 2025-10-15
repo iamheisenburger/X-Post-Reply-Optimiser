@@ -93,14 +93,29 @@ export default function PostsPage() {
 
     try {
       // Step 1: Save daily input to Convex
-      await saveDailyInput({
+      // Only include futurePlans if it has values
+      const filteredFuturePlans = futurePlans.filter(p => p.trim());
+      const dailyInputData: {
+        date: string;
+        events: string[];
+        insights: string[];
+        struggles: string[];
+        metrics: typeof metrics;
+        futurePlans?: string[];
+      } = {
         date,
         events: events.filter(e => e.trim()),
         insights: insights.filter(i => i.trim()),
         struggles: struggles.filter(s => s.trim()),
-        futurePlans: futurePlans.filter(p => p.trim()),
         metrics,
-      });
+      };
+      
+      // Only add futurePlans if array has items
+      if (filteredFuturePlans.length > 0) {
+        dailyInputData.futurePlans = filteredFuturePlans;
+      }
+      
+      await saveDailyInput(dailyInputData);
 
       // Step 2: Call Claude API to generate posts
       const response = await fetch('/api/generate-posts', {
