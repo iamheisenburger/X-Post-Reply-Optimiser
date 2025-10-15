@@ -215,15 +215,55 @@ export default function PostsPage() {
   };
 
   const handleCopy = async (content: string, index: number) => {
-    const cleanContent = decodeURIComponent(content);
-    await navigator.clipboard.writeText(cleanContent);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-    toast({
-      title: "Copied!",
-      description: "Post copied to clipboard",
-      duration: 3000, // Auto-dismiss after 3 seconds
-    });
+    try {
+      // Decode URL-encoded content if present
+      let cleanContent = content;
+      
+      // Check if content appears to be URL-encoded (contains %XX patterns)
+      if (/%[0-9A-F]{2}/i.test(content)) {
+        try {
+          cleanContent = decodeURIComponent(content);
+        } catch (e) {
+          // If decoding fails, use original
+          console.warn('Failed to decode content:', e);
+        }
+      }
+      
+      // Use Clipboard API with explicit text/plain MIME type
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([cleanContent], { type: 'text/plain' })
+        })
+      ]);
+      
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+      toast({
+        title: "Copied!",
+        description: "Post copied to clipboard",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Copy failed:', error);
+      // Fallback to simple writeText
+      try {
+        await navigator.clipboard.writeText(content);
+        setCopiedIndex(index);
+        setTimeout(() => setCopiedIndex(null), 2000);
+        toast({
+          title: "Copied!",
+          description: "Post copied to clipboard",
+          duration: 3000,
+        });
+      } catch (e) {
+        toast({
+          title: "Copy failed",
+          description: "Please try again",
+          variant: "destructive",
+          duration: 3000,
+        });
+      }
+    }
   };
 
   const handleEdit = (postId: string, content: string) => {

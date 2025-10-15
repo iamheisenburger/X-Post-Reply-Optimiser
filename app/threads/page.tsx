@@ -203,30 +203,76 @@ export default function ThreadsPage() {
   const handleCopyThread = async () => {
     if (!generatedThread) return;
 
-    // Decode any URL-encoded text and create clean thread
-    const threadText = generatedThread.tweets.map((tweet, i) => {
-      const cleanTweet = decodeURIComponent(tweet);
-      return `${i + 1}/${generatedThread.tweets.length}\n${cleanTweet}`;
-    }).join('\n\n');
-    
-    await navigator.clipboard.writeText(threadText);
-    toast({
-      title: "Thread copied!",
-      description: "Full thread copied to clipboard",
-      duration: 3000, // Auto-dismiss after 3 seconds
-    });
+    try {
+      // Decode any URL-encoded text and create clean thread
+      const threadText = generatedThread.tweets.map((tweet, i) => {
+        let cleanTweet = tweet;
+        if (/%[0-9A-F]{2}/i.test(tweet)) {
+          try {
+            cleanTweet = decodeURIComponent(tweet);
+          } catch (e) {
+            console.warn('Failed to decode tweet:', e);
+          }
+        }
+        return `${i + 1}/${generatedThread.tweets.length}\n${cleanTweet}`;
+      }).join('\n\n');
+      
+      // Use Clipboard API with explicit text/plain MIME type
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([threadText], { type: 'text/plain' })
+        })
+      ]);
+      
+      toast({
+        title: "Thread copied!",
+        description: "Full thread copied to clipboard",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Copy failed:', error);
+      toast({
+        title: "Copy failed",
+        description: "Please try again",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   const handleCopyTweet = async (tweet: string, index: number) => {
-    const cleanTweet = decodeURIComponent(tweet);
-    await navigator.clipboard.writeText(cleanTweet);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-    toast({
-      title: "Tweet copied!",
-      description: "Tweet copied to clipboard",
-      duration: 3000, // Auto-dismiss after 3 seconds
-    });
+    try {
+      let cleanTweet = tweet;
+      if (/%[0-9A-F]{2}/i.test(tweet)) {
+        try {
+          cleanTweet = decodeURIComponent(tweet);
+        } catch (e) {
+          console.warn('Failed to decode tweet:', e);
+        }
+      }
+      
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([cleanTweet], { type: 'text/plain' })
+        })
+      ]);
+      
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+      toast({
+        title: "Tweet copied!",
+        description: "Tweet copied to clipboard",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Copy failed:', error);
+      toast({
+        title: "Copy failed",
+        description: "Please try again",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   const handleEditTweet = (index: number, content: string) => {
