@@ -214,15 +214,14 @@ Generate the 5 posts now. Use authentic voice, specific data, and variety.`;
 function parsePosts(response: string, date: string): GeneratedPost[] {
   const posts: GeneratedPost[] = [];
 
-  // More flexible regex - matches POST 1, POST 2, etc.
-  const postPattern = /POST\s+\d+\s*-\s*CATEGORY:\s*(\w+),\s*TYPE:\s*([\w_]+):\s*([\s\S]+?)(?=MEDIA:|$)/gi;
-  const mediaPattern = /MEDIA:\s*(yes|no)(?:\s*-\s*([^\n]+))?/gi;
+  // More flexible regex - handles spaces and mixed case in category/type
+  const postPattern = /POST\s+\d+\s*-\s*CATEGORY:\s*([^,]+),\s*TYPE:\s*([^:]+):\s*([\s\S]+?)(?=POST\s+\d+|$)/gi;
 
   const postMatches = [...response.matchAll(postPattern)];
 
   for (const match of postMatches) {
-    const category = match[1].toLowerCase();
-    const postType = match[2].toLowerCase();
+    const category = match[1].trim().toLowerCase().replace(/\s+/g, '');
+    const postType = match[2].trim().toLowerCase().replace(/\s+/g, '_');
     const fullContent = match[3].trim();
 
     // Extract content and media info
