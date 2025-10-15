@@ -91,16 +91,8 @@ export default function PostsPage() {
     setGenerating(true);
 
     try {
-      // Save daily input
-      const filteredFuturePlans = futurePlans.filter(p => p.trim());
-      await saveDailyInput({
-        date,
-        events: events.filter(e => e.trim()),
-        insights: insights.filter(i => i.trim()),
-        struggles: struggles.filter(s => s.trim()),
-        futurePlans: filteredFuturePlans.length > 0 ? filteredFuturePlans : undefined,
-        metrics,
-      });
+      // Skip Convex save for now - directly call API
+      // TODO: Fix saveDailyInput mutation later
 
       // Call API to generate posts
       const response = await fetch('/api/generate-posts', {
