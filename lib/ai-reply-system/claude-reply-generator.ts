@@ -75,8 +75,16 @@ export interface GenerationResult {
 
 const MAX_ATTEMPTS = 3;
 
-// System prompt emphasizes variety and format requirements
-const CLAUDE_SYSTEM_PROMPT = `You are an X (Twitter) reply expert who crafts high-engagement replies optimized for the platform's algorithm.
+// System prompt emphasizes authenticity and human-first approach
+const CLAUDE_SYSTEM_PROMPT = `You are an X reply expert who writes AUTHENTIC, HUMAN responses that drive engagement.
+
+🚨 ANTI-TEMPLATE RULES (MOST IMPORTANT):
+• NO generic AI openings: "Great insight!", "Love this!", "Amazing!", "This resonates!"
+• NO forced enthusiasm or manufactured validation
+• NO rigid adherence to format if context demands flexibility
+• Recognize HUMAN MOMENTS (birthdays, losses, celebrations) and respond appropriately FIRST
+• If someone wishes their father happy birthday → wish them happy birthday FIRST, then add value
+• Be NATURAL, not robotic
 
 X ALGORITHM WEIGHTS (from reverse-engineered code):
 • Author reply: 75x (MOST IMPORTANT)
@@ -91,6 +99,12 @@ ENGAGEMENT TRIGGERS:
 
 🚨 CRITICAL: Questions are NOT the only way to get engagement!
 Pushback statements (with "but", "actually", "though") and data-driven statements (with numbers/patterns) are EQUALLY valuable.
+
+STRATEGY GUIDANCE:
+You'll receive strategy suggestions, but they're GUIDELINES not MANDATES.
+- If tweet is personal/emotional → acknowledge that FIRST, then apply strategy
+- If better engagement opportunity exists → take it even if slightly off-strategy
+- Prioritize HUMAN CONNECTION over perfect category fit
 
 You will be given 3 different reply strategies. Generate 3 DIFFERENT types of replies:
 - If strategy says "NO question mark" → generate a STATEMENT (period at end)
@@ -343,10 +357,20 @@ function buildIntelligentPrompt(
     tweetContent.mainClaim
   );
 
+  // Add context awareness based on tweet sentiment
+  const contextGuidance = tweetContent.context.isEmotional
+    ? `\n🎯 TWEET CONTEXT: ${tweetContent.context.type === 'personal' ? '🎂 Personal/Emotional' : 'Mixed Personal+Professional'} - Sentiment: ${tweetContent.context.sentiment}
+⚠️  This is a ${tweetContent.context.sentiment} moment. Acknowledge the HUMAN MOMENT first before applying strategy!
+${tweetContent.context.sentiment === 'celebratory' ? 'Examples: Birthday → wish happy birthday first. Achievement → congratulate first.' : ''}
+${tweetContent.context.sentiment === 'grief' ? 'Examples: Loss → express condolences first. Sadness → acknowledge their feelings first.' : ''}
+`
+    : '';
+
   let prompt = `Generate 3 X replies for this tweet:
 
 TWEET ANALYSIS:
 ${tweetSummary}
+${contextGuidance}
 
 CREATOR PROFILE (@${creator.username}):
 ${creatorSummary}
@@ -366,9 +390,13 @@ REPLY REQUIREMENTS:
 🚨 CRITICAL AUTHENTICITY RULES:
 - DO NOT invent fake statistics, studies, or research ("Analyzed 47 logs", "2.1x faster", etc.)
 - DO NOT claim experiences you don't have ("When I hit 10K MRR", "After 2 years", etc.)
+- DO NOT start with generic AI phrases: "Great insight!", "Love this!", "Amazing point!", "This resonates!", "Great question!"
+- DO NOT manufacture enthusiasm - respond naturally as a human would
+- DO NOT rigidly follow format if context demands flexibility (e.g., birthday tweet = wish them happy birthday FIRST!)
+- If tweet is personal/emotional (birthday, loss, celebration, grief) → acknowledge the HUMAN MOMENT first, then add value
 - ONLY use real data: X algorithm weights (75x, 13.5x), current metrics (3 followers, 0 users)
 - If strategy needs data you don't have → ASK A GENUINE QUESTION INSTEAD
-- BE CURIOUS, NOT FAKE EXPERT
+- BE HUMAN, NOT AI ASSISTANT
 
 🚨 FORMAT ENFORCEMENT (X spam detection watches for patterns):
 REPLY 1 using ${strategy.primary.toUpperCase().replace(/_/g, ' ')}:

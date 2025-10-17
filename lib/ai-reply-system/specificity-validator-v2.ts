@@ -100,6 +100,30 @@ const FAKE_RESEARCH_PATTERNS = [
   },
 ];
 
+// Catch GENERIC AI PHRASES (critical - these kill authenticity)
+const GENERIC_AI_PHRASES = [
+  {
+    pattern: /^@\w+\s+(great|amazing|awesome|fantastic|excellent) (insight|point|question|thought|take)/gi,
+    severity: 'critical' as const,
+    fix: 'BE HUMAN: Skip the generic AI validation and jump straight to your actual response'
+  },
+  {
+    pattern: /^@\w+\s+(love|loving) this/gi,
+    severity: 'critical' as const,
+    fix: 'BE HUMAN: Don\'t manufacture enthusiasm. Respond naturally.'
+  },
+  {
+    pattern: /^@\w+\s+this (really )?resonates/gi,
+    severity: 'critical' as const,
+    fix: 'BE HUMAN: Generic AI phrase. Be specific about what connects with you or ask a question.'
+  },
+  {
+    pattern: /^@\w+\s+great question/gi,
+    severity: 'critical' as const,
+    fix: 'BE HUMAN: Skip validation, answer the question or add value directly.'
+  },
+];
+
 // Catch VAGUE language (these are warnings, not critical)
 const VAGUE_PATTERNS = [
   {
@@ -176,6 +200,22 @@ export function validateAuthenticSpecificity(reply: string, iteration: number = 
             severity
           });
         }
+      });
+    }
+  });
+
+  // CRITICAL: Check for GENERIC AI PHRASES
+  GENERIC_AI_PHRASES.forEach(({ pattern, severity, fix }) => {
+    const matches = reply.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        issues.push({
+          type: 'fake_expertise',
+          text: match,
+          explanation: `🚨 GENERIC AI PHRASE: "${match}" - Sounds robotic, not human!`,
+          fix,
+          severity
+        });
       });
     }
   });

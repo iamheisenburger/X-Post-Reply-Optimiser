@@ -10,6 +10,11 @@ export interface TweetContent {
   solutionMentioned: string | null; // If tweet mentions a solution
   hasExample: boolean;
   exampleContent: string | null;
+  context: {                   // NEW: Context/sentiment detection
+    type: 'personal' | 'professional' | 'mixed';
+    sentiment: 'celebratory' | 'grief' | 'gratitude' | 'frustration' | 'neutral' | 'educational';
+    isEmotional: boolean;      // Flag for emotionally charged tweets
+  };
 }
 
 /**
@@ -18,28 +23,31 @@ export interface TweetContent {
  */
 export function analyzeTweetContent(tweetText: string): TweetContent {
   const cleaned = tweetText.trim();
-  
+
   // Extract key phrases (2-4 word meaningful chunks)
   const keyPhrases = extractKeyPhrases(cleaned);
-  
+
   // Extract entities (capitalized words that aren't at start of sentence)
   const entities = extractEntities(cleaned);
-  
+
   // Extract numbers/stats
   const numbers = extractNumbers(cleaned);
-  
+
   // Extract action words (important verbs)
   const actionWords = extractActionWords(cleaned);
-  
+
   // Identify problem/solution pattern
   const { problem, solution } = extractProblemSolution(cleaned);
-  
+
   // Identify examples
   const { hasExample, exampleContent } = extractExample(cleaned);
-  
+
   // Extract main claim (first sentence or key statement)
   const mainClaim = extractMainClaim(cleaned);
-  
+
+  // NEW: Detect context and sentiment
+  const context = detectTweetContext(cleaned);
+
   return {
     mainClaim,
     keyPhrases,
@@ -50,6 +58,7 @@ export function analyzeTweetContent(tweetText: string): TweetContent {
     solutionMentioned: solution,
     hasExample,
     exampleContent,
+    context,
   };
 }
 
@@ -199,15 +208,78 @@ function extractExample(text: string): { hasExample: boolean; exampleContent: st
     /such as\s+(.+?)[.!?]/i,
     /e\.g\.\s*(.+?)[.!?]/i,
   ];
-  
+
   for (const pattern of exampleIndicators) {
     const match = text.match(pattern);
     if (match) {
       return { hasExample: true, exampleContent: match[1].trim() };
     }
   }
-  
+
   return { hasExample: false, exampleContent: null };
+}
+
+/**
+ * NEW: Detect tweet context and sentiment for appropriate reply style
+ */
+function detectTweetContext(text: string): {
+  type: 'personal' | 'professional' | 'mixed';
+  sentiment: 'celebratory' | 'grief' | 'gratitude' | 'frustration' | 'neutral' | 'educational';
+  isEmotional: boolean;
+} {
+  const lowerText = text.toLowerCase();
+
+  // Personal moment indicators
+  const personalIndicators = [
+    /birthday/i,
+    /anniversary/i,
+    /passed away/i,
+    /rest in peace|rip\b/i,
+    /congratulations/i,
+    /proud of/i,
+    /lost (my|our) (dad|mom|father|mother|parent|friend)/i,
+    /celebrating/i,
+    /wedding/i,
+    /graduation/i,
+  ];
+
+  // Professional indicators
+  const professionalIndicators = [
+    /algorithm/i,
+    /code|coding|programming/i,
+    /business|startup|company/i,
+    /strategy|tactic|framework/i,
+    /data|metrics|analytics/i,
+    /product|feature|launch/i,
+  ];
+
+  // Sentiment patterns
+  const celebratoryPatterns = [/birthday|congrat|celebrating|proud|excited|happy|achieved|won/i];
+  const griefPatterns = [/passed away|rest in peace|rip\b|lost (my|our)|sad|miss|gone/i];
+  const gratitudePatterns = [/thank|grateful|appreciate|honored|blessed/i];
+  const frustrationPatterns = [/frustrated|stuck|failing|difficult|struggle|annoying/i];
+  const educationalPatterns = [/learn|teach|explain|understand|principle|framework|how to|why/i];
+
+  // Determine type
+  const hasPersonal = personalIndicators.some(pattern => pattern.test(text));
+  const hasProfessional = professionalIndicators.some(pattern => pattern.test(text));
+
+  let type: 'personal' | 'professional' | 'mixed' = 'professional';
+  if (hasPersonal && hasProfessional) type = 'mixed';
+  else if (hasPersonal) type = 'personal';
+
+  // Determine sentiment
+  let sentiment: 'celebratory' | 'grief' | 'gratitude' | 'frustration' | 'neutral' | 'educational' = 'neutral';
+  if (celebratoryPatterns.some(p => p.test(text))) sentiment = 'celebratory';
+  else if (griefPatterns.some(p => p.test(text))) sentiment = 'grief';
+  else if (gratitudePatterns.some(p => p.test(text))) sentiment = 'gratitude';
+  else if (frustrationPatterns.some(p => p.test(text))) sentiment = 'frustration';
+  else if (educationalPatterns.some(p => p.test(text))) sentiment = 'educational';
+
+  // Emotional flag
+  const isEmotional = ['celebratory', 'grief', 'gratitude', 'frustration'].includes(sentiment);
+
+  return { type, sentiment, isEmotional };
 }
 
 /**

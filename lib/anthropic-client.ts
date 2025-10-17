@@ -37,7 +37,7 @@ export async function generateWithClaude(
   });
 
   const response = await anthropic.messages.create({
-    model: options.model || "claude-sonnet-4-5",
+    model: options.model || "claude-haiku-4-5-20251001",
     max_tokens: options.maxTokens || 800,
     temperature: options.temperature ?? 0.7,
     system: systemPrompt,
@@ -74,9 +74,8 @@ export async function generateReplyWithClaude(
     });
   }
 
-  // Claude Sonnet 4.5 is the latest - better at following instructions
-  // Newer model with improved capabilities
-  const model = "claude-sonnet-4-5";
+  // Claude Haiku 4.5 - faster and more cost-effective while maintaining quality
+  const model = "claude-haiku-4-5-20251001";
   const temperature = iteration <= 2 ? 0.7 : 0.9;
 
   console.log(`   🤖 Using ${model} for iteration ${iteration} (temp: ${temperature})`);

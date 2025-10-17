@@ -249,33 +249,36 @@ PURE CURIOSITY - Ask a genuinely interesting question about their insight
 - Focus on understanding THEIR perspective deeper
 - No personal story needed
 - Can be a single question OR a brief observation + question
-Format: Direct question about the insight's origin, application, or edge cases
-Example: "What made you realize quality beats quantity for X growth? Most people say the opposite."`,
+❌ DON'T: Start with "Great insight!", "Love this!", "Amazing point!"
+❌ DON'T: Generic validation before asking question
+✅ DO: Jump straight to genuine curiosity about their experience`,
 
     devils_advocate: `
 DEVIL'S ADVOCATE - Challenge their assumption with intellectual pushback
 - Use "but", "actually", "though", "counterpoint" to signal disagreement
 - NO QUESTION MARKS - make a statement that challenges them
 - Stay respectful but probe edge cases
-Format: "[Pushback word] this breaks down when [specific scenario]. [Their claim] doesn't account for [edge case]."
-Example: "But this breaks down when you're at 0 users and need ANY signal. Building in complete silence doesn't work if nobody knows you exist."`,
+❌ DON'T: Agree first then challenge ("Great point, but...")
+❌ DON'T: Be confrontational or dismissive
+✅ DO: Thoughtfully question the edge cases or assumptions`,
 
     expand_idea: `
 EXPAND THEIR IDEA - Build on what they said with your own addition
 - Add to THEIR narrative, not yours
 - Can be pure expansion OR expansion + clarifying question
 - Use "This also", "Building on this", "Plus" to signal you're adding
-Format: "This also explains why [related pattern]. The [their concept] connects to [bigger framework]."
-Example: "This also explains why early founders quit. The building phase is invisible - no external validation, just faith you're making progress."`,
+❌ DON'T: Hijack their idea to talk about yourself
+❌ DON'T: Repeat what they said in different words
+✅ DO: Add a genuinely new dimension to their insight`,
 
     provide_evidence: `
 PROVIDE EVIDENCE - Share ONLY real data/observations from YOUR authentic journey
 - 🚨 CRITICAL: DO NOT invent fake studies, metrics, or research
 - ONLY reference YOUR real experiences from YOUR CONTEXT (will be provided)
 - If you don't have relevant data → Switch to asking a GENUINE QUESTION instead
-- NO phrases like "I've tracked 47 accounts", "I analyzed X logs", "Studies show" - YOU HAVEN'T!
-- Use specific details from YOUR CONTEXT: current metrics, recent struggles, actual observations
-Example: Reference your actual current stage, real metrics, and genuine learnings from context`,
+❌ DON'T: "I've tracked 47 accounts", "I analyzed X logs", "Studies show"
+❌ DON'T: Make up statistics or research that doesn't exist
+✅ DO: Reference your actual current stage, real metrics, genuine observations`,
 
     personal_crossover: `
 PERSONAL CROSSOVER - Connect your authentic experience with specificity
@@ -283,24 +286,27 @@ PERSONAL CROSSOVER - Connect your authentic experience with specificity
 - Use REAL metrics from YOUR CONTEXT (provided above)
 - Reference ACTUAL events from recent journey
 - Can be statement OR statement + question
-Format: "[Current experience with real data]. The [their insight] is exactly what I hit at [specific stage]."
-Example: "Going through this now building SubWise - hit the same bottleneck at 0 users. Shifted from feature bloat to solving ONE problem after realizing nobody cares about complex features."`,
+❌ DON'T: Force a personal connection where none exists
+❌ DON'T: Exaggerate or embellish your experience
+✅ DO: Share genuine parallel experiences with real details`,
 
     synthesize: `
 SYNTHESIZE - Connect their idea to broader concept, framework, or thinker
 - Can be pure connection OR connection + question
 - Reference frameworks, mental models, or related creators (if authentic)
 - ONLY reference thinkers/concepts you actually know
-Format: "This mirrors [concept/thinker]'s [principle] - [their insight] connects to [broader pattern]."
-Example: "This mirrors the X algorithm's engagement scoring - original takes get 75x weight because they spark actual conversation, not just passive scrolling."`,
+❌ DON'T: Name-drop frameworks you don't understand
+❌ DON'T: Make vague connections ("This is like life...")
+✅ DO: Draw specific, meaningful connections to concepts you know`,
 
     practical_application: `
 PRACTICAL APPLICATION - Ask how their principle applies to specific scenario
 - Focus on CONCRETE, realistic situations from YOUR current stage
 - Ask about edge cases or implementation details
 - Reference your actual context when relevant
-Format: "How would you apply this to [specific realistic situation with YOUR context]?"
-Example: "How would you apply this to someone at 7 followers trying to get initial traction? The early game feels different than growth at scale."`,
+❌ DON'T: Ask generic "how do I apply this?" questions
+❌ DON'T: Create hypothetical scenarios divorced from reality
+✅ DO: Ask about real, specific situations from your actual experience`,
   };
 
   return `

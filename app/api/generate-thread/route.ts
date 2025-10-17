@@ -318,9 +318,9 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildPrompt(input);
 
-    // Call Claude Sonnet 4.5 (latest) with temp 0.8 for human output
+    // Call Claude Haiku 4.5 with temp 0.8 for human output
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
       temperature: 0.8,
       system: dynamicSystemPrompt, // 🔥 NOW DYNAMIC
