@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight, Calendar, TrendingUp, Trash2 } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function ActivityPage() {
+function ActivityContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -332,5 +332,19 @@ export default function ActivityPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="text-center py-8 text-muted-foreground">
+          Loading activity...
+        </div>
+      </div>
+    }>
+      <ActivityContent />
+    </Suspense>
   );
 }
