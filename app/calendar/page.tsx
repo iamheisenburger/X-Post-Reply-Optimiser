@@ -141,9 +141,17 @@ export default function CalendarPage() {
 
               const replyCount = getReplyCountForDate(day);
               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const today = new Date().toISOString().split('T')[0];
-              const isToday = dateStr === today;
-              const isFuture = new Date(dateStr) > new Date(today);
+
+              // UTC-safe date comparison
+              const todayUTC = new Date();
+              const todayStr = new Date(Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()))
+                .toISOString().split('T')[0];
+              const isToday = dateStr === todayStr;
+
+              const [yearC, monthC, dayC] = dateStr.split('-').map(Number);
+              const dateUTC = new Date(Date.UTC(yearC, monthC - 1, dayC));
+              const todayDateUTC = new Date(Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()));
+              const isFuture = dateUTC > todayDateUTC;
 
               return (
                 <Link

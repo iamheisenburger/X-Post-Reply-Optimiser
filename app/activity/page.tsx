@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar, TrendingUp, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSearchParams, useRouter } from "next/navigation";
 
 export default function ActivityPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [selectedDate, setSelectedDate] = useState(() => {
-    return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    // Read date from URL parameter, fallback to today
+    const urlDate = searchParams.get('date');
+    if (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate)) {
+      return urlDate;
+    }
+    // Use UTC to get today's date consistently
+    const todayUTC = new Date();
+    return new Date(Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()))
+      .toISOString().split('T')[0];
   });
 
   const todayStats = useQuery(api.sentReplies.getTodayStats);
@@ -20,6 +32,14 @@ export default function ActivityPage() {
   });
   const deleteReply = useMutation(api.sentReplies.deleteReply);
   const { toast } = useToast();
+
+  // Sync selectedDate when URL parameter changes (e.g., from calendar clicks or browser navigation)
+  useEffect(() => {
+    const urlDate = searchParams.get('date');
+    if (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate) && urlDate !== selectedDate) {
+      setSelectedDate(urlDate);
+    }
+  }, [searchParams, selectedDate]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -41,29 +61,47 @@ export default function ActivityPage() {
   };
 
   const goToPreviousDay = () => {
-    const date = new Date(selectedDate + 'T00:00:00');
-    date.setDate(date.getDate() - 1);
-    setSelectedDate(date.toISOString().split('T')[0]);
+    // Parse YYYY-MM-DD as UTC to avoid timezone bugs
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() - 1);
+    const newDate = date.toISOString().split('T')[0];
+    router.push(`/activity?date=${newDate}`);
   };
 
   const goToNextDay = () => {
-    const date = new Date(selectedDate + 'T00:00:00');
-    const tomorrow = new Date(date);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Parse YYYY-MM-DD as UTC to avoid timezone bugs
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + 1);
 
-    // Don't allow going to future dates
-    const today = new Date();
-    if (tomorrow <= today) {
-      setSelectedDate(tomorrow.toISOString().split('T')[0]);
+    // Don't allow going to future dates (compare UTC dates)
+    const todayUTC = new Date();
+    const todayDate = new Date(Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()));
+
+    if (date <= todayDate) {
+      const newDate = date.toISOString().split('T')[0];
+      router.push(`/activity?date=${newDate}`);
     }
   };
 
   const goToToday = () => {
-    setSelectedDate(new Date().toISOString().split('T')[0]);
+    const todayUTC = new Date();
+    const today = new Date(Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()))
+      .toISOString().split('T')[0];
+    router.push(`/activity?date=${today}`);
   };
 
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
-  const isCurrentDateReached = new Date(selectedDate + 'T00:00:00') >= new Date(new Date().toISOString().split('T')[0]);
+  // UTC-safe date comparisons
+  const todayUTC = new Date();
+  const todayStr = new Date(Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()))
+    .toISOString().split('T')[0];
+  const isToday = selectedDate === todayStr;
+
+  const [year, month, day] = selectedDate.split('-').map(Number);
+  const selectedDateUTC = new Date(Date.UTC(year, month - 1, day));
+  const todayDateUTC = new Date(Date.UTC(todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()));
+  const isCurrentDateReached = selectedDateUTC >= todayDateUTC;
 
   const formatStrategyName = (strategy: string | undefined) => {
     if (!strategy) return 'Unknown';

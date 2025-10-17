@@ -101,8 +101,10 @@ export const getSentRepliesByDate = query({
     date: v.string(), // YYYY-MM-DD
   },
   handler: async (ctx, args) => {
-    const startOfDay = new Date(args.date + 'T00:00:00').getTime();
-    const endOfDay = new Date(args.date + 'T23:59:59').getTime();
+    // Parse date as UTC to avoid timezone bugs
+    const [year, month, day] = args.date.split('-').map(Number);
+    const startOfDay = Date.UTC(year, month - 1, day, 0, 0, 0);
+    const endOfDay = Date.UTC(year, month - 1, day, 23, 59, 59, 999);
 
     const replies = await ctx.db
       .query("posts")
@@ -126,9 +128,10 @@ export const getSentRepliesByDate = query({
  */
 export const getTodaySentReplies = query({
   handler: async (ctx) => {
-    const today = new Date().toISOString().split('T')[0];
-    const startOfDay = new Date(today + 'T00:00:00').getTime();
-    const endOfDay = new Date(today + 'T23:59:59').getTime();
+    const todayUTC = new Date();
+    const [year, month, day] = [todayUTC.getUTCFullYear(), todayUTC.getUTCMonth(), todayUTC.getUTCDate()];
+    const startOfDay = Date.UTC(year, month, day, 0, 0, 0);
+    const endOfDay = Date.UTC(year, month, day, 23, 59, 59, 999);
 
     const replies = await ctx.db
       .query("posts")
@@ -224,8 +227,10 @@ export const deleteReply = mutation({
 
     if (stats) {
       // Get all remaining replies for this date to recalculate stats
-      const startOfDay = new Date(replyDate + 'T00:00:00').getTime();
-      const endOfDay = new Date(replyDate + 'T23:59:59').getTime();
+      // Parse date as UTC to avoid timezone bugs
+      const [year, month, day] = replyDate.split('-').map(Number);
+      const startOfDay = Date.UTC(year, month - 1, day, 0, 0, 0);
+      const endOfDay = Date.UTC(year, month - 1, day, 23, 59, 59, 999);
 
       const remainingReplies = await ctx.db
         .query("posts")
