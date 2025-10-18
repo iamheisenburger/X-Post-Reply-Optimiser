@@ -409,6 +409,7 @@ export default defineSchema({
       date: v.string(),
       authorUsername: v.optional(v.string()),
     })),
+    lastCursor: v.optional(v.string()), // Pagination cursor for fetching NEW posts on re-analysis
     lastAnalyzed: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),

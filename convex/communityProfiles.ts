@@ -26,6 +26,7 @@ export const upsert = mutation({
       date: v.string(),
       authorUsername: v.optional(v.string()),
     })),
+    lastCursor: v.optional(v.string()), // Pagination cursor for next analysis
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -43,6 +44,7 @@ export const upsert = mutation({
         description: args.description,
         voiceProfile: args.voiceProfile,
         topPosts: args.topPosts,
+        lastCursor: args.lastCursor,
         lastAnalyzed: now,
         updatedAt: now,
       });
@@ -56,6 +58,7 @@ export const upsert = mutation({
         description: args.description,
         voiceProfile: args.voiceProfile,
         topPosts: args.topPosts,
+        lastCursor: args.lastCursor,
         lastAnalyzed: now,
         createdAt: now,
         updatedAt: now,

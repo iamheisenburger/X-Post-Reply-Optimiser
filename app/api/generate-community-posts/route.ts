@@ -268,29 +268,50 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Generate posts for each community
+    // Generate 3 posts for each community
     console.log(
-      `🤖 Generating posts for ${communitiesWithProfiles.length} communities...`
+      `🤖 Generating 3 posts for each of ${communitiesWithProfiles.length} communities...`
     );
 
-    const generatedPosts = await Promise.all(
-      communitiesWithProfiles.map(async ({ community, profile }) => {
-        const post = await generateCommunityPost(
-          {
-            communityName: community.name,
+    const generatedPosts = (
+      await Promise.all(
+        communitiesWithProfiles.map(async ({ community, profile }) => {
+          // Generate 3 posts per community in parallel
+          const posts = await Promise.all([
+            generateCommunityPost(
+              {
+                communityName: community.name,
+                date,
+                context,
+              },
+              profile!.voiceProfile
+            ),
+            generateCommunityPost(
+              {
+                communityName: community.name,
+                date,
+                context,
+              },
+              profile!.voiceProfile
+            ),
+            generateCommunityPost(
+              {
+                communityName: community.name,
+                date,
+                context,
+              },
+              profile!.voiceProfile
+            ),
+          ]);
+
+          return posts.map((post) => ({
             date,
-            context,
-          },
-          profile!.voiceProfile
-        );
-
-        return {
-          date,
-          communityName: community.name,
-          ...post,
-        };
-      })
-    );
+            communityName: community.name,
+            ...post,
+          }));
+        })
+      )
+    ).flat(); // Flatten array of arrays into single array
 
     // Save to Convex
     console.log(`💾 Saving ${generatedPosts.length} posts to Convex...`);

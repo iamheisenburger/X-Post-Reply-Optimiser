@@ -172,6 +172,9 @@ Respond ONLY with the JSON object, no additional text.`;
   }
 
   console.log(`📊 Voice Profile Analysis:`);
+  console.log(`   Analyzed ${allTweets.length} tweets total`);
+  console.log(`   Sent ${tweetsToAnalyze.length} representative tweets to Claude`);
+  console.log(`   Saving ${Math.min(100, allTweets.length)} posts for reference`);
   console.log(`   Common phrases: ${voiceProfile.commonPhrases.length}`);
   console.log(`   Tone: ${voiceProfile.toneCharacteristics.join(", ")}`);
   console.log(`   Length: ${voiceProfile.lengthPreference}`);
@@ -182,7 +185,7 @@ Respond ONLY with the JSON object, no additional text.`;
     communityName,
     description: communityDescription,
     voiceProfile,
-    topPosts: tweetsToAnalyze.slice(0, 30), // Save top 30 for reference
+    topPosts: allTweets.slice(0, 100), // Save 100 representative posts (mix of top, middle, recent)
   };
 }
 

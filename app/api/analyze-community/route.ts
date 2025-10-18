@@ -24,13 +24,17 @@ function getHeaders(): HeadersInit {
  * Fetches multiple pages to get at least 200 tweets for comprehensive analysis
  */
 async function fetchCommunityTweets(
-  communityId: string
-): Promise<CommunityTweet[]> {
+  communityId: string,
+  startFromCursor?: string // Optional: continue from where we left off for re-analysis
+): Promise<{ tweets: CommunityTweet[]; nextCursor: string | null }> {
   console.log(`🔍 Fetching 200+ community tweets (no filters)...`);
   console.log(`   Using community ID: ${communityId}`);
+  if (startFromCursor) {
+    console.log(`   📍 Continuing from previous analysis (fetching NEW posts)`);
+  }
 
   const allTweets: CommunityTweet[] = [];
-  let cursor: string | null = null;
+  let cursor: string | null = startFromCursor || null;
   let pageCount = 0;
   const maxPages = 10; // Fetch up to 10 pages (200-500 tweets depending on API)
 
@@ -116,7 +120,7 @@ async function fetchCommunityTweets(
   }
 
   console.log(`✅ Found ${allTweets.length} tweets from community across ${pageCount} pages (unfiltered)`);
-  return allTweets;
+  return { tweets: allTweets, nextCursor: cursor };
 }
 
 export async function POST(request: NextRequest) {
@@ -143,8 +147,25 @@ export async function POST(request: NextRequest) {
 
     console.log(`\n🏘️ Analyzing community: ${communityName}`);
 
+    // Check if we're re-analyzing (to continue from where we left off)
+    const { fetchQuery } = await import("convex/nextjs");
+    const existingProfile = await fetchQuery(
+      api.communityProfiles.getByName,
+      { communityName }
+    );
+
+    const startCursor = existingProfile?.lastCursor;
+    if (startCursor) {
+      console.log(`♻️ Re-analyzing: Will fetch NEW posts after previous analysis`);
+    } else {
+      console.log(`🆕 First-time analysis: Fetching from beginning`);
+    }
+
     // Step 1: Fetch ALL tweets from the community (no filters)
-    const communityTweets = await fetchCommunityTweets(communityId);
+    const { tweets: communityTweets, nextCursor } = await fetchCommunityTweets(
+      communityId,
+      startCursor
+    );
 
     if (communityTweets.length < 10) {
       return NextResponse.json(
@@ -178,9 +199,11 @@ export async function POST(request: NextRequest) {
         date: tweet.date,
         authorUsername: tweet.authorUsername,
       })),
+      lastCursor: nextCursor || undefined, // Save cursor for next re-analysis (convert null to undefined)
     };
 
     console.log(`Data being saved:`, JSON.stringify(dataToSave, null, 2).substring(0, 500));
+    console.log(`   Saving cursor for next re-analysis: ${nextCursor ? 'Yes' : 'No (end of feed)'}`);
 
     await fetchMutation(api.communityProfiles.upsert, dataToSave);
 
