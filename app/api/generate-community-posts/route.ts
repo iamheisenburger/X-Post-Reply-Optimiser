@@ -268,50 +268,36 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Generate 3 posts for each community
+    // Generate 3 posts for each community (sequentially to avoid rate limits)
     console.log(
-      `🤖 Generating 3 posts for each of ${communitiesWithProfiles.length} communities...`
+      `🤖 Generating 3 posts for each of ${communitiesWithProfiles.length} communities (sequentially)...`
     );
 
-    const generatedPosts = (
-      await Promise.all(
-        communitiesWithProfiles.map(async ({ community, profile }) => {
-          // Generate 3 posts per community in parallel
-          const posts = await Promise.all([
-            generateCommunityPost(
-              {
-                communityName: community.name,
-                date,
-                context,
-              },
-              profile!.voiceProfile
-            ),
-            generateCommunityPost(
-              {
-                communityName: community.name,
-                date,
-                context,
-              },
-              profile!.voiceProfile
-            ),
-            generateCommunityPost(
-              {
-                communityName: community.name,
-                date,
-                context,
-              },
-              profile!.voiceProfile
-            ),
-          ]);
+    const generatedPosts = [];
 
-          return posts.map((post) => ({
-            date,
+    // Process each community one at a time
+    for (const { community, profile } of communitiesWithProfiles) {
+      console.log(`   📝 Generating posts for ${community.name}...`);
+
+      // Generate 3 posts for this community sequentially
+      for (let i = 1; i <= 3; i++) {
+        console.log(`      Post ${i}/3...`);
+        const post = await generateCommunityPost(
+          {
             communityName: community.name,
-            ...post,
-          }));
-        })
-      )
-    ).flat(); // Flatten array of arrays into single array
+            date,
+            context,
+          },
+          profile!.voiceProfile
+        );
+
+        generatedPosts.push({
+          date,
+          communityName: community.name,
+          ...post,
+        });
+      }
+    }
 
     // Save to Convex
     console.log(`💾 Saving ${generatedPosts.length} posts to Convex...`);
