@@ -36,11 +36,13 @@ async function fetchCommunityTweets(
 
   while (pageCount < maxPages && allTweets.length < 200) {
     pageCount++;
+    // Based on twitterapi.io docs: GET /twitter/community/tweets?community_id={id}
     const url: string = cursor
-      ? `${TWITTER_API_BASE_URL}/twitter/community/tweets?communityId=${communityId}&cursor=${cursor}`
-      : `${TWITTER_API_BASE_URL}/twitter/community/tweets?communityId=${communityId}`;
+      ? `${TWITTER_API_BASE_URL}/twitter/community/tweets?community_id=${communityId}&cursor=${cursor}`
+      : `${TWITTER_API_BASE_URL}/twitter/community/tweets?community_id=${communityId}`;
 
     console.log(`   Fetching page ${pageCount}...`);
+    console.log(`   URL: ${url}`);
 
     const response = await fetch(url, {
       headers: getHeaders(),
@@ -48,8 +50,17 @@ async function fetchCommunityTweets(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Community tweets fetch failed: ${response.status}`);
-      console.error(`   Error: ${errorText}`);
+      console.error(`❌ Community tweets fetch failed: ${response.status} ${response.statusText}`);
+      console.error(`   URL: ${url}`);
+      console.error(`   Response: ${errorText}`);
+
+      // Try to parse as JSON for better error details
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error(`   Parsed Error:`, JSON.stringify(errorJson, null, 2));
+      } catch {
+        // Not JSON, already logged as text
+      }
 
       // If we already have some tweets, continue with what we have
       if (allTweets.length >= 50) {
@@ -62,10 +73,18 @@ async function fetchCommunityTweets(
 
     const data = await response.json();
 
-    // Parse response - format may vary
+    // Log response structure for debugging
+    if (pageCount === 1) {
+      console.log(`   Response keys: [${Object.keys(data).join(', ')}]`);
+      console.log(`   Response preview: ${JSON.stringify(data).substring(0, 200)}...`);
+    }
+
+    // Parse response - format may vary based on API version
     const tweets = data.tweets || data.data?.tweets || data.data || [];
     if (!Array.isArray(tweets)) {
       console.warn(`⚠️ Unexpected response format from community API on page ${pageCount}`);
+      console.warn(`   Expected tweets array, got: ${typeof tweets}`);
+      console.warn(`   Response keys: [${Object.keys(data).join(', ')}]`);
       break;
     }
 
