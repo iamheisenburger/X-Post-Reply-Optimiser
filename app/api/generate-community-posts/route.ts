@@ -69,6 +69,7 @@ async function generateCommunityPost(
   const hasInsight = context.insights.length > 0;
   const hasStruggle = context.struggles.length > 0;
   const hasFuture = context.futurePlans.length > 0;
+  const hasAnyContent = hasProgress || hasInsight || hasStruggle || hasFuture;
 
   let postType = "general";
   if (hasProgress && context.metrics.followers > 0) postType = "progress";
@@ -86,6 +87,12 @@ async function generateCommunityPost(
     .filter(Boolean)
     .join("\n");
 
+  // If no context provided, use observation-based post types
+  // These don't require personal stories, just community-native commentary
+  if (!hasAnyContent) {
+    postType = "observation"; // Community-relevant observation/question/commentary
+  }
+
   const prompt = `Generate 1 post for the "${communityName}" community that sounds NATIVE to that community.
 
 COMMUNITY VOICE PROFILE:
@@ -100,14 +107,31 @@ COMMUNITY VOICE PROFILE:
 POSTING GUIDELINES:
 ${guidelines}
 
-YOUR CONTEXT (use this to write an authentic post):
+${hasAnyContent ? `YOUR CONTEXT (use this to write an authentic post):
 ${contextSummary}
 
 Current metrics:
 - X followers: ${context.metrics.followers}
 - SubWise users: ${context.metrics.subwiseUsers}
 ${context.metrics.subwiseMRR ? `- SubWise MRR: $${context.metrics.subwiseMRR}` : ""}
-${context.metrics.trainingMinutes ? `- Training: ${context.metrics.trainingMinutes} min` : ""}
+${context.metrics.trainingMinutes ? `- Training: ${context.metrics.trainingMinutes} min` : ""}` : `NO PERSONAL CONTEXT PROVIDED.
+
+Since you have no personal stories/events to share, create a community-native post that:
+- Asks a relevant question that sparks discussion
+- Shares an observation about topics this community cares about
+- Invites others to share their experiences
+- Uses community voice patterns but requires NO personal data
+
+DO NOT:
+- Make up fake events, metrics, or personal stories
+- Claim to have done something that wasn't mentioned
+- Fabricate data or achievements
+
+INSTEAD:
+- Ask genuine questions ("What's your take on X?")
+- Share observations ("Anyone else notice that...?")
+- Invite experiences ("How do you handle...?")
+- Comment on trends this community discusses`}
 
 POST TYPE: ${postType}
 
@@ -117,7 +141,7 @@ REQUIREMENTS:
 3. Use emoji ${voiceProfile.emojiUsage === "frequent" ? "liberally (2-3)" : voiceProfile.emojiUsage === "moderate" ? "sparingly (1-2)" : "rarely or not at all"}
 4. Technical depth: ${voiceProfile.technicalDepth}
 5. NO EM-DASHES (—) or hyphens (-) for separating clauses
-6. Be AUTHENTIC - only use real data from YOUR CONTEXT above
+6. ${hasAnyContent ? "Be AUTHENTIC - only use real data from YOUR CONTEXT above" : "NO FAKE DATA - ask questions/share observations instead of making up stories"}
 7. Trigger engagement using: ${voiceProfile.engagementTriggers.slice(0, 2).join(", ")}
 
 RESPOND WITH JSON (no markdown, no code blocks):
