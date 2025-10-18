@@ -165,7 +165,8 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Save to Convex
     console.log(`💾 Saving community profile to Convex...`);
-    await fetchMutation(api.communityProfiles.upsert, {
+
+    const dataToSave = {
       communityName: voiceProfile.communityName,
       twitterCommunityId: communityId,
       description: voiceProfile.description,
@@ -177,7 +178,11 @@ export async function POST(request: NextRequest) {
         date: tweet.date,
         authorUsername: tweet.authorUsername,
       })),
-    });
+    };
+
+    console.log(`Data being saved:`, JSON.stringify(dataToSave, null, 2).substring(0, 500));
+
+    await fetchMutation(api.communityProfiles.upsert, dataToSave);
 
     console.log(`✅ Community profile saved successfully`);
 
@@ -189,6 +194,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error analyzing community:", error);
+
+    // Log full error details for debugging
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+
     const errorMessage =
       error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ error: errorMessage }, { status: 500 });
