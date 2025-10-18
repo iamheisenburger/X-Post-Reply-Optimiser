@@ -19,6 +19,7 @@ export interface CommunityTweet {
   replies: number;
   date: string;
   authorUsername?: string;
+  hasImage?: boolean;
 }
 
 export interface CommunityVoiceProfile {
@@ -32,20 +33,24 @@ export interface CommunityVoiceProfile {
     lengthPreference: "short" | "medium" | "long";
     emojiUsage: "frequent" | "moderate" | "rare";
     technicalDepth: "beginner" | "intermediate" | "expert";
+    mediaUsage: "frequent" | "moderate" | "rare";
   };
   topPosts: CommunityTweet[];
 }
 
-const ANALYSIS_SYSTEM_PROMPT = `You are a community voice analysis expert. Your job is to analyze a collection of high-engagement tweets from a specific online community and extract their unique voice characteristics.
+const ANALYSIS_SYSTEM_PROMPT = `You are a community voice analysis expert. Your job is to analyze a collection of tweets from a specific online community and extract their unique voice characteristics.
+
+Claude Haiku 4.5 can analyze images. If tweets have [HAS_IMAGE] marker, consider image usage in your analysis.
 
 Analyze the tweets to identify:
 1. **Common Phrases**: Opening patterns, catchphrases, recurring language
 2. **Tone Characteristics**: casual/formal, supportive/competitive, humble/confident
-3. **Topic Patterns**: What themes consistently get engagement
+3. **Topic Patterns**: What themes are common
 4. **Engagement Triggers**: What makes people reply, like, share
 5. **Length Preference**: Do posts tend to be short (1-2 sentences), medium (3-5 sentences), or long (6+ sentences)?
 6. **Emoji Usage**: frequent (multiple per post), moderate (1-2 per post), rare (occasionally)
 7. **Technical Depth**: beginner-friendly, intermediate (some jargon), expert (heavy technical language)
+8. **Media Usage**: frequent (most posts have images/screenshots), moderate (some posts), rare (rarely)
 
 Be SPECIFIC. Extract actual phrases used (e.g., "Just shipped", "Day 47:", "Hot take:"), not generic descriptions.`;
 
@@ -65,18 +70,23 @@ export async function analyzeCommunityVoice(
     (a, b) => b.likes + b.replies - (a.likes + a.replies)
   );
 
-  // Take top 30 for analysis
-  const topTweets = sortedTweets.slice(0, 30);
+  // Analyze ALL tweets (200+) for better understanding, not just top 30
+  const tweetsToAnalyze = tweets.slice(0, 200);
 
-  // Build analysis prompt
-  const tweetList = topTweets
+  // Calculate media usage percentage
+  const tweetsWithImages = tweetsToAnalyze.filter(t => t.hasImage).length;
+  const mediaUsagePercent = Math.round((tweetsWithImages / tweetsToAnalyze.length) * 100);
+  console.log(`   ${mediaUsagePercent}% of tweets have images`);
+
+  // Build analysis prompt with image markers
+  const tweetList = tweetsToAnalyze
     .map(
       (t, idx) =>
-        `${idx + 1}. [${t.likes} likes, ${t.replies} replies] "${t.text}"`
+        `${idx + 1}. [${t.likes} likes, ${t.replies} replies]${t.hasImage ? ' [HAS_IMAGE]' : ''} "${t.text}"`
     )
     .join("\n");
 
-  const prompt = `Analyze the voice of the "${communityName}" community based on these ${topTweets.length} high-engagement tweets:
+  const prompt = `Analyze the voice of the "${communityName}" community based on these ${tweetsToAnalyze.length} tweets:
 
 ${tweetList}
 
@@ -90,7 +100,8 @@ Provide analysis in this EXACT JSON format:
   "engagementTriggers": ["trigger 1", "trigger 2", ...],
   "lengthPreference": "short" | "medium" | "long",
   "emojiUsage": "frequent" | "moderate" | "rare",
-  "technicalDepth": "beginner" | "intermediate" | "expert"
+  "technicalDepth": "beginner" | "intermediate" | "expert",
+  "mediaUsage": "frequent" | "moderate" | "rare"
 }
 
 IMPORTANT:
@@ -137,6 +148,7 @@ Respond ONLY with the JSON object, no additional text.`;
     "lengthPreference",
     "emojiUsage",
     "technicalDepth",
+    "mediaUsage",
   ];
 
   for (const field of requiredFields) {
@@ -150,12 +162,13 @@ Respond ONLY with the JSON object, no additional text.`;
   console.log(`   Tone: ${voiceProfile.toneCharacteristics.join(", ")}`);
   console.log(`   Length: ${voiceProfile.lengthPreference}`);
   console.log(`   Technical depth: ${voiceProfile.technicalDepth}`);
+  console.log(`   Media usage: ${voiceProfile.mediaUsage}`);
 
   return {
     communityName,
     description: communityDescription,
     voiceProfile,
-    topPosts: topTweets,
+    topPosts: tweetsToAnalyze.slice(0, 30), // Save top 30 for reference
   };
 }
 

@@ -12,27 +12,27 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, RefreshCw, Copy, Check, Edit2, ThumbsUp, ThumbsDown, Send, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Default communities - Add your Twitter Community IDs here
+// Twitter Communities - Real IDs
 const DEFAULT_COMMUNITIES = [
   {
     name: "Software Engineering",
     description: "Professional software engineers discussing code quality, architecture, and best practices",
-    communityId: "", // Add your community ID
+    communityId: "1699807431709041070",
   },
   {
     name: "Indie Hackers",
     description: "Solo founders building and growing profitable online businesses",
-    communityId: "", // Add your community ID
+    communityId: "1852284626317754858",
   },
   {
     name: "Build in Public",
     description: "Entrepreneurs sharing their journey transparently, including metrics and struggles",
-    communityId: "", // Add your community ID
+    communityId: "1493446837214187523",
   },
   {
     name: "The First Thousand",
     description: "Creators growing from 0 to 1000 followers sharing tactics and strategies",
-    communityId: "", // Add your community ID
+    communityId: "1926186499399139650",
   },
 ];
 

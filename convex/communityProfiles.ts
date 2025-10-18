@@ -17,6 +17,7 @@ export const upsert = mutation({
       lengthPreference: v.string(),
       emojiUsage: v.string(),
       technicalDepth: v.string(),
+      mediaUsage: v.string(),
     }),
     topPosts: v.array(v.object({
       text: v.string(),

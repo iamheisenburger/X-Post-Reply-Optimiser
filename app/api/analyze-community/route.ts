@@ -18,49 +18,86 @@ function getHeaders(): HeadersInit {
 }
 
 /**
- * Fetch ALL tweets from a community to understand average posting style
+ * Fetch 200+ tweets from a community to understand average posting style
  *
  * No filtering - we want to see how the average person posts in this community
+ * Fetches multiple pages to get at least 200 tweets for comprehensive analysis
  */
 async function fetchCommunityTweets(
   communityId: string
 ): Promise<CommunityTweet[]> {
-  console.log(`🔍 Fetching ALL community tweets (no filters)...`);
+  console.log(`🔍 Fetching 200+ community tweets (no filters)...`);
   console.log(`   Using community ID: ${communityId}`);
 
-  const url = `${TWITTER_API_BASE_URL}/twitter/community/tweets?communityId=${communityId}`;
+  const allTweets: CommunityTweet[] = [];
+  let cursor: string | null = null;
+  let pageCount = 0;
+  const maxPages = 10; // Fetch up to 10 pages (200-500 tweets depending on API)
 
-  const response = await fetch(url, {
-    headers: getHeaders(),
-  });
+  while (pageCount < maxPages && allTweets.length < 200) {
+    pageCount++;
+    const url: string = cursor
+      ? `${TWITTER_API_BASE_URL}/twitter/community/tweets?communityId=${communityId}&cursor=${cursor}`
+      : `${TWITTER_API_BASE_URL}/twitter/community/tweets?communityId=${communityId}`;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`❌ Community tweets fetch failed: ${response.status}`);
-    console.error(`   Error: ${errorText}`);
-    throw new Error(`Failed to fetch community tweets: ${response.status}`);
+    console.log(`   Fetching page ${pageCount}...`);
+
+    const response = await fetch(url, {
+      headers: getHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Community tweets fetch failed: ${response.status}`);
+      console.error(`   Error: ${errorText}`);
+
+      // If we already have some tweets, continue with what we have
+      if (allTweets.length >= 50) {
+        console.log(`   ⚠️ API error but continuing with ${allTweets.length} tweets collected so far`);
+        break;
+      }
+
+      throw new Error(`Failed to fetch community tweets: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Parse response - format may vary
+    const tweets = data.tweets || data.data?.tweets || data.data || [];
+    if (!Array.isArray(tweets)) {
+      console.warn(`⚠️ Unexpected response format from community API on page ${pageCount}`);
+      break;
+    }
+
+    // Map to CommunityTweet format - NO FILTERING
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mappedTweets: CommunityTweet[] = tweets.map((tweet: any) => ({
+      text: tweet.text || tweet.full_text || "",
+      likes: tweet.public_metrics?.like_count || tweet.favorite_count || 0,
+      replies: tweet.public_metrics?.reply_count || tweet.reply_count || 0,
+      date: tweet.created_at || new Date().toISOString(),
+      authorUsername: tweet.author?.username || tweet.user?.screen_name,
+      hasImage: !!(tweet.entities?.media?.length || tweet.attachments?.media_keys?.length),
+    }));
+
+    allTweets.push(...mappedTweets);
+    console.log(`   Page ${pageCount}: ${mappedTweets.length} tweets (total: ${allTweets.length})`);
+
+    // Check for pagination cursor
+    cursor = data.meta?.next_token || data.next_cursor || null;
+    if (!cursor) {
+      console.log(`   No more pages available`);
+      break;
+    }
+
+    // Small delay between pages to avoid rate limits
+    if (pageCount < maxPages && allTweets.length < 200) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
 
-  const data = await response.json();
-
-  // Parse response - format may vary
-  let tweets = data.tweets || data.data?.tweets || data.data || [];
-  if (!Array.isArray(tweets)) {
-    console.warn(`⚠️ Unexpected response format from community API`);
-    tweets = [];
-  }
-
-  console.log(`✅ Found ${tweets.length} tweets from community (unfiltered)`);
-
-  // Map to CommunityTweet format - NO FILTERING
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return tweets.map((tweet: any) => ({
-    text: tweet.text || tweet.full_text || "",
-    likes: tweet.public_metrics?.like_count || tweet.favorite_count || 0,
-    replies: tweet.public_metrics?.reply_count || tweet.reply_count || 0,
-    date: tweet.created_at || new Date().toISOString(),
-    authorUsername: tweet.author?.username || tweet.user?.screen_name,
-  }));
+  console.log(`✅ Found ${allTweets.length} tweets from community across ${pageCount} pages (unfiltered)`);
+  return allTweets;
 }
 
 export async function POST(request: NextRequest) {

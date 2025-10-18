@@ -400,6 +400,7 @@ export default defineSchema({
       lengthPreference: v.string(), // "short" | "medium" | "long"
       emojiUsage: v.string(), // "frequent" | "moderate" | "rare"
       technicalDepth: v.string(), // "beginner" | "intermediate" | "expert"
+      mediaUsage: v.string(), // "frequent" | "moderate" | "rare"
     }),
     topPosts: v.array(v.object({
       text: v.string(),
