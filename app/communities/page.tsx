@@ -317,6 +317,7 @@ export default function CommunitiesPage() {
 
                   {profile && (
                     <div className="text-sm space-y-1 mb-3">
+                      <p><strong>Posts analyzed:</strong> {profile.topPosts.length}</p>
                       <p><strong>Tone:</strong> {profile.voiceProfile.toneCharacteristics.slice(0, 2).join(", ")}</p>
                       <p><strong>Length:</strong> {profile.voiceProfile.lengthPreference}</p>
                       <p><strong>Depth:</strong> {profile.voiceProfile.technicalDepth}</p>
