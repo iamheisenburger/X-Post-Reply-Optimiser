@@ -10,7 +10,8 @@
       "Bash(dir:*)",
       "Bash(git reset:*)",
       "Bash(npx convex deploy:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(curl -X POST http://localhost:3000/api/generate-community-posts -H \"Content-Type: application/json\" -d '{\n  \"\"date\"\": \"\"2025-10-18\"\",\n  \"\"events\"\": [\"\"Working on anti-AI post generation\"\"],\n  \"\"insights\"\": [\"\"Posts were sounding too robotic\"\", \"\"Need to show examples not just extract patterns\"\"],\n  \"\"struggles\"\": [\"\"Fighting with making 3 posts sound different\"\"],\n  \"\"futurePlans\"\": [\"\"Test the new generation system\"\"],\n  \"\"metrics\"\": {\n    \"\"followers\"\": 9,\n    \"\"subwiseUsers\"\": 0,\n    \"\"subwiseMRR\"\": 0,\n    \"\"trainingMinutes\"\": 0\n  }\n}')"
     ],
     "deny": [],
     "ask": []
