@@ -90,7 +90,7 @@ async function generateCommunityPost(
     ? `\n\nYou already wrote:\n${priorGeneratedPosts.map((p) => `"${p}"`).join("\n")}\n\nWrite something different.`
     : "";
 
-  const prompt = `Here are posts from the ${communityName} community:
+  const prompt = `Here are 20 real posts from the ${communityName} community:
 
 ${examplesText}
 
@@ -99,13 +99,8 @@ ${context.metrics.followers > 0 ? `\nYour stats: ${context.metrics.followers} fo
 
 Match their style exactly.
 
-JSON response:
-{
-  "content": "post text",
-  "category": "${postType}",
-  "suggestMedia": true/false,
-  "mediaType": "screenshot" | "metrics_chart" | null
-}`;
+Return ONLY valid JSON, no markdown, no code blocks, no backticks:
+{"content": "post text", "category": "${postType}", "suggestMedia": true, "mediaType": null}`;
 
   const response = await generateWithClaude(
     COMMUNITY_POST_SYSTEM_PROMPT,
@@ -121,11 +116,32 @@ JSON response:
   // Parse JSON response
   let postData;
   try {
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    // Remove markdown code blocks if present
+    let cleanedResponse = response.trim();
+    if (cleanedResponse.startsWith("```")) {
+      cleanedResponse = cleanedResponse.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("No JSON found in response");
     }
-    postData = JSON.parse(jsonMatch[0]);
+
+    // Fix literal newlines in JSON strings - they need to be escaped
+    let jsonStr = jsonMatch[0];
+    // Find all string values and replace literal newlines with \n
+    jsonStr = jsonStr.replace(/"content"\s*:\s*"([^"]*(?:\\.[^"]*)*)"/gs, (match, content) => {
+      // Replace literal newlines with \n in the content field
+      const escapedContent = content.replace(/\n/g, '\\n').replace(/\r/g, '');
+      return `"content": "${escapedContent}"`;
+    });
+
+    postData = JSON.parse(jsonStr);
+
+    // Unescape newlines in the content for display
+    if (postData.content) {
+      postData.content = postData.content.replace(/\\n/g, '\n');
+    }
   } catch (error) {
     console.error("❌ Failed to parse post JSON:", error);
     console.error("Response:", response);
