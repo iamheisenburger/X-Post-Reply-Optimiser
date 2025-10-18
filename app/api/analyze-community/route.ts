@@ -18,105 +18,49 @@ function getHeaders(): HeadersInit {
 }
 
 /**
- * Fetch high-engagement tweets from a community
+ * Fetch ALL tweets from a community to understand average posting style
  *
- * This uses the Twitter API's community tweets endpoint if communityId is provided,
- * otherwise falls back to keyword search for community-related content
+ * No filtering - we want to see how the average person posts in this community
  */
 async function fetchCommunityTweets(
-  communityId?: string,
-  searchKeywords?: string
+  communityId: string
 ): Promise<CommunityTweet[]> {
-  console.log(`🔍 Fetching community tweets...`);
+  console.log(`🔍 Fetching ALL community tweets (no filters)...`);
+  console.log(`   Using community ID: ${communityId}`);
 
-  if (communityId) {
-    // Use Twitter Communities API endpoint
-    console.log(`   Using community ID: ${communityId}`);
-    const url = `${TWITTER_API_BASE_URL}/twitter/community/tweets?communityId=${communityId}`;
+  const url = `${TWITTER_API_BASE_URL}/twitter/community/tweets?communityId=${communityId}`;
 
-    const response = await fetch(url, {
-      headers: getHeaders(),
-    });
+  const response = await fetch(url, {
+    headers: getHeaders(),
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Community tweets fetch failed: ${response.status}`);
-      console.error(`   Error: ${errorText}`);
-      throw new Error(`Failed to fetch community tweets: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Parse response - format may vary
-    let tweets = data.tweets || data.data?.tweets || data.data || [];
-    if (!Array.isArray(tweets)) {
-      console.warn(`⚠️ Unexpected response format from community API`);
-      tweets = [];
-    }
-
-    console.log(`✅ Found ${tweets.length} tweets from community`);
-
-    // Map to CommunityTweet format
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return tweets.map((tweet: any) => ({
-      text: tweet.text || tweet.full_text || "",
-      likes: tweet.public_metrics?.like_count || tweet.favorite_count || 0,
-      replies: tweet.public_metrics?.reply_count || tweet.reply_count || 0,
-      date: tweet.created_at || new Date().toISOString(),
-      authorUsername: tweet.author?.username || tweet.user?.screen_name,
-    }));
-  } else if (searchKeywords) {
-    // Fallback: Use search API with engagement filters
-    console.log(`   Using keyword search: "${searchKeywords}"`);
-    const url = `${TWITTER_API_BASE_URL}/twitter/search?query=${encodeURIComponent(
-      searchKeywords
-    )}&count=100`;
-
-    const response = await fetch(url, {
-      headers: getHeaders(),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Search failed: ${response.status}`);
-      console.error(`   Error: ${errorText}`);
-      throw new Error(`Failed to search tweets: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Parse response
-    let tweets = data.tweets || data.data?.tweets || data.statuses || [];
-    if (!Array.isArray(tweets)) {
-      console.warn(`⚠️ Unexpected response format from search API`);
-      tweets = [];
-    }
-
-    console.log(`✅ Found ${tweets.length} tweets from search`);
-
-    // Map to CommunityTweet format
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mappedTweets: CommunityTweet[] = tweets.map((tweet: any) => ({
-      text: tweet.text || tweet.full_text || "",
-      likes: tweet.public_metrics?.like_count || tweet.favorite_count || 0,
-      replies: tweet.public_metrics?.reply_count || tweet.reply_count || 0,
-      date: tweet.created_at || new Date().toISOString(),
-      authorUsername: tweet.author?.username || tweet.user?.screen_name,
-    }));
-
-    // Filter to only high-engagement tweets (at least 10 likes OR 5 replies)
-    const highEngagement = mappedTweets.filter(
-      (t) => t.likes >= 10 || t.replies >= 5
-    );
-
-    console.log(
-      `   Filtered to ${highEngagement.length} high-engagement tweets`
-    );
-
-    return highEngagement;
-  } else {
-    throw new Error("Either communityId or searchKeywords must be provided");
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`❌ Community tweets fetch failed: ${response.status}`);
+    console.error(`   Error: ${errorText}`);
+    throw new Error(`Failed to fetch community tweets: ${response.status}`);
   }
+
+  const data = await response.json();
+
+  // Parse response - format may vary
+  let tweets = data.tweets || data.data?.tweets || data.data || [];
+  if (!Array.isArray(tweets)) {
+    console.warn(`⚠️ Unexpected response format from community API`);
+    tweets = [];
+  }
+
+  console.log(`✅ Found ${tweets.length} tweets from community (unfiltered)`);
+
+  // Map to CommunityTweet format - NO FILTERING
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return tweets.map((tweet: any) => ({
+    text: tweet.text || tweet.full_text || "",
+    likes: tweet.public_metrics?.like_count || tweet.favorite_count || 0,
+    replies: tweet.public_metrics?.reply_count || tweet.reply_count || 0,
+    date: tweet.created_at || new Date().toISOString(),
+    authorUsername: tweet.author?.username || tweet.user?.screen_name,
+  }));
 }
 
 export async function POST(request: NextRequest) {
@@ -125,7 +69,6 @@ export async function POST(request: NextRequest) {
       communityName,
       communityDescription,
       communityId,
-      searchKeywords,
     } = await request.json();
 
     if (!communityName || !communityDescription) {
@@ -135,25 +78,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!communityId && !searchKeywords) {
+    if (!communityId) {
       return NextResponse.json(
-        { error: "Either communityId or searchKeywords must be provided" },
+        { error: "communityId is required" },
         { status: 400 }
       );
     }
 
     console.log(`\n🏘️ Analyzing community: ${communityName}`);
 
-    // Step 1: Fetch high-engagement tweets from the community
-    const communityTweets = await fetchCommunityTweets(
-      communityId,
-      searchKeywords
-    );
+    // Step 1: Fetch ALL tweets from the community (no filters)
+    const communityTweets = await fetchCommunityTweets(communityId);
 
     if (communityTweets.length < 10) {
       return NextResponse.json(
         {
-          error: `Not enough tweets found (${communityTweets.length}). Need at least 10 high-engagement tweets.`,
+          error: `Not enough tweets found (${communityTweets.length}). Need at least 10 tweets from the community.`,
         },
         { status: 400 }
       );

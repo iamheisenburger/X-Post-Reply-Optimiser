@@ -12,27 +12,27 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, RefreshCw, Copy, Check, Edit2, ThumbsUp, ThumbsDown, Send, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Default communities
+// Default communities - Add your Twitter Community IDs here
 const DEFAULT_COMMUNITIES = [
   {
     name: "Software Engineering",
     description: "Professional software engineers discussing code quality, architecture, and best practices",
-    searchKeywords: "#SoftwareEngineering OR #CodeQuality OR #CleanCode OR #SoftwareDevelopment min_faves:10",
+    communityId: "", // Add your community ID
   },
   {
     name: "Indie Hackers",
     description: "Solo founders building and growing profitable online businesses",
-    searchKeywords: "#IndieHackers OR #SoloFounder OR #BootstrappedStartup OR #IndieDev min_faves:10",
+    communityId: "", // Add your community ID
   },
   {
     name: "Build in Public",
     description: "Entrepreneurs sharing their journey transparently, including metrics and struggles",
-    searchKeywords: "#BuildInPublic OR #BIP OR building in public min_faves:10",
+    communityId: "", // Add your community ID
   },
   {
     name: "The First Thousand",
     description: "Creators growing from 0 to 1000 followers sharing tactics and strategies",
-    searchKeywords: "growing followers OR first 1000 followers OR twitter growth min_faves:10",
+    communityId: "", // Add your community ID
   },
 ];
 
@@ -95,6 +95,16 @@ export default function CommunitiesPage() {
   };
 
   const handleAnalyzeCommunity = async (community: typeof DEFAULT_COMMUNITIES[0]) => {
+    if (!community.communityId) {
+      toast({
+        title: "Community ID missing",
+        description: "Please add the Twitter Community ID for this community in the code",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+
     setAnalyzing(community.name);
 
     try {
@@ -104,7 +114,7 @@ export default function CommunitiesPage() {
         body: JSON.stringify({
           communityName: community.name,
           communityDescription: community.description,
-          searchKeywords: community.searchKeywords,
+          communityId: community.communityId,
         }),
       });
 
