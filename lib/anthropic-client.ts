@@ -12,9 +12,24 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
+interface TextBlock {
+  type: "text";
+  text: string;
+}
+
+interface ImageBlock {
+  type: "image";
+  source: {
+    type: "url";
+    url: string;
+  };
+}
+
+type ClaudeContent = string | Array<TextBlock | ImageBlock>;
+
 interface ClaudeMessage {
   role: "user" | "assistant";
-  content: string;
+  content: ClaudeContent;
 }
 
 export async function generateWithClaude(

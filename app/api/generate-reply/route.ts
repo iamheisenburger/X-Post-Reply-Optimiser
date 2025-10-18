@@ -147,6 +147,7 @@ export async function POST(request: NextRequest) {
       ? await generateOptimizedRepliesWithClaude({
           tweetText: tweet.text,
           tweetAuthor: tweet.author.username,
+          tweetMedia: tweet.media, // 🖼️ IMAGES
           creatorProfile: creatorIntelligence,
           minutesSincePosted,
           yourHandle: process.env.NEXT_PUBLIC_X_HANDLE || "madmanhakim",

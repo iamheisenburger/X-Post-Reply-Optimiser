@@ -27,6 +27,12 @@ export interface TwitterUser {
   verified?: boolean;
 }
 
+export interface TweetMedia {
+  type: "photo" | "video" | "animated_gif";
+  url: string;
+  preview_image_url?: string;
+}
+
 export interface Tweet {
   id: string;
   text: string;
@@ -48,6 +54,7 @@ export interface Tweet {
 export interface DetailedTweet extends Tweet {
   author: TwitterUser;
   hasMedia: boolean;
+  media?: TweetMedia[];
   isThread: boolean;
 }
 
@@ -349,6 +356,49 @@ export const twitterApi = {
 
       console.log(`✅ SUCCESS: Tweet from @${author.username} (ID: ${author.id})`);
 
+      // Extract media from tweet
+      const media: TweetMedia[] = [];
+
+      // TwitterAPI.io returns media in different formats
+      // Check for media array (photos, videos, gifs)
+      if (tweet.media && Array.isArray(tweet.media)) {
+        for (const m of tweet.media) {
+          media.push({
+            type: m.type === 'video' ? 'video' : m.type === 'animated_gif' ? 'animated_gif' : 'photo',
+            url: m.media_url_https || m.url || m.media_url || '',
+            preview_image_url: m.preview_image_url || m.media_url_https || m.url
+          });
+        }
+      }
+
+      // Check for attachments format
+      if (tweet.attachments?.media_keys && tweet.includes?.media) {
+        for (const mediaItem of tweet.includes.media) {
+          media.push({
+            type: mediaItem.type === 'video' ? 'video' : mediaItem.type === 'animated_gif' ? 'animated_gif' : 'photo',
+            url: mediaItem.url || mediaItem.media_url_https || '',
+            preview_image_url: mediaItem.preview_image_url || mediaItem.url
+          });
+        }
+      }
+
+      // Check for extended_entities (Twitter standard format)
+      if (tweet.extended_entities?.media) {
+        for (const m of tweet.extended_entities.media) {
+          media.push({
+            type: m.type === 'video' ? 'video' : m.type === 'animated_gif' ? 'animated_gif' : 'photo',
+            url: m.media_url_https || m.url || '',
+            preview_image_url: m.media_url_https || m.url
+          });
+        }
+      }
+
+      const hasMedia = media.length > 0;
+
+      if (hasMedia) {
+        console.log(`📷 Found ${media.length} media item(s): ${media.map(m => m.type).join(', ')}`);
+      }
+
       return {
         ...tweet,
         author: {
@@ -360,7 +410,8 @@ export const twitterApi = {
           following_count: author.following_count,
           verified: author.verified || false,
         },
-        hasMedia: !!(tweet.entities?.urls?.length || tweet.attachments || tweet.media),
+        hasMedia,
+        media: hasMedia ? media : undefined,
         isThread: tweet.conversation_id && tweet.conversation_id !== tweet.id,
       };
     } catch (error) {

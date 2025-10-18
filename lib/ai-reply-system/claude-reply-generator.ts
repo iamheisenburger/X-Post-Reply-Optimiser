@@ -35,9 +35,15 @@ import { generateCrossoverPositioning } from "./niche-crossover-system";
 import { selectReplyStrategies, getStrategyInstructions, type ReplyValueType } from "./reply-strategy-selector";
 import { selectRelevantQuestions } from "./niche-knowledge-base";
 
+export interface TweetMedia {
+  type: "photo" | "video" | "animated_gif";
+  url: string;
+}
+
 export interface ReplyGenerationContext {
   tweetText: string;
   tweetAuthor: string;
+  tweetMedia?: TweetMedia[]; // 🖼️ IMAGES/VIDEOS
   creatorProfile: CreatorIntelligence;
   minutesSincePosted: number;
   yourHandle: string;
@@ -164,7 +170,7 @@ export async function generateOptimizedRepliesWithClaude(
     console.log(`${"=".repeat(60)}`);
 
     try {
-      // Build intelligent prompt
+      // Build intelligent prompt (multimodal if images present)
       const improvementInstructions = specificityReport !== null
         ? specificityReport.improvementInstructions
         : undefined;
@@ -173,6 +179,7 @@ export async function generateOptimizedRepliesWithClaude(
         context.creatorProfile,
         selectedStrategy,
         context.postsContext, // 🔥 DYNAMIC CONTEXT
+        context.tweetMedia, // 🖼️ IMAGES
         improvementInstructions,
         qualityReport?.improvements
       );
@@ -180,7 +187,7 @@ export async function generateOptimizedRepliesWithClaude(
       // Build messages for Claude
       const messages = [];
 
-      // Add user prompt
+      // Add user prompt (can be string or multimodal content)
       messages.push({ role: "user" as const, content: prompt });
 
       // If this is a retry, add previous attempt + feedback
@@ -391,14 +398,28 @@ function getStrategyGuidance(strategyType: ReplyValueType, replyNumber: number):
 → ENDING: ${guidance.endingRule}`;
 }
 
+interface TextBlock {
+  type: "text";
+  text: string;
+}
+
+interface ImageBlock {
+  type: "image";
+  source: {
+    type: "url";
+    url: string;
+  };
+}
+
 function buildIntelligentPrompt(
   tweetContent: TweetContent,
   creator: CreatorIntelligence,
   strategy: ReturnType<typeof selectReplyStrategies>,
   postsContext: PostsContextData | null | undefined, // 🔥 DYNAMIC CONTEXT
+  tweetMedia?: TweetMedia[], // 🖼️ IMAGES
   specificityFeedback?: string,
   constraints?: ReplyConstraints
-): string {
+): string | Array<TextBlock | ImageBlock> {
   const tweetSummary = buildTweetSummary(tweetContent);
   const creatorSummary = buildCreatorSummary(creator);
   const authenticContext = buildDynamicReplyContext(postsContext || null); // 🔥 NOW DYNAMIC
@@ -494,6 +515,36 @@ Generate 3 distinct replies now following FORMAT requirements above.`;
   // Add specificity/authenticity feedback if needed
   if (specificityFeedback) {
     prompt += `\n\n${specificityFeedback}`;
+  }
+
+  // If tweet has images/videos, return multimodal content
+  if (tweetMedia && tweetMedia.length > 0) {
+    const content: Array<TextBlock | ImageBlock> = [];
+
+    // Add text prompt first
+    content.push({ type: "text", text: prompt });
+
+    // Add all images
+    for (const media of tweetMedia) {
+      if (media.type === "photo") {
+        content.push({
+          type: "image",
+          source: {
+            type: "url",
+            url: media.url
+          }
+        });
+      }
+      // For videos/gifs, just describe them in text (Claude can't watch videos)
+      else {
+        content.push({
+          type: "text",
+          text: `\n\n📹 Note: The tweet includes a ${media.type} (${media.url}). Consider this when crafting your reply.`
+        });
+      }
+    }
+
+    return content;
   }
 
   return prompt;
