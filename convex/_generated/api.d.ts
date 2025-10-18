@@ -9,6 +9,8 @@
  */
 
 import type * as analytics from "../analytics.js";
+import type * as communityPosts from "../communityPosts.js";
+import type * as communityProfiles from "../communityProfiles.js";
 import type * as contextManagement from "../contextManagement.js";
 import type * as creators from "../creators.js";
 import type * as migrations_addFuturePlansField from "../migrations/addFuturePlansField.js";
@@ -35,6 +37,8 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
+  communityPosts: typeof communityPosts;
+  communityProfiles: typeof communityProfiles;
   contextManagement: typeof contextManagement;
   creators: typeof creators;
   "migrations/addFuturePlansField": typeof migrations_addFuturePlansField;

@@ -94,14 +94,30 @@ export function assessQuality(
   }
   
   // ============================================
-  // CHECK 3: Content Specificity
+  // CHECK 3: AI Detection Prevention - Em-Dashes
+  // ============================================
+  const hasEmDashes = replies.filter(r =>
+    r.text.includes('—') || r.text.match(/\s-\s/)  // em-dash or " - "
+  );
+
+  if (hasEmDashes.length > 0) {
+    issues.push('CRITICAL: Em-dashes/hyphens detected - instant AI tell!');
+    console.log(`   🚨 ${hasEmDashes.length} replies contain em-dashes or hyphens for clause separation`);
+    improvements.avoidGenericPhrases = true; // Use this flag to trigger rewrite
+    improvements.ensureGrammar = true; // Use this to enforce no em-dashes
+  } else {
+    console.log(`   ✅ No em-dashes detected`);
+  }
+
+  // ============================================
+  // CHECK 4: Content Specificity
   // ============================================
   const referencesContent = replies.filter(r => {
     // Check if reply references any key phrase from tweet
     const lowerText = r.text.toLowerCase();
-    return tweetContent.keyPhrases.some(phrase => 
+    return tweetContent.keyPhrases.some(phrase =>
       lowerText.includes(phrase.toLowerCase())
-    ) || tweetContent.mainClaim.split(' ').slice(0, 5).some(word => 
+    ) || tweetContent.mainClaim.split(' ').slice(0, 5).some(word =>
       word.length > 4 && lowerText.includes(word.toLowerCase())
     );
   });
@@ -117,35 +133,35 @@ export function assessQuality(
   }
   
   // ============================================
-  // CHECK 4: Creator Profile Matching
+  // CHECK 5: Creator Profile Matching
   // ============================================
   const emphasizedTopics = creator.optimalReplyStrategy.emphasizeTopics;
   const matchesProfile = replies.filter(r => {
     const lowerText = r.text.toLowerCase();
-    return emphasizedTopics.some(topic => 
+    return emphasizedTopics.some(topic =>
       lowerText.includes(topic.toLowerCase())
     );
   });
-  
+
   if (matchesProfile.length === 0 && emphasizedTopics.length > 0) {
     issues.push(`Not leveraging creator's emphasized topics: ${emphasizedTopics.join(', ')}`);
     console.log(`   ❌ No replies reference creator's emphasized topics`);
-    
+
     improvements.emphasizeCreatorTopics = emphasizedTopics.slice(0, 2);
   } else {
     console.log(`   ✅ ${matchesProfile.length}/3 replies match creator profile`);
   }
-  
+
   // ============================================
-  // CHECK 5: Tone Matching
+  // CHECK 6: Tone Matching
   // ============================================
   const preferredTone = creator.audience.engagementPatterns.preferredTone;
   if (preferredTone && !improvements.mustUseTone) {
     improvements.mustUseTone = preferredTone;
   }
-  
+
   // ============================================
-  // CHECK 6: Diversity (INFORMATIONAL ONLY)
+  // CHECK 7: Diversity (INFORMATIONAL ONLY)
   // ============================================
   // NOTE: Strategy selector determines how many approaches are needed
   // We no longer enforce "must have 3 distinct strategies"

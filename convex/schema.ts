@@ -386,5 +386,74 @@ export default defineSchema({
     })),
     lastUpdated: v.number(),
   }).index("by_key", ["key"]),
+
+  // Community Profiles (Voice analysis for each community)
+  communityProfiles: defineTable({
+    communityName: v.string(), // "Software Engineering", "Indie Hackers", etc.
+    twitterCommunityId: v.optional(v.string()), // Twitter community ID (if available)
+    description: v.string(), // What this community is about
+    voiceProfile: v.object({
+      commonPhrases: v.array(v.string()), // ["Just shipped", "Hot take:", "Day 47"]
+      toneCharacteristics: v.array(v.string()), // ["casual", "technical", "supportive"]
+      topicPatterns: v.array(v.string()), // ["code quality", "shipping fast", "metrics"]
+      engagementTriggers: v.array(v.string()), // ["ask questions", "share metrics", "be vulnerable"]
+      lengthPreference: v.string(), // "short" | "medium" | "long"
+      emojiUsage: v.string(), // "frequent" | "moderate" | "rare"
+      technicalDepth: v.string(), // "beginner" | "intermediate" | "expert"
+    }),
+    topPosts: v.array(v.object({
+      text: v.string(),
+      likes: v.number(),
+      replies: v.number(),
+      date: v.string(),
+      authorUsername: v.optional(v.string()),
+    })),
+    lastAnalyzed: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_name", ["communityName"])
+    .index("by_analyzed", ["lastAnalyzed"]),
+
+  // Community Posts (Generated posts for each community)
+  communityPosts: defineTable({
+    date: v.string(), // YYYY-MM-DD
+    communityName: v.string(), // Which community this is for
+    content: v.string(), // The post text
+    category: v.string(), // Type of post ("progress", "insight", "question", etc.)
+    algorithmScore: v.number(), // 0-100 predicted engagement
+    communityFitScore: v.number(), // 0-100 how well it matches community voice
+    scoreBreakdown: v.object({
+      hookStrength: v.number(),
+      communityAlignment: v.number(),
+      conversationTrigger: v.number(),
+      authenticity: v.number(),
+    }),
+    suggestMedia: v.boolean(),
+    mediaType: v.optional(v.string()),
+    status: v.union(
+      v.literal("generated"),
+      v.literal("edited"),
+      v.literal("approved"),
+      v.literal("posted"),
+      v.literal("rejected")
+    ),
+    postedAt: v.optional(v.number()),
+    tweetUrl: v.optional(v.string()),
+    performance: v.optional(v.object({
+      views: v.number(),
+      likes: v.number(),
+      retweets: v.number(),
+      replies: v.number(),
+      bookmarks: v.number(),
+      profileClicks: v.number(),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_date", ["date"])
+    .index("by_community", ["communityName"])
+    .index("by_status", ["status"])
+    .index("by_date_community", ["date", "communityName"]),
 });
 
