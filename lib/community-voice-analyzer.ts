@@ -70,13 +70,26 @@ export async function analyzeCommunityVoice(
     (a, b) => b.likes + b.replies - (a.likes + a.replies)
   );
 
-  // Analyze ALL tweets (200+) for better understanding, not just top 30
-  const tweetsToAnalyze = tweets.slice(0, 200);
+  // Analyze ALL 200 tweets for statistics, but send representative sample to Claude
+  const allTweets = tweets.slice(0, 200);
 
-  // Calculate media usage percentage
-  const tweetsWithImages = tweetsToAnalyze.filter(t => t.hasImage).length;
-  const mediaUsagePercent = Math.round((tweetsWithImages / tweetsToAnalyze.length) * 100);
+  // Calculate media usage percentage from all tweets
+  const tweetsWithImages = allTweets.filter(t => t.hasImage).length;
+  const mediaUsagePercent = Math.round((tweetsWithImages / allTweets.length) * 100);
   console.log(`   ${mediaUsagePercent}% of tweets have images`);
+
+  // Take a diverse sample for Claude analysis to avoid token limits
+  // Sample strategy: top performers + random middle + recent posts
+  const topTweets = sortedTweets.slice(0, 20); // Top 20 by engagement
+  const middleTweets = allTweets.slice(50, 70); // 20 from middle (average posts)
+  const recentTweets = allTweets.slice(0, 10); // 10 most recent
+
+  // Combine and deduplicate
+  const tweetsToAnalyze = Array.from(
+    new Map([...topTweets, ...middleTweets, ...recentTweets].map(t => [t.text, t])).values()
+  ).slice(0, 50); // Max 50 tweets for Claude (manageable token size)
+
+  console.log(`   Sending ${tweetsToAnalyze.length} representative tweets to Claude for analysis`);
 
   // Build analysis prompt with image markers
   const tweetList = tweetsToAnalyze
@@ -86,11 +99,12 @@ export async function analyzeCommunityVoice(
     )
     .join("\n");
 
-  const prompt = `Analyze the voice of the "${communityName}" community based on these ${tweetsToAnalyze.length} tweets:
+  const prompt = `Analyze the voice of the "${communityName}" community based on this representative sample of ${tweetsToAnalyze.length} tweets (selected from 200+ community posts to show top performers, average posts, and recent activity):
 
 ${tweetList}
 
 Community description: ${communityDescription}
+Media usage stats (from all 200 tweets): ${mediaUsagePercent}% of posts include images
 
 Provide analysis in this EXACT JSON format:
 {
