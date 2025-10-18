@@ -32,7 +32,7 @@ import {
   type PostsContextData 
 } from "./personal-knowledge-base";
 import { generateCrossoverPositioning } from "./niche-crossover-system";
-import { selectReplyStrategies, getStrategyInstructions } from "./reply-strategy-selector";
+import { selectReplyStrategies, getStrategyInstructions, type ReplyValueType } from "./reply-strategy-selector";
 import { selectRelevantQuestions } from "./niche-knowledge-base";
 
 export interface ReplyGenerationContext {
@@ -342,6 +342,55 @@ export async function generateOptimizedRepliesWithClaude(
   };
 }
 
+/**
+ * Get strategy-specific guidance without hardcoding length
+ */
+function getStrategyGuidance(strategyType: ReplyValueType, replyNumber: number): string {
+  const strategyMap: Record<ReplyValueType, { description: string; lengthGuidance: string; endingRule: string }> = {
+    pure_curiosity: {
+      description: "Ask a genuinely interesting question that digs deeper into their insight",
+      lengthGuidance: "Usually SHORT (1 sentence) but can be longer if exploring something complex",
+      endingRule: "MUST end with question mark (?)"
+    },
+    devils_advocate: {
+      description: "Challenge an assumption or provide counter-perspective thoughtfully",
+      lengthGuidance: "MEDIUM length usually works (need space to build counter-argument)",
+      endingRule: "MUST end with period (.) - NO question"
+    },
+    expand_idea: {
+      description: "Build on their insight and add to their narrative",
+      lengthGuidance: "Flexible length - SHORT if simple addition, LONGER if expanding significantly",
+      endingRule: "Can be statement OR question"
+    },
+    provide_evidence: {
+      description: "Share relevant data, research, or concrete examples",
+      lengthGuidance: "MEDIUM to LONG (need space for data/context)",
+      endingRule: "MUST end with period (.) - NO question"
+    },
+    personal_crossover: {
+      description: "Connect your authentic experience naturally",
+      lengthGuidance: "MEDIUM to LONG (personal stories need context)",
+      endingRule: "Can be statement OR question"
+    },
+    synthesize: {
+      description: "Connect to related concept, framework, or creator",
+      lengthGuidance: "MEDIUM length usually (need space to draw connection)",
+      endingRule: "Can be statement OR question"
+    },
+    practical_application: {
+      description: "Ask about concrete scenario or real-world example",
+      lengthGuidance: "SHORT to MEDIUM (keep scenario focused)",
+      endingRule: "MUST end with question mark (?)"
+    }
+  };
+
+  const guidance = strategyMap[strategyType];
+  return `REPLY ${replyNumber} using ${strategyType.toUpperCase().replace(/_/g, ' ')}:
+→ STRATEGY: ${guidance.description}
+→ LENGTH: ${guidance.lengthGuidance}
+→ ENDING: ${guidance.endingRule}`;
+}
+
 function buildIntelligentPrompt(
   tweetContent: TweetContent,
   creator: CreatorIntelligence,
@@ -414,23 +463,20 @@ REPLY REQUIREMENTS:
 - If strategy needs data you don't have → ASK A GENUINE QUESTION INSTEAD
 - BE HUMAN, NOT AI ASSISTANT
 
-🚨 FORMAT ENFORCEMENT (X spam detection watches for patterns):
-REPLY 1 using ${strategy.primary.toUpperCase().replace(/_/g, ' ')}:
-→ LENGTH: SHORT (1 sentence, 20-60 characters total)
-→ NO EM-DASHES (—) OR HYPHENS (-) to separate clauses
-${strategy.primary === 'pure_curiosity' || strategy.primary === 'practical_application' ? '→ MUST end with question mark (?)' : strategy.primary === 'devils_advocate' || strategy.primary === 'provide_evidence' ? '→ MUST end with period (.) - NO question mark' : '→ Can be statement OR question'}
+🚨 GENERATE 3 DIFFERENT REPLIES:
 
-REPLY 2 using ${strategy.secondary.toUpperCase().replace(/_/g, ' ')}:
-→ LENGTH: MEDIUM (2-3 sentences, 80-150 characters total)
-→ NO EM-DASHES (—) OR HYPHENS (-) to separate clauses
-${strategy.secondary === 'pure_curiosity' || strategy.secondary === 'practical_application' ? '→ MUST end with question mark (?)' : strategy.secondary === 'devils_advocate' || strategy.secondary === 'provide_evidence' ? '→ MUST end with period (.) - NO question mark' : '→ Can be statement OR question'}
+${getStrategyGuidance(strategy.primary, 1)}
 
-REPLY 3 using ${strategy.fallback.toUpperCase().replace(/_/g, ' ')}:
-→ LENGTH: LONG (3-4 sentences, 150-240 characters total)
-→ NO EM-DASHES (—) OR HYPHENS (-) to separate clauses
-${strategy.fallback === 'pure_curiosity' || strategy.fallback === 'practical_application' ? '→ MUST end with question mark (?)' : strategy.fallback === 'devils_advocate' || strategy.fallback === 'provide_evidence' ? '→ MUST end with period (.) - NO question mark' : '→ Can be statement OR question'}
+${getStrategyGuidance(strategy.secondary, 2)}
 
-If strategy says "NO question", you MUST generate a statement. Use pushback words ("but", "actually", "though") or data (numbers, percentages) to trigger algorithm.
+${getStrategyGuidance(strategy.fallback, 3)}
+
+CRITICAL RULES FOR ALL REPLIES:
+→ NO EM-DASHES (—) OR HYPHENS (-) to separate clauses
+→ Vary lengths dramatically - don't make them all similar length
+→ Choose length based on what the strategy needs, not arbitrary rules
+→ Be human and natural - if a simple question works, use it
+→ If strategy needs data you don't have, ask a genuine question instead
 
 OUTPUT FORMAT (MUST FOLLOW EXACTLY):
 
